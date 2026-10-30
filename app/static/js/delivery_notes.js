@@ -16,6 +16,12 @@
     let createLines = [];
     let currentDetailId = null;
     let currentDetailStatus = null;
+    const PER_PAGE = 20;
+    // Historial desde Clientes: /delivery-notes?customer_id=N filtra por el cliente del directorio.
+    const urlCustomerId = new URLSearchParams(window.location.search).get("customer_id");
+    const listState = { page: 1, customerId: /^[1-9]\d{0,9}$/.test(urlCustomerId || "") ? urlCustomerId : "" };
+    let linkedCustomer = null;  // cliente del directorio elegido en "Nueva nota"
+    let idempotencyKey = null;  // una clave por envío: un reintento no emite otra nota
 
     const moneyFormat = new Intl.NumberFormat("es-VE", {
         minimumFractionDigits: 2,
@@ -117,9 +123,10 @@
         const iso = String(value);
         const date = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
         if (isNaN(date.getTime())) return "—";
+        // Hora de Venezuela, como el filtro de fechas del servidor y el PDF.
         return date.toLocaleString("es-VE", {
             day: "2-digit", month: "2-digit", year: "numeric",
-            hour: "2-digit", minute: "2-digit",
+            hour: "2-digit", minute: "2-digit", timeZone: "America/Caracas",
         });
     }
 
@@ -191,17 +198,20 @@
     // ------------------------------------------------------------------
     // KPIs
     // ------------------------------------------------------------------
-    function updateKpis(notes) {
-        const issued = notes.filter((n) => n.status === "issued");
-        const cancelled = notes.filter((n) => n.status === "cancelled");
-        const totalAmount = issued.reduce((s, n) => s + Number(n.total_amount || 0), 0);
-        const avg = issued.length ? totalAmount / issued.length : 0;
+    // Totales del servidor: cubren todas las notas filtradas, no solo la página visible.
+    function updateKpis(summary) {
+        $("kpi-issued").textContent = String(summary.issued);
+        $("kpi-cancelled").textContent = String(summary.cancelled);
+        const hasAmounts = summary.issued > 0 && summary.issued_amount !== null;
+        $("kpi-total-amount").textContent = hasAmounts ? fmtMoney(summary.issued_amount) : "—";
+        $("kpi-average").textContent = hasAmounts ? fmtMoney(summary.average_amount) : "—";
+    }
 
-        $("kpi-issued").textContent = String(issued.length);
-        $("kpi-cancelled").textContent = String(cancelled.length);
-        const hasAmounts = issued.length > 0 && issued.every((n) => n.total_amount !== null && n.total_amount !== undefined);
-        $("kpi-total-amount").textContent = hasAmounts ? fmtMoney(totalAmount) : "—";
-        $("kpi-average").textContent = hasAmounts ? fmtMoney(avg) : "—";
+    function renderPager(data) {
+        const pages = Math.max(data.pages || 0, 1);
+        $("notes-page").textContent = data.count ? `Página ${data.page} de ${pages}` : "";
+        $("notes-prev").disabled = data.page <= 1;
+        $("notes-next").disabled = data.page >= pages;
     }
 
     // ------------------------------------------------------------------
@@ -224,14 +234,15 @@
             customer_name: $("f-customer").value,
             date_from: $("f-date-from").value,
             date_to: $("f-date-to").value,
+            customer_id: listState.customerId,
+            page: listState.page,
+            per_page: PER_PAGE,
         };
     }
 
-    function renderNotes(notes) {
+    function renderNotes(notes, total) {
         const tbody = $("notes-tbody");
-        updateKpis(notes);
-        $("notes-count").textContent =
-            notes.length === 1 ? "1 nota" : `${notes.length} notas`;
+        $("notes-count").textContent = total === 1 ? "1 nota" : `${total} notas`;
 
         if (!notes.length) {
             tbody.replaceChildren(stateRow("Sin notas para los filtros seleccionados.", TABLE_COLS));
@@ -299,7 +310,13 @@
 
         try {
             const data = await apiFetch("/api/delivery-notes", { params: getFilters() });
-            renderNotes(data.items || []);
+            if (data.page > 1 && !(data.items || []).length && data.pages < data.page) {
+                listState.page = Math.max(data.pages, 1);  // la página quedó vacía tras filtrar o cancelar
+                return loadNotes();
+            }
+            updateKpis(data.summary);
+            renderNotes(data.items || [], data.count);
+            renderPager(data);
         } catch (error) {
             console.error("Error al cargar notas:", error);
             tbody.replaceChildren(stateRow(errorMessage(error), TABLE_COLS));
@@ -418,6 +435,9 @@
 
     function resetCreateForm() {
         $("create-form-error").classList.add("d-none");
+        idempotencyKey = null;
+        setLinkedCustomer(null);
+        if ($("c-customer-search")) $("c-customer-search").value = "";
         $("c-customer-name").value = "";
         $("c-customer-document").value = "";
         $("c-customer-phone").value = "";
@@ -428,6 +448,108 @@
         createLines = [];
         renderCreateLines();
         setConfirmStep(false);
+    }
+
+    // ------------------------------------------------------------------
+    // Cliente del directorio
+    // ------------------------------------------------------------------
+    function newIdempotencyKey() {
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);  // disponible también fuera de HTTPS, a diferencia de randomUUID
+        return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function setLinkedCustomer(customer) {
+        linkedCustomer = customer;
+        ["c-customer-name", "c-customer-document", "c-customer-phone"].forEach((id) => { $(id).readOnly = Boolean(customer); });
+        if (customer) {
+            $("c-customer-name").value = customer.name || "";
+            $("c-customer-document").value = customer.tax_id || "";
+            $("c-customer-phone").value = customer.phone || "";
+        }
+        const chip = $("c-customer-linked");
+        if (!chip) return;
+        chip.classList.toggle("d-none", !customer);
+        $("c-customer-linked-name").textContent = customer ? customer.name : "";
+    }
+
+    function closeCustomerResults() {
+        const list = $("c-customer-results");
+        list.classList.add("d-none");
+        list.replaceChildren();
+        $("c-customer-search").setAttribute("aria-expanded", "false");
+        $("c-customer-search").removeAttribute("aria-activedescendant");
+    }
+
+    function chooseCustomer(customer) {
+        setLinkedCustomer(customer);
+        $("c-customer-search").value = "";
+        closeCustomerResults();
+        $("c-customer-address").focus();
+    }
+
+    let customerSearchTimer = null;
+    let customerSearchId = 0;
+
+    function customerOption(customer, index) {
+        const li = document.createElement("li");
+        li.id = `c-customer-option-${index}`;
+        li.setAttribute("role", "option");
+        li.setAttribute("aria-selected", "false");
+        const name = document.createElement("span");
+        name.textContent = customer.name;
+        const ref = document.createElement("small");
+        ref.textContent = customer.tax_id || customer.phone || "";
+        li.append(name, ref);
+        li.addEventListener("mousedown", (event) => { event.preventDefault(); chooseCustomer(customer); });
+        li.customer = customer;
+        return li;
+    }
+
+    async function searchCustomers() {
+        const term = $("c-customer-search").value.trim();
+        const current = ++customerSearchId;
+        if (term.length < 2) { closeCustomerResults(); return; }
+        try {
+            const data = await apiFetch("/api/customers", { params: { search: term, status: "active", per_page: 6 } });
+            if (current !== customerSearchId) return;
+            const list = $("c-customer-results");
+            const items = (data.items || []).filter((c) => c.is_active !== false);
+            if (items.length) {
+                list.replaceChildren(...items.map(customerOption));
+            } else {
+                const empty = document.createElement("li");
+                empty.textContent = "Sin coincidencias en el directorio.";
+                empty.setAttribute("aria-disabled", "true");
+                list.replaceChildren(empty);
+            }
+            list.classList.remove("d-none");
+            $("c-customer-search").setAttribute("aria-expanded", "true");
+        } catch (error) {
+            if (current === customerSearchId) closeCustomerResults();
+        }
+    }
+
+    function moveCustomerOption(step) {
+        const options = Array.from($("c-customer-results").querySelectorAll('[role="option"]'));
+        if (!options.length) return;
+        const current = options.findIndex((o) => o.getAttribute("aria-selected") === "true");
+        const next = (current + step + options.length) % options.length;
+        options.forEach((o, i) => o.setAttribute("aria-selected", i === next ? "true" : "false"));
+        $("c-customer-search").setAttribute("aria-activedescendant", options[next].id);
+        options[next].scrollIntoView({ block: "nearest" });
+    }
+
+    function onCustomerSearchKey(event) {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            moveCustomerOption(event.key === "ArrowDown" ? 1 : -1);
+        } else if (event.key === "Enter") {
+            const selected = $("c-customer-results").querySelector('[aria-selected="true"]');
+            if (selected) { event.preventDefault(); chooseCustomer(selected.customer); }
+        } else if (event.key === "Escape") {
+            closeCustomerResults();
+        }
     }
 
     // Paso 1 "Revisar nota" muestra el resumen; paso 2 "Confirmar emisión" crea la nota.
@@ -503,11 +625,14 @@
             return;
         }
 
+        idempotencyKey = idempotencyKey || newIdempotencyKey();
         const payload = {
+            idempotency_key: idempotencyKey,
             customer_name: customerName,
             customer_document: $("c-customer-document").value.trim(),
             customer_phone: $("c-customer-phone").value.trim(),
             customer_address: $("c-customer-address").value.trim(),
+            ...(linkedCustomer ? { customer_id: linkedCustomer.id } : {}),
             // El precio mostrado permite al servidor detectar cambios antes de emitir.
             items: createLines.map((l) => ({
                 product_id: l.product_id,
@@ -554,6 +679,8 @@
         $("detail-title").textContent = "Detalle de nota";
         $("detail-cancelled-alert").classList.add("d-none");
         $("d-cancelled-wrap").classList.add("d-none");
+        $("d-cancel-reason-wrap").classList.add("d-none");
+        setCancelStep(false);
         const btnCancel = $("btn-cancel-note");
         if (btnCancel) btnCancel.classList.add("d-none");
         const btnPdf = $("btn-download-pdf");
@@ -580,6 +707,10 @@
                 $("d-cancelled-wrap").classList.remove("d-none");
                 $("d-cancelled-by").textContent = note.cancelled_by || "—";
                 $("d-cancelled-at").textContent = fmtDateTime(note.cancelled_at);
+                if (note.cancellation_reason) {
+                    $("d-cancel-reason-text").textContent = note.cancellation_reason;
+                    $("d-cancel-reason-wrap").classList.remove("d-none");
+                }
             }
 
             const itemsBody = $("detail-items-tbody");
@@ -694,21 +825,40 @@
         }
     }
 
+    // Primer clic: pide el motivo. Segundo clic: cancela con ese motivo.
+    let cancelling = false;
+
+    function setCancelStep(on) {
+        cancelling = on;
+        const form = $("cancel-form");
+        if (!form) return;
+        form.classList.toggle("d-none", !on);
+        $("btn-cancel-note-label").textContent = on ? "Confirmar cancelación" : "Cancelar nota";
+        if (!on) $("d-cancel-reason").value = "";
+    }
+
     async function cancelNote() {
         if (!currentDetailId || currentDetailStatus !== "issued") return;
-
-        const ok = window.confirm(
-            "¿Cancelar esta nota de entrega?\n\n" +
-            "Al cancelar esta nota se devolverá el stock de sus productos."
-        );
-        if (!ok) return;
+        if (!cancelling) {
+            setCancelStep(true);
+            $("d-cancel-reason").focus();
+            return;
+        }
+        const reason = $("d-cancel-reason").value.trim();
+        if (reason.length < 5) {
+            $("detail-error").textContent = "Indique el motivo de la cancelación (al menos 5 caracteres).";
+            $("detail-error").classList.remove("d-none");
+            $("d-cancel-reason").focus();
+            return;
+        }
+        $("detail-error").classList.add("d-none");
 
         const btnCancel = $("btn-cancel-note");
         if (btnCancel) btnCancel.disabled = true;
         try {
             const data = await apiFetch(`/api/delivery-notes/${currentDetailId}/cancel`, {
                 method: "POST",
-                body: {},
+                body: { reason },
             });
             getModal("detail-modal").hide();
             showAlert("success", data.message || "Nota cancelada correctamente.");
@@ -728,17 +878,37 @@
     $("filters-form").addEventListener("submit", (e) => {
         e.preventDefault();
         hideAlert();
+        listState.page = 1;
         loadNotes();
     });
+
+    function clearCustomerFilter() {
+        listState.customerId = "";
+        $("f-customer-link").classList.add("d-none");
+        const url = new URL(window.location.href);
+        url.searchParams.delete("customer_id");
+        window.history.replaceState(null, "", url);
+    }
 
     $("btn-clear-filters").addEventListener("click", () => {
         $("f-status").value = "";
         $("f-customer").value = "";
         $("f-date-from").value = "";
         $("f-date-to").value = "";
+        clearCustomerFilter();
         hideAlert();
+        listState.page = 1;
         loadNotes();
     });
+
+    $("f-customer-link-clear").addEventListener("click", () => {
+        clearCustomerFilter();
+        listState.page = 1;
+        loadNotes();
+    });
+
+    $("notes-prev").addEventListener("click", () => { listState.page = Math.max(1, listState.page - 1); loadNotes(); });
+    $("notes-next").addEventListener("click", () => { listState.page += 1; loadNotes(); });
 
     if (CAN_CREATE) {
         $("btn-new-note").addEventListener("click", () => {
@@ -750,6 +920,18 @@
         $("btn-add-line").addEventListener("click", addLine);
         $("create-back-btn").addEventListener("click", () => setConfirmStep(false));
         $("create-form").addEventListener("submit", submitCreate);
+        if ($("c-customer-search")) {
+            $("c-customer-search").addEventListener("input", () => {
+                clearTimeout(customerSearchTimer);
+                customerSearchTimer = setTimeout(searchCustomers, 250);
+            });
+            $("c-customer-search").addEventListener("keydown", onCustomerSearchKey);
+            $("c-customer-search").addEventListener("blur", () => setTimeout(closeCustomerResults, 150));
+            $("c-customer-unlink").addEventListener("click", () => {
+                setLinkedCustomer(null);
+                $("c-customer-search").focus();
+            });
+        }
     }
 
     if (CAN_CANCEL) {
@@ -758,7 +940,20 @@
 
     $("btn-download-pdf").addEventListener("click", downloadPdf);
 
+    async function showCustomerFilter() {
+        if (!listState.customerId) return;
+        $("f-customer-link").classList.remove("d-none");
+        $("f-customer-link-name").textContent = `#${listState.customerId}`;
+        try {
+            const customer = await apiFetch(`/api/customers/${listState.customerId}`);
+            $("f-customer-link-name").textContent = customer.name;
+        } catch (error) {
+            // Sin permiso para el directorio: se conserva el número de cliente.
+        }
+    }
+
     async function init() {
+        showCustomerFilter();
         try {
             await loadProducts();
         } catch (error) {

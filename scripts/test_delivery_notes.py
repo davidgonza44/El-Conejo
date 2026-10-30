@@ -116,14 +116,14 @@ def main():
     check("13. stock insuficiente -> 409", 409, r.status_code)
 
     # 14-15 Cancelar y devolver stock
-    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={})
+    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"})
     check("14. inventario cancela -> 200", 200, r.status_code)
     r = admin.get(f"{BASE}/api/products/{prod_id}")
     stock_after_cancel = r.json()["current_stock"]
     check("15. cancelar devuelve stock", stock_before, stock_after_cancel)
 
     # 16 Cancelar dos veces
-    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={})
+    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"})
     check("16. cancelar dos veces -> 409", 409, r.status_code)
 
     # 17 Vendedor no puede cancelar
@@ -132,10 +132,10 @@ def main():
         "items": [{"product_id": prod_id, "quantity": 1}],
     })
     note2_id = r2.json()["delivery_note"]["id"]
-    r = vendedor.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={})
+    r = vendedor.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={"reason": "Cancelación de prueba"})
     check("17. vendedor cancelar -> 403", 403, r.status_code)
     # Limpiar nota 2 con inventario
-    inventario.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={})
+    inventario.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={"reason": "Cancelación de prueba"})
 
     # 18-24 No regresión
     r = admin.get(f"{BASE}/dashboard")

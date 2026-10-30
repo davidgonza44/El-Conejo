@@ -82,7 +82,7 @@ def main():
     r = requests.get(f"{BASE}/api/delivery-notes", allow_redirects=False)
     check("401 API sin sesión", 401, r.status_code)
 
-    r = inventario.post(f"{BASE}/api/delivery-notes/999999/cancel", json={})
+    r = inventario.post(f"{BASE}/api/delivery-notes/999999/cancel", json={"reason": "Cancelación de prueba"})
     check("404 cancel nota inexistente", 404, r.status_code)
 
     r = admin.post(f"{BASE}/api/delivery-notes", json={
@@ -103,13 +103,13 @@ def main():
     r = admin.get(f"{BASE}/api/products/{prod_id}")
     check("crear descuenta stock", stock_before - qty, r.json()["current_stock"])
 
-    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={})
+    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"})
     check("inventario cancela -> 200", 200, r.status_code)
 
     r = admin.get(f"{BASE}/api/products/{prod_id}")
     check("cancelar devuelve stock", stock_before, r.json()["current_stock"])
 
-    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={})
+    r = inventario.post(f"{BASE}/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"})
     check("cancelar dos veces -> 409", 409, r.status_code)
 
     r2 = vendedor.post(f"{BASE}/api/delivery-notes", json={
@@ -117,9 +117,9 @@ def main():
         "items": [{"product_id": prod_id, "quantity": 1}],
     })
     note2_id = r2.json()["delivery_note"]["id"]
-    r = vendedor.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={})
+    r = vendedor.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={"reason": "Cancelación de prueba"})
     check("vendedor cancelar -> 403", 403, r.status_code)
-    inventario.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={})
+    inventario.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={"reason": "Cancelación de prueba"})
 
     # --- Regresión ---
     print("\n=== REGRESIÓN ===")

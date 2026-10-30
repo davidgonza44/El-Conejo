@@ -84,7 +84,7 @@ class DeliveryNoteSecurity(IsolatedCase):
             })
             self.assertEqual(response.status_code, 201, response.json)
             self.ids.append(response.json["delivery_note"]["id"])
-        cancelled = self.clients["admin"].post(f"/api/delivery-notes/{self.ids[-1]}/cancel", json={})
+        cancelled = self.clients["admin"].post(f"/api/delivery-notes/{self.ids[-1]}/cancel", json={"reason": "Cancelación de prueba"})
         self.assertEqual(cancelled.status_code, 200)
         self.product.sale_price = CURRENT_PRICE  # Synthetic later catalog change, never historical data.
         db.session.commit()
@@ -388,7 +388,7 @@ class DeliveryNoteSecurity(IsolatedCase):
         self.assertEqual(response.json["delivery_note"]["items"][0]["unit_price"], float(CURRENT_PRICE))
         self.assert_cost_absent(response.get_data(as_text=True))
         note_id = response.json["delivery_note"]["id"]
-        cancelled = self.clients["admin"].post(f"/api/delivery-notes/{note_id}/cancel", json={})
+        cancelled = self.clients["admin"].post(f"/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"})
         self.assertEqual(cancelled.status_code, 200)
         self.assert_cost_absent(cancelled.get_data(as_text=True))
         before = self.snapshot()

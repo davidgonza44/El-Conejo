@@ -12,6 +12,7 @@ from flask import current_app
 from PIL import Image
 
 from app.services import company_logo_service, settings_service
+from app.services.inventory_service import COMMERCIAL_ZONE
 
 BLUE = (21, 112, 239)
 INK = (16, 24, 50)
@@ -59,7 +60,7 @@ def pdf_letterhead(pdf, brand: dict, *, subtitle: str = "Sistema de Inventario")
     pdf.cell(right - text_x - 60, 6, _text(brand["name"]))
     pdf.set_font("Helvetica", "", 8)
     pdf.set_text_color(*MUTED)
-    pdf.cell(60, 6, _text(f"Generado: {datetime.now():%d/%m/%Y %H:%M}"), align="R")
+    pdf.cell(60, 6, _text(f"Generado: {datetime.now(COMMERCIAL_ZONE):%d/%m/%Y %H:%M}"), align="R")
     pdf.set_xy(text_x, top + 7.5)
     pdf.set_font("Helvetica", "", 9)
     pdf.cell(right - text_x, 5, _text(f"RIF: {brand['tax_id']}" if brand["tax_id"] else subtitle))
@@ -91,7 +92,7 @@ def xlsx_letterhead(sheet, brand: dict, title: str, width: int) -> int:
     lines = [(brand["name"], Font(bold=True, size=14, color="101832")),
              (f"RIF: {brand['tax_id']}" if brand["tax_id"] else "Sistema de Inventario", Font(size=10, color="65718D")),
              (title, Font(bold=True, size=12, color="1570EF")),
-             (f"Generado: {datetime.now():%d/%m/%Y %H:%M}", Font(size=9, color="65718D"))]
+             (f"Generado: {datetime.now(COMMERCIAL_ZONE):%d/%m/%Y %H:%M}", Font(size=9, color="65718D"))]
     for row, (value, font) in enumerate(lines, 1):
         cell = sheet.cell(row, text_column, value)
         cell.font = font

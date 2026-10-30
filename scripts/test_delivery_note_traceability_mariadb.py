@@ -309,7 +309,7 @@ def concurrency_case(server):
 
         def cancel(client):
             barrier.wait(10)
-            return client.post(f"/api/delivery-notes/{note_id}/cancel", json={}).status_code
+            return client.post(f"/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"}).status_code
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             statuses = sorted(pool.map(cancel, workers))

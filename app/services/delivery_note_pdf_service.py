@@ -13,7 +13,7 @@ incluyen á é í ó ú ñ Ñ de forma legal, sin añadir archivos TTF al reposi
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
 from fpdf import FPDF
@@ -22,6 +22,7 @@ from fpdf.fonts import FontFace
 
 from app.models.delivery_note import STATUS_CANCELLED, STATUS_ISSUED, DeliveryNote
 from app.services import delivery_note_service, settings_service
+from app.services.inventory_service import COMMERCIAL_ZONE
 
 DOCUMENT_TITLE = "NOTA DE ENTREGA"
 INTERNAL_DISCLAIMER = (
@@ -76,7 +77,10 @@ def _format_datetime(value: datetime | str | None) -> str:
         return ""
     if isinstance(value, str):
         value = datetime.fromisoformat(value)
-    return value.strftime("%d/%m/%Y %H:%M")
+    # La base guarda UTC sin zona; el documento muestra la hora de Venezuela, como la pantalla.
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(COMMERCIAL_ZONE).strftime("%d/%m/%Y %H:%M")
 
 
 def safe_pdf_filename(note_number: str | None) -> str:

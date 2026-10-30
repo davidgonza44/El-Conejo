@@ -38,7 +38,7 @@ class DeliveryTraceabilityTests(IsolatedCase):
         return db.session.get(DeliveryNote, result.json["delivery_note"]["id"])
 
     def cancel(self, note_id):
-        return self.clients["admin"].post(f"/api/delivery-notes/{note_id}/cancel", json={})
+        return self.clients["admin"].post(f"/api/delivery-notes/{note_id}/cancel", json={"reason": "Cancelación de prueba"})
 
     def snapshot(self):
         db.session.expire_all()
@@ -102,7 +102,7 @@ class DeliveryTraceabilityTests(IsolatedCase):
                 login_user(self.users["admin"])
                 with patch.object(service, "StockMovement", side_effect=failing_movement):
                     with self.assertRaisesRegex(RuntimeError, "Synthetic"):
-                        service.cancel_note(note_id) if note_id else service.create_note(payload)
+                        service.cancel_note(note_id, "Cancelación de prueba") if note_id else service.create_note(payload)
             self.assertEqual(len(calls), 2)
             self.assertEqual(self.snapshot(), before)
             self.assertTrue(db.session.is_active)
@@ -127,7 +127,7 @@ class DeliveryTraceabilityTests(IsolatedCase):
                         context = patch.object(db.session, failure, side_effect=RuntimeError("Synthetic persistence failure"))
                     with context:
                         with self.assertRaises((RuntimeError, IntegrityError), msg=f"{failure} {operation}"):
-                            service.cancel_note(note_id) if note_id else service.create_note(payload)
+                            service.cancel_note(note_id, "Cancelación de prueba") if note_id else service.create_note(payload)
                 self.assertEqual(self.snapshot(), before, (failure, operation))
                 self.assertTrue(db.session.is_active)
                 db.session.execute(select(Product.id)).all()

@@ -104,3 +104,72 @@
     color: var(--cj-warn-ink);
     font-size: 13px;
 }
+
+/* Buscador de clientes del directorio dentro de "Nueva nota". */
+.dn-customer-picker {
+    position: relative;
+}
+
+.dn-customer-results {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    margin: 4px 0 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--cj-surface, #fff);
+    border: 1px solid var(--cj-rule-strong, #cdd1ca);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(25, 28, 26, .14);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.dn-customer-results li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.dn-customer-results li[aria-selected="true"],
+.dn-customer-results li:hover {
+    background: var(--cj-accent-soft);
+}
+
+.dn-customer-results small {
+    color: var(--cj-muted);
+    font-family: var(--cj-mono, monospace);
+}
+
+.dn-customer-chip {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--cj-rule, #e2e4df);
+    border-radius: 8px;
+    background: var(--cj-tint, #f7f8f5);
+    font-size: 13px;
+}
+
+/* Motivo obligatorio antes de cancelar una nota. */
+.dn-cancel-form {
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--cj-danger-soft, #fdeceb);
+    border-radius: 12px;
+    background: var(--cj-danger-soft, #fdeceb);
+}
+
+/* Datos copiados del directorio: de solo lectura mientras el cliente esté enlazado. */
+#create-modal input[readonly] {
+    background: var(--cj-tint, #f7f8f5);
+    color: var(--cj-ink-2, #3a403c);
+}

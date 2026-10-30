@@ -214,7 +214,7 @@ def delivery_notes(domain, plan, products, customers, actors):
         note_movements(domain, [products[index].id for index, _ in note["items"]], when)
         if note["cancel"]:
             use_actor(actors[1])
-            domain.delivery_note_service.cancel_note(row.id)
+            domain.delivery_note_service.cancel_note(row.id, "Cancelación registrada en la semilla")
             cancelled_at = when + timedelta(minutes=30)
             row.cancelled_at = cancelled_at
             for line in row.items:

@@ -19,7 +19,8 @@
 
 {% if not fixture %}
 {# ---------------- Modo normal: directorio real ---------------- #}
-<div class="sa-toolbar" data-can-write="{{ '1' if can_write_customers else '0' }}">
+{% set can_notes = has_permission('delivery_notes:read') %}
+<div class="sa-toolbar" data-can-write="{{ '1' if can_write_customers else '0' }}" data-can-notes="{{ '1' if can_notes else '0' }}">
     <label class="px-search sa-toolbar-search">
         <i class="ti ti-search" aria-hidden="true"></i>
         <input type="search" id="cu-search" placeholder="Buscar por nombre, RIF, teléfono o correo..." aria-label="Buscar clientes">
@@ -33,9 +34,9 @@
 <section class="ix-card sa-table-card" aria-label="Clientes registrados">
     <div class="px-table-wrap sa-table-wrap">
         <table class="px-table sa-table sa-list-table sa-customers-table">
-            <colgroup><col style="width: 237px"><col style="width: 139px"><col style="width: 150px"><col style="width: 257px"><col></colgroup>
+            <colgroup><col style="width: 237px"><col style="width: 139px"><col style="width: 150px"><col style="width: 257px"><col>{% if can_notes %}<col style="width: 110px">{% endif %}</colgroup>
             <thead>
-                <tr>{% for c in ["Nombre / Razón Social", "RIF", "Teléfono", "Correo", "Estado"] %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+                <tr>{% for c in ["Nombre / Razón Social", "RIF", "Teléfono", "Correo", "Estado"] + (["Notas"] if can_notes else []) %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
             </thead>
             <tbody id="cu-body" aria-busy="true"></tbody>
         </table>
