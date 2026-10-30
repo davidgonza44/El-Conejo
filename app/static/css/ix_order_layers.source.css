@@ -1,0 +1,55 @@
+@import "tailwindcss/utilities" source(none);
+@theme prefix(oltw) { --spacing: 0.25rem; }
+@source "../../templates/sales/_order_layers.html";
+/* Every selector belongs to the four reference-only layers. */
+.ol-layer,.ol-layer *{box-sizing:border-box}
+.ol-layer{color:#202b3d;background:white;border:1px solid #e7e9ee;border-radius:8px;font:12px/1.45 Inter,Arial,sans-serif;box-shadow:0 8px 24px #24324718;padding:0}
+.ol-layer[hidden],.ol-layer:not([open]).ol-drawer,.ol-layer:not([open]).ol-more{display:none}
+.ol-layer button,.ol-layer input,.ol-layer select,.ol-layer textarea{font:inherit;color:inherit}
+.ol-layer button{cursor:pointer}.ol-layer button:disabled{opacity:.45;cursor:default}
+.ol-layer :focus-visible{outline:2px solid #2676ec;outline-offset:2px}
+.ol-layer svg{width:16px;height:16px;flex-shrink:0}
+.ol-layer::backdrop{background:rgba(32,40,52,.47)}
+.ol-header{position:relative;padding:14px 20px;border-bottom:1px solid #edf0f3}
+.ol-header h2{font-size:22px;font-weight:700;line-height:28px;letter-spacing:-.4px;margin:0}
+.ol-header p{margin:2px 0 0;color:#7b8290;font-size:12px}
+.ol-close{position:absolute;right:18px;top:18px;background:none;border:0;padding:4px;color:#7b8290!important;display:flex}
+.ol-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:543px;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border-width:0 0 0 1px}
+.ol-drawer[open]{display:flex;flex-direction:column}
+.ol-order-body{padding:14px 20px 12px;overflow:auto;flex:1;min-height:0}
+.ol-layer h3{font-size:14px;font-weight:700;margin:0 0 7px}
+.ol-grid{@apply oltw:grid oltw:grid-cols-2;gap:10px 20px}
+.ol-wide{grid-column:1/-1}
+.ol-layer label{display:block;font-weight:500;min-width:0}
+.ol-layer em{color:#e75555;font-style:normal;margin-left:3px}
+.ol-layer input,.ol-layer select,.ol-layer textarea{display:block;width:100%;height:34px;border:1px solid #e4e7ec;border-radius:6px;background:#fff;margin-top:6px;padding:6px 11px;min-width:0;font-size:11px}
+.ol-layer textarea{height:57px;resize:vertical}.ol-layer input::placeholder{color:#88919e}
+.ol-layer .ol-date-input{padding-left:39px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23818b9b' stroke-width='2'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 11h18M8 15h2'/%3E%3C/svg%3E");background-position:12px center;background-repeat:no-repeat}
+#ol-order-status{padding-left:31px;background-image:radial-gradient(circle,#f3a329 0 4px,transparent 4.5px);background-size:16px 16px;background-repeat:no-repeat;background-position:11px center}
+.ol-layer select{appearance:none;padding-right:25px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23818b9b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+#ol-customer,#ol-filter-client,#ol-filter-product,#ol-filter-seller{padding-left:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23818b9b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23818b9b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-position:11px center,right 10px center}
+.ol-products{border-top:1px solid #eceef2;margin-top:17px;padding-top:14px}
+.ol-section-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.ol-section-heading h3{margin:0}
+.ol-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;min-height:36px;padding:8px 20px;border:1px solid #e6e8ec;border-radius:6px;background:white;font-weight:600!important;font-size:11px!important}
+.ol-primary{color:white!important;background:#2473ee;border-color:#2473ee}
+.ol-soft{background:#eef5ff;color:#2873d9!important;border-color:#cbdcf5;min-height:28px;padding:5px 10px;font-size:10px!important}
+.ol-product-table{border:1px solid #e7e9ee;border-radius:8px;overflow:auto}
+.ol-product-table table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.ol-product-table th{font-size:9px;font-weight:600;color:#667085;background:#f8f9fb;height:34px;text-align:left;padding:8px 5px}
+.ol-product-table th:first-child{width:36%;padding-left:11px}.ol-product-table th:nth-child(2){width:18%}.ol-product-table th:nth-child(3){width:27%;text-align:center}.ol-product-table th:nth-child(4){width:14%}.ol-product-table th:last-child{width:5%}
+.ol-product-table td{padding:7px 5px;border-top:1px solid #eef0f4;height:51px}.ol-product-table td:first-child{padding-left:10px}
+.ol-product{display:flex;align-items:center;gap:9px;font-size:10px;font-weight:600}.ol-product img{width:32px;height:36px;object-fit:contain}.ol-product small{display:block;font-size:9px;font-weight:400;color:#7a8494;margin-top:3px}
+.ol-qty{display:flex;align-items:center;justify-content:center;gap:3px}.ol-qty button{width:26px;height:28px;border:1px solid #e5e8ed;border-radius:5px;background:white;color:#768294}.ol-qty input{width:44px;height:28px;padding:3px;text-align:center;margin:0;appearance:textfield}.ol-qty input::-webkit-inner-spin-button{appearance:none}
+.ol-delete{border:0;background:none;color:#e25860!important;padding:0;display:flex}.ol-delete svg{width:14px;height:14px}
+.ol-summary{background:#f8f9fb;border:1px solid #e7e9ee;border-radius:8px;padding:12px 14px;margin-top:12px}.ol-summary h4{font-size:11px;font-weight:600;margin:0 0 7px}.ol-summary dl{margin:0}.ol-summary dl>div{display:flex;justify-content:space-between;margin-top:3px}.ol-summary dt{color:#818998;font-weight:400;font-size:11px}.ol-summary dd{margin:0;font-size:11px}.ol-summary .ol-total{border-top:1px solid #e6e9ef;margin-top:8px;padding-top:8px}.ol-total dt,.ol-total dd{font-size:15px;font-weight:700;color:#202b3d}
+.ol-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid #eceef2;flex-shrink:0}.ol-drawer>.ol-footer{padding:16px 20px}.ol-drawer>.ol-footer .ol-button{height:41px;min-width:122px}
+.ol-more{position:fixed;inset:0;width:600px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);margin:auto;padding:19px;overflow:auto}
+.ol-more-header{display:flex;gap:14px;align-items:center;padding:0;margin-bottom:24px;border:0}.ol-more-header h2{font-size:17px;line-height:24px}.ol-more-header .ol-close{right:0;top:0}.ol-heading-icon{width:43px;height:43px;background:#eaf2ff;color:#2877ed;border-radius:7px;display:grid;place-items:center}.ol-heading-icon svg{width:23px;height:23px}
+.ol-more .ol-grid{gap:20px}.ol-more input,.ol-more select{height:36px}.ol-layer fieldset{border:0;padding:0;margin:0;min-width:0}.ol-layer legend{font-size:12px;font-weight:500;margin:0;float:none;width:auto}.ol-pair{display:flex;gap:10px;align-items:center}.ol-pair input{width:0;flex:1;padding:6px 8px}.ol-pair span{color:#8b94a3}
+.ol-more .ol-footer{border:0;padding:30px 0 0}.ol-reset{margin-right:auto;border:0;color:#2675dc!important;padding-left:0;padding-right:0}
+.ol-dates,.ol-status{position:fixed;z-index:1050}.ol-dates{width:752px;max-width:calc(100vw - 24px)}.ol-date-body{display:flex;padding:18px 12px 16px}.ol-quick{width:166px;flex-shrink:0;padding-right:10px;border-right:1px solid #e9ecf1}.ol-quick button{display:block;width:100%;text-align:left;border:0;background:white;padding:9px 11px;border-radius:6px;margin-bottom:1px;font-size:13px}.ol-quick button.is-active{background:#eaf3ff;color:#2676df}
+.ol-calendars{display:grid;grid-template-columns:1fr 1fr;flex:1}.ol-month{padding:0 16px}.ol-month+.ol-month{border-left:1px solid #edf0f4}.ol-month header{height:36px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.ol-month h3{font-size:14px;margin:0;text-transform:capitalize}.ol-month header button{border:0;background:white;font-size:20px;width:24px}.ol-week,.ol-days{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}.ol-week span{color:#737d8e;font-size:12px;padding:7px 0}.ol-days button{border:0;background:white;height:36px;padding:0;font-size:12px;border-radius:0}.ol-days button.is-other{color:#b5bbc4}.ol-days button.is-range{background:#edf5ff;color:#2873dd}.ol-days button.is-end{background:#2473ee;color:white;border-radius:7px}.ol-dates .ol-footer{margin:0 16px;padding:14px 0;gap:7px}.ol-dates .ol-button{min-width:105px}#ol-range{margin-right:auto;font-size:12px}
+.ol-status{width:252px;padding:8px}.ol-status button{border:0;background:white;border-radius:6px;width:100%;display:flex;align-items:center;gap:14px;padding:8px 13px;font-size:12px;text-align:left}.ol-status button[aria-selected=true]{background:#eff6ff;color:#246fda;font-weight:600}.ol-dot{width:10px;height:10px;border-radius:50%;background:var(--dot);box-shadow:0 0 0 7px color-mix(in srgb,var(--dot) 10%,white);margin:0 2px}.ol-check{margin-left:auto;color:#2473ee;font-size:17px}
+.ol-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.ol-notice{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#effaf3;border:1px solid #b7dec5;color:#24613d;border-radius:8px;padding:14px 22px;z-index:1100;font-size:13px}
+#ol-add-controls:not([hidden]){display:flex;gap:8px;align-items:end;margin-bottom:12px}#ol-add-controls label{flex:1}#ol-order-error:empty,#ol-filter-error:empty{display:none}#ol-order-error,#ol-filter-error{color:#bd3737;font-size:12px;margin:8px 0 0}
+@media(max-width:650px){.ol-grid{grid-template-columns:1fr}.ol-wide{grid-column:auto}.ol-more .ol-footer{flex-wrap:wrap}.ol-more .ol-reset{margin-right:15px}.ol-date-body{display:block;padding:10px}.ol-quick{width:auto;border-right:0;display:flex;flex-wrap:wrap;padding:0}.ol-quick button{width:auto;font-size:11px}.ol-calendars{grid-template-columns:1fr}.ol-month{padding:0 8px}.ol-month+.ol-month{border:0}.ol-days button{height:27px}.ol-month header{height:28px;margin:0}.ol-week span{padding:3px}.ol-dates{max-height:calc(100dvh - 24px);overflow:auto}.ol-dates .ol-footer{flex-wrap:wrap}#ol-range{width:100%}.ol-dates .ol-button{min-width:85px}.ol-product-table{overflow:auto}.ol-product-table table{min-width:480px}}

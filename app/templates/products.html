@@ -1,0 +1,198 @@
+{% extends "base_app.html" %}
+{% set active_page = "products" %}
+
+{% block title %}Productos — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/products.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="page-header mb-3">
+    <div class="row align-items-center">
+        <div class="col">
+            <h1 class="page-title mb-1">
+                <i class="ti ti-box me-2 text-primary"></i>Productos
+            </h1>
+            <div class="text-secondary" id="products-count">Cargando…</div>
+        </div>
+        {% if can_write %}
+        <div class="col-auto">
+            <button type="button" class="btn btn-primary" id="btn-new-product">
+                <i class="ti ti-plus me-1"></i>Nuevo producto
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Mensajes globales -->
+<div id="page-alert" class="alert d-none" role="alert"></div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form id="filters-form" class="row g-2 align-items-end" autocomplete="off">
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1" for="f-search">Buscar</label>
+                <div class="input-icon">
+                    <span class="input-icon-addon"><i class="ti ti-search"></i></span>
+                    <input type="text" id="f-search" class="form-control form-control-sm"
+                           placeholder="Nombre o código del producto">
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label mb-1" for="f-category">Categoría</label>
+                <select id="f-category" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-status">Estado</label>
+                <select id="f-status" class="form-select form-select-sm">
+                    <option value="active" selected>Activos</option>
+                    <option value="inactive">Inactivos</option>
+                    <option value="all">Todos</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-1">
+                <label class="form-check form-switch mb-1 mt-3">
+                    <input class="form-check-input" type="checkbox" id="f-low-stock">
+                    <span class="form-check-label small">Bajo stock</span>
+                </label>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="ti ti-filter me-1"></i>Aplicar
+                </button>
+                <button type="button" id="btn-clear-filters" class="btn btn-outline-secondary btn-sm flex-fill">
+                    Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de productos -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-vcenter table-striped card-table">
+            <thead>
+                <tr>
+                    <th class="w-1" aria-label="Imagen"></th>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th class="text-end">Stock actual</th>
+                    <th class="text-end">Stock mínimo</th>
+                    <th class="text-end">Precio venta</th>
+                    <th>Estado</th>
+                    <th class="w-1">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="products-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_write %}
+<!-- Modal crear/editar producto (solo roles con permiso de escritura) -->
+<div class="modal" id="product-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="product-modal-title">Nuevo producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="product-form" autocomplete="off" novalidate>
+                <div class="modal-body">
+                    <div id="product-form-error" class="alert alert-danger d-none" role="alert"></div>
+                    <input type="hidden" id="p-id">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label required" for="p-code">Código</label>
+                            <input type="text" id="p-code" class="form-control" placeholder="Ej: HER-002" maxlength="50">
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <label class="form-label required" for="p-name">Nombre</label>
+                            <input type="text" id="p-name" class="form-control" placeholder="Nombre del producto" maxlength="150">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required" for="p-category">Categoría</label>
+                            <select id="p-category" class="form-select">
+                                <option value="">Seleccione…</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" for="p-unit">Unidad</label>
+                            <input type="text" id="p-unit" class="form-control" value="unidad" maxlength="30">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" for="p-minimum-stock">Stock mínimo</label>
+                            <input type="number" id="p-minimum-stock" class="form-control" min="0" step="1" value="0">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label" for="p-purchase-price">Precio compra</label>
+                            <input type="number" id="p-purchase-price" class="form-control" min="0" step="0.01" value="0">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label" for="p-sale-price">Precio venta</label>
+                            <input type="number" id="p-sale-price" class="form-control" min="0" step="0.01" value="0">
+                        </div>
+                        <div class="col-12 col-md-4" id="p-stock-group">
+                            <label class="form-label" for="p-current-stock">Stock inicial</label>
+                            <input type="number" id="p-current-stock" class="form-control" min="0" step="1" value="0">
+                            <small class="form-hint">
+                                Solo se define al crear. Luego se mueve por inventario.
+                            </small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="p-description">Descripción</label>
+                            <textarea id="p-description" class="form-control" rows="2"
+                                      placeholder="Descripción opcional"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="p-image">Imagen (opcional)</label>
+                            <div class="d-flex align-items-start gap-3">
+                                <span class="product-thumb product-thumb-lg" id="p-image-preview">
+                                    <i class="ti ti-photo"></i>
+                                </span>
+                                <div class="flex-fill">
+                                    <input type="file" id="p-image" class="form-control"
+                                           accept=".jpg,.jpeg,.png,.webp">
+                                    <small class="form-hint">JPG, JPEG, PNG o WEBP. Máximo 2 MB.</small>
+                                    <button type="button" id="p-image-remove"
+                                            class="btn btn-sm btn-outline-danger mt-2 d-none">
+                                        <i class="ti ti-trash me-1"></i>Quitar imagen actual
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="p-is-active" checked>
+                                <span class="form-check-label">Producto activo</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="product-save-btn">
+                        <i class="ti ti-device-floppy me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>window.CAN_WRITE = {{ can_write | tojson }};</script>
+<script src="{{ url_for('static', filename='js/products.js') }}"></script>
+{% endblock %}

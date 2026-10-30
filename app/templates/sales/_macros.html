@@ -1,0 +1,112 @@
+{# Macros del módulo Ventas (ix_sales.css). Los datos llegan desde
+   app/utils/sales_reference.py (modo referencia) y las macros solo dibujan. #}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+
+{# ---- Cabecera: título/subtítulo (+ insignia) y búsqueda/campana. El contenido de
+   {% call %} se coloca bajo la búsqueda, alineado a la derecha (botones de acción). ---- #}
+{% macro header(title, subtitle, placeholder, reference_mode=True, badge=None, search=True, extra_class="", search_chevron=False) %}
+<header class="ix-header sa-header{{ ' ' ~ extra_class if extra_class }}">
+    <div class="sa-heading">
+        <h1 class="ix-title">{{ title }}{% if badge %} <span class="px-badge sa-title-badge is-{{ badge[1] }}">{{ badge[0] }}</span>{% endif %}</h1>
+        <p class="ix-subtitle">{{ subtitle }}</p>
+    </div>
+    <div class="sa-header-side">
+        <div class="ix-header-actions">
+            <button type="button" class="ix-menu-toggle" id="ix-menu-toggle"
+                    aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">
+                <i class="ti ti-menu-2" aria-hidden="true"></i>
+            </button>
+            {{ iv.shell_chrome(reference_mode, placeholder, search=search, search_class="sa-search", chevron=search_chevron) }}
+        </div>
+        {% if reference_mode and caller is defined %}
+        <div class="px-actions sa-header-actions">{{ caller() }}</div>
+        {% endif %}
+    </div>
+</header>
+{% endmacro %}
+
+{% macro btn(label, icon=None, primary=False, extra_class="", chevron=False) -%}
+<button type="button" class="px-btn sa-btn{{ ' is-primary' if primary }}{{ ' ' ~ extra_class if extra_class }}"{% if chevron %} aria-haspopup="menu" aria-expanded="false"{% endif %}>{% if icon %}<i class="ti {{ icon }}" aria-hidden="true"></i>{% endif %}{{ label }}{% if chevron %}<i class="ti ti-chevron-down sa-btn-chevron" aria-hidden="true"></i>{% endif %}</button>
+{%- endmacro %}
+
+{# Botón cuadrado solo icono (filtro/ajustes junto a la búsqueda, desplegable junto a Guardar). #}
+{% macro icon_btn(icon, label, primary=False) -%}
+<button type="button" class="px-btn sa-btn sa-icon-btn{{ ' is-primary' if primary }}" aria-label="{{ label }}"><i class="ti {{ icon }}" aria-hidden="true"></i></button>
+{%- endmacro %}
+
+{# ---- Barra de fechas: rango + periodo de comparación (Dashboard, Reportes) ---- #}
+{% macro date_bar(range, compare) %}
+<div class="sa-dates">
+    <button type="button" class="sa-date" aria-haspopup="dialog" aria-expanded="false">
+        <i class="ti ti-calendar" aria-hidden="true"></i>{{ range }}<i class="ti ti-chevron-down sa-date-chevron" aria-hidden="true"></i>
+    </button>
+    <span class="sa-compare"><i class="ti ti-arrows-diff" aria-hidden="true"></i>{{ compare }}</span>
+</div>
+{% endmacro %}
+
+{# ---- Barra de herramientas: búsqueda ancha + botón de filtros + acción primaria ---- #}
+{% macro toolbar(search, primary, filter_icon="ti-adjustments-horizontal", dropdown=False) %}
+<div class="sa-toolbar">
+    <label class="px-search sa-toolbar-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="search" placeholder="{{ search }}" aria-label="{{ search }}">
+    </label>
+    <div class="px-actions sa-toolbar-actions">
+        {% if filter_icon %}{{ icon_btn(filter_icon, "Filtros") }}{% endif %}
+        {{ btn(primary[0], primary[1], True) }}
+        {% if dropdown %}{{ icon_btn("ti-chevron-down", "Más opciones", True) }}{% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{# ---- Filtros tipo "chip" con desplegable: lista de (icono, etiqueta) ---- #}
+{% macro filters(items) %}
+<div class="sa-filters" role="group" aria-label="Filtros">
+    {% for ico, label in items %}
+    <button type="button" class="sa-chip" aria-haspopup="listbox" aria-expanded="false">
+        <i class="ti {{ ico }}" aria-hidden="true"></i>{{ label }}<i class="ti ti-chevron-down sa-chip-chevron" aria-hidden="true"></i>
+    </button>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro badge(pair, extra_class="") -%}
+<span class="px-badge sa-badge is-{{ pair[1] }}{{ ' ' ~ extra_class if extra_class }}">{{ pair[0] }}</span>
+{%- endmacro %}
+
+{# ---- Pie de tabla: resumen a la izquierda, páginas a la derecha ---- #}
+{% macro pagination(pg) %}
+<footer class="sa-pagination">
+    <span class="sa-pagination-summary">{{ pg.summary }}</span>
+    <nav class="px-pages sa-pages" aria-label="Paginación">
+        <button type="button" class="px-pg" aria-label="Página anterior"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+        {% for item in pg.pages %}
+        {% if item.gap %}<span class="px-pg is-gap" aria-hidden="true">...</span>
+        {% else %}<button type="button" class="px-pg{{ ' is-active' if item.active }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.text }}</button>{% endif %}
+        {% endfor %}
+        <button type="button" class="px-pg" aria-label="Página siguiente"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+    </nav>
+</footer>
+{% endmacro %}
+
+{# Miniatura + nombre (+ código debajo) #}
+{% macro product(p, code=None) %}
+<div class="px-product sa-product">
+    <span class="ix-thumb px-thumb sa-thumb">{{ iv.thumb_img(p) }}</span>
+    <span class="px-product-text">
+        <span class="px-product-name" title="{{ p.name }}">{{ p.name }}</span>
+        {% if code %}<span class="px-product-sku">{{ code }}</span>{% endif %}
+    </span>
+</div>
+{% endmacro %}
+
+{# ---- Modo normal: el módulo aún no tiene datos propios en la aplicación ---- #}
+{% macro unavailable(title) %}
+<section class="ix-card px-unavailable sa-unavailable" aria-live="polite">
+    <i class="ti ti-database-search" aria-hidden="true"></i>
+    <h2 class="px-card-title">{{ title }} no disponible</h2>
+    <p>El módulo de ventas todavía no cuenta con datos propios en la aplicación. Las salidas
+       de mercancía reales se registran en <a href="{{ url_for('pages.delivery_notes') }}">Notas de entrega</a>.</p>
+</section>
+{% endmacro %}

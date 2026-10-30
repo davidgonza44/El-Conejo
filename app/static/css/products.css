@@ -1,0 +1,69 @@
+/* Estilos compartidos de las páginas de Productos y Categorías.
+   Complementa dashboard.css (paleta: azul oscuro, gris, blanco, dorado suave). */
+
+/* Estados de carga / vacío dentro de las tablas. */
+.table-state-row td {
+    max-width: none;
+    white-space: normal;
+    text-align: center;
+    padding: 2.2rem 1rem;
+    color: var(--tblr-secondary, #6c757d);
+}
+
+/* Nombre de producto con descripción secundaria debajo. */
+.cell-title {
+    font-weight: 600;
+    color: var(--dash-dark-blue, #1d3d5f);
+}
+
+.cell-sub {
+    font-size: 0.78rem;
+    color: var(--tblr-secondary, #6c757d);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Fila de producto inactivo: atenuada pero legible. */
+.row-inactive td {
+    opacity: 0.62;
+}
+
+/* Números alineados y tabulares para stock y precios. */
+.cell-num {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Acento dorado suave para el badge de bajo stock. */
+.badge-low-stock {
+    background-color: rgba(217, 165, 33, 0.15);
+    color: #8a6d1a;
+}
+
+/* Miniatura de producto (tabla y modal). */
+.product-thumb {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.4rem;
+    background-color: #eef1f5;
+    color: #8a97a6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-thumb-lg {
+    width: 5.5rem;
+    height: 5.5rem;
+    font-size: 1.6rem;
+    border: 1px dashed #c6ced6;
+}

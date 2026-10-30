@@ -1,0 +1,8 @@
+{{ app_name }}
+
+{{ notification.title }}
+
+{{ notification.message }}
+
+Generado el {{ notification.created_at.strftime('%d/%m/%Y %H:%M') }} (UTC).
+Puede ajustar qué eventos recibe en Configuración > Notificaciones.

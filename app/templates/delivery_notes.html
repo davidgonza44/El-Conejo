@@ -1,0 +1,306 @@
+{% extends "ix_base.html" %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "delivery_notes" %}
+{% set sidebar_variant = "sales" %}
+
+{% block title %}Notas de entrega — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_inventory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/delivery_notes.css') }}">
+{% endblock %}
+
+{% block main %}
+<!-- Encabezado -->
+<header class="ix-header iv-header has-actions">
+    <div class="iv-heading">
+        <h1 class="ix-title">Notas de entrega</h1>
+        <p class="ix-subtitle">Emisión y consulta de notas de entrega (no fiscal)</p>
+    </div>
+    <div class="iv-header-side">
+        <div class="ix-header-actions">
+            <button type="button" class="ix-menu-toggle" id="ix-menu-toggle"
+                    aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">
+                <i class="ti ti-menu-2" aria-hidden="true"></i>
+            </button>
+            {{ iv.shell_chrome(reference_mode, "Buscar productos, clientes, ventas...") }}
+        </div>
+        {% if can_create %}
+        <div class="px-actions iv-actions">
+            <button type="button" class="btn btn-primary" id="btn-new-note">
+                <i class="ti ti-plus me-1"></i>Nueva nota de entrega
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</header>
+
+<div id="page-alert" class="alert d-none" role="alert"></div>
+
+<!-- KPIs -->
+<div class="row row-deck row-cards mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-blue-lt text-blue"><i class="ti ti-receipt"></i></div>
+                <div class="kpi-value" id="kpi-issued">—</div>
+                <div class="kpi-label">Notas emitidas</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-red-lt text-red"><i class="ti ti-file-x"></i></div>
+                <div class="kpi-value" id="kpi-cancelled">—</div>
+                <div class="kpi-label">Notas canceladas</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card kpi-card kpi-gold">
+            <div class="card-body">
+                <div class="kpi-icon bg-green-lt text-green"><i class="ti ti-currency-dollar"></i></div>
+                <div class="kpi-value" id="kpi-total-amount">—</div>
+                <div class="kpi-label">Monto total emitido</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-purple-lt text-purple"><i class="ti ti-chart-bar"></i></div>
+                <div class="kpi-value" id="kpi-average">—</div>
+                <div class="kpi-label">Promedio por nota</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form id="filters-form" class="row g-2 align-items-end" autocomplete="off">
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-status">Estado</label>
+                <select id="f-status" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    <option value="issued">Emitida</option>
+                    <option value="cancelled">Cancelada</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label mb-1" for="f-customer">Cliente</label>
+                <input type="text" id="f-customer" class="form-control form-control-sm"
+                       placeholder="Nombre del cliente">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-date-from">Desde</label>
+                <input type="date" id="f-date-from" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-date-to">Hasta</label>
+                <input type="date" id="f-date-to" class="form-control form-control-sm">
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="ti ti-filter me-1"></i>Aplicar
+                </button>
+                <button type="button" id="btn-clear-filters" class="btn btn-outline-secondary btn-sm flex-fill">
+                    Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Listado de notas</h3>
+        <div class="card-actions">
+            <span class="text-secondary small" id="notes-count">Cargando…</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter table-striped card-table">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th class="text-end">Total</th>
+                    <th>Estado</th>
+                    <th>Creado por</th>
+                    <th class="w-1">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="notes-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_create %}
+<!-- Modal: crear nota -->
+<div class="modal" id="create-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-file-plus me-2"></i>Nueva nota de entrega</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="create-form" autocomplete="off" novalidate>
+                <div class="modal-body">
+                    <div id="create-form-error" class="alert alert-danger d-none" role="alert"></div>
+
+                    <h4 class="mb-3">Datos del cliente</h4>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required" for="c-customer-name">Nombre del cliente</label>
+                            <input type="text" id="c-customer-name" class="form-control" maxlength="150">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="c-customer-document">Documento</label>
+                            <input type="text" id="c-customer-document" class="form-control" maxlength="30">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="c-customer-phone">Teléfono</label>
+                            <input type="text" id="c-customer-phone" class="form-control" maxlength="30">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="c-customer-address">Dirección</label>
+                            <input type="text" id="c-customer-address" class="form-control" maxlength="255">
+                        </div>
+                    </div>
+
+                    <h4 class="mb-3">Productos</h4>
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label mb-1" for="c-product">Producto</label>
+                            <select id="c-product" class="form-select form-select-sm">
+                                <option value="">Seleccione…</option>
+                            </select>
+                            <small class="form-hint" id="c-product-hint"></small>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label mb-1" for="c-quantity">Cantidad</label>
+                            <input type="number" id="c-quantity" class="form-control form-control-sm" min="1" step="1" value="1">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-add-line">
+                                <i class="ti ti-plus me-1"></i>Agregar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-vcenter">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th class="text-end">Precio unit.</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="w-1"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="create-lines-tbody"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Total general</td>
+                                    <td class="text-end fw-bold cell-num" id="create-total">0,00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="create-save-btn">
+                        <i class="ti ti-device-floppy me-1"></i>Emitir nota
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal: detalle -->
+<div class="modal" id="detail-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detail-title">Detalle de nota</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detail-cancelled-alert" class="alert alert-warning d-none" role="alert">
+                    Esta nota fue cancelada. El stock de sus productos fue devuelto al inventario.
+                </div>
+                <div id="detail-error" class="alert alert-danger d-none" role="alert"></div>
+                <div id="detail-loading" class="text-center py-4 text-secondary">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Cargando detalle…
+                </div>
+                <div id="detail-content" class="d-none">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><span class="text-secondary">Estado:</span> <span id="d-status"></span></div>
+                        <div class="col-6"><span class="text-secondary">Fecha:</span> <span id="d-created-at"></span></div>
+                        <div class="col-12"><span class="text-secondary">Cliente:</span> <span id="d-customer-name" class="fw-bold"></span></div>
+                        <div class="col-6"><span class="text-secondary">Documento:</span> <span id="d-customer-document"></span></div>
+                        <div class="col-6"><span class="text-secondary">Teléfono:</span> <span id="d-customer-phone"></span></div>
+                        <div class="col-12"><span class="text-secondary">Dirección:</span> <span id="d-customer-address"></span></div>
+                        <div class="col-6"><span class="text-secondary">Creado por:</span> <span id="d-created-by"></span></div>
+                        <div class="col-6 d-none" id="d-cancelled-wrap">
+                            <span class="text-secondary">Cancelado por:</span> <span id="d-cancelled-by"></span>
+                            <span class="text-secondary ms-2">(<span id="d-cancelled-at"></span>)</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-vcenter">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Precio unit.</th>
+                                    <th class="text-end">Total línea</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detail-items-tbody"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Total general</td>
+                                    <td class="text-end fw-bold cell-num" id="d-total"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btn-download-pdf" disabled>
+                    <i class="ti ti-download me-1"></i>Descargar PDF
+                </button>
+                {% if can_cancel %}
+                <button type="button" class="btn btn-outline-danger d-none" id="btn-cancel-note">
+                    <i class="ti ti-ban me-1"></i>Cancelar nota
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.CAN_CREATE = {{ can_create | tojson }};
+    window.CAN_CANCEL = {{ can_cancel | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/delivery_notes.js') }}"></script>
+{% endblock %}

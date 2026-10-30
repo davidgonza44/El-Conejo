@@ -1,0 +1,71 @@
+# Standalone laboratory. Never combine this file with compose.yaml or DEMO overrides.
+name: ${COMPOSE_PROJECT_NAME:?A unique laboratory project is required}
+x-lab: &lab
+  image: ${LAB_IMAGE:?A new laboratory image is required}
+  env_file: ${LAB_ENV_FILE:?An explicit private laboratory environment is required}
+  networks: [lab]
+  volumes:
+    - instance:/app/instance
+    - uploads:/app/uploads
+  labels:
+    com.conejo.purpose: historical2026-isolated
+    com.conejo.environment: ${ENVIRONMENT_ID}
+services:
+  db:
+    image: mariadb:10.11.14@sha256:dbe56e20372fc6d6b8e0e396866ba89c4c7f128c38c4f59aaa54d957db95790c
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    volumes: [database:/var/lib/mysql]
+    networks: [lab]
+    labels:
+      com.conejo.purpose: historical2026-isolated
+      com.conejo.environment: ${ENVIRONMENT_ID}
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+  init:
+    <<: *lab
+    command: [python, -B, -m, docker_support.real2026_lab, init]
+    depends_on:
+      db: {condition: service_healthy}
+    profiles: [tools]
+  app:
+    <<: *lab
+    networks: [lab, web]
+    build:
+      context: .
+      dockerfile: docker_support/real2026.Dockerfile
+    command: [python, -B, -m, docker_support.real2026_lab, start]
+    ports: ["127.0.0.1:${APP_PORT:?A dedicated port is required}:5000"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -B, -m, docker_support.real2026_lab, health]
+      interval: 15s
+      timeout: 10s
+      start_period: 15s
+      retries: 4
+networks:
+  web:
+    ipam:
+      config:
+        - subnet: ${LAB_WEB_SUBNET:?A dedicated localhost application subnet is required}
+    labels: {com.conejo.purpose: historical2026-isolated}
+  lab:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${LAB_SUBNET:?A dedicated laboratory subnet is required}
+    labels: {com.conejo.purpose: historical2026-isolated}
+volumes:
+  database:
+    labels: {com.conejo.purpose: historical2026-isolated}
+  instance:
+    labels: {com.conejo.purpose: historical2026-isolated}
+  uploads:
+    labels: {com.conejo.purpose: historical2026-isolated}

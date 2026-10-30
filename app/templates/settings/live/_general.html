@@ -1,0 +1,47 @@
+{% set s = live.settings %}{% set database = live.database %}{% set disk = live.disk %}
+<div class="st-general-grid grid">
+<div class="st-column">
+<section class="st-card st-general-info"><h2>Información general</h2><div class="st-fields grid grid-cols-2">
+<label><span>Nombre de la empresa</span><span class="st-control"><input name="company.name" aria-label="Nombre de la empresa" value="{{ s['company.name'] }}" maxlength="120" required title="{{ s['company.name'] }}"></span></label>
+<label><span>Ubicación</span>{{ st.ro('Ubicación', 'Acarigua, Portuguesa', 'Ubicación fija de la aplicación.') }}</label>
+<label><span>Zona horaria</span>{{ st.ro('Zona horaria', 'America/Caracas (GMT-04:00)', 'Zona horaria fija de la aplicación.') }}</label>
+<label><span>Moneda</span>{{ st.ro('Moneda', 'USD y VES (Bs.) por registro', 'Cada precio y compra indica su moneda (USD o VES); la aplicación no convierte entre monedas ni aplica tipo de cambio.') }}</label>
+<label><span>Idioma</span>{{ st.ro('Idioma', 'Español', 'Idioma fijo de la aplicación.') }}</label>
+<label><span>Formato de fecha</span>{{ st.ro('Formato de fecha', 'DD/MM/YYYY', 'Convención actual de la aplicación.') }}</label>
+</div><label class="st-logo-label">Logo de la empresa</label>{% set logo = get_company_logo_url() %}
+<div class="st-logo-row" id="st-company-logo" data-logo-url="{{ url_for('settings.company_logo') }}" data-saved-url="{{ logo or '' }}">
+<input type="file" id="st-logo-file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" hidden>
+<button type="button" class="st-button" id="st-logo-choose" {% if not has_permission('settings:write') %}disabled{% endif %}>{{ st.icon('upload') }}<span>{{ 'Cambiar logo' if logo else 'Subir logo' }}</span></button>
+<span class="st-logo-description"><span id="st-logo-name">{{ 'Logo actual' if logo else '' }}</span><span>PNG, JPG o WEBP. Máximo 2 MB.</span></span>
+<img id="st-logo-preview" class="st-logo-preview" {% if logo %}src="{{ logo }}"{% else %}hidden{% endif %} alt="Logo de la empresa" width="36" height="36">
+<button type="button" class="st-button" id="st-logo-delete" {% if not logo %}hidden{% endif %} {% if not has_permission('settings:write') %}disabled{% endif %}>Eliminar logo</button>
+</div></section>
+{% if settings_tab_allowed('predictive', reference_mode) %}
+<section class="st-card st-general-parameters"><h2>Parámetros de análisis predictivo</h2>
+{{ st.ro_row('Horizonte de pronóstico', 'Se elige en cada consulta; 30 días por defecto.', '7, 30 o 90 días', 'Fijado en el código; no es un ajuste global.') }}
+{{ st.ro_row('Intervalo de predicción', 'Calculado con los residuos del backtest.', '≈ 80 %', 'Fijo en el código; no hay selección de nivel de confianza.') }}
+{{ st.ro_row('Actualización automática de modelos', 'Sin reentrenamiento programado.', 'No disponible') }}
+<a class="st-card-link" href="{{ url_for('pages.settings', tab='predictive') }}">Ver parámetros vigentes {{ st.icon('chevron') }}</a></section>
+{% endif %}
+</div>
+<div class="st-column">
+<section class="st-card st-preferences"><h2>Preferencias del sistema</h2>
+{{ st.live_toggle('Control de stock mínimo', 'Enviar alertas cuando el stock esté por debajo del mínimo.', 'alerts.low_stock_enabled', s['alerts.low_stock_enabled'], 'boxes') }}
+{{ st.live_toggle('Sugerencias de reabastecimiento', 'Disponibles en el módulo predictivo; no existe un interruptor global.', None, False, 'chart', 'Ajuste global no disponible: la función se consulta en Análisis predictivo.') }}
+{{ st.live_toggle('Análisis de estacionalidad', 'Ajuste global no implementado en esta versión.', None, False, 'chart') }}
+{{ st.live_toggle('Detección de outliers', 'Ajuste global no implementado en esta versión.', None, False, 'search') }}
+{{ st.live_toggle('Redondeo de cantidades', 'Ajuste global no implementado en esta versión.', None, False, 'sliders') }}
+{{ st.live_toggle('Precios con impuestos incluidos', 'Ajuste global no implementado en esta versión.', None, False, 'clipboard') }}
+</section>
+<section class="st-card st-units"><h2>Unidades y conversiones</h2>{% for label in ['Unidad de medida base', 'Peso base', 'Longitud base'] %}<div class="st-row"><label>{{ label }}</label>{{ st.ro(label, 'No disponible') }}</div>{% endfor %}{{ st.unavailable('Gestionar unidades de medida', class='st-card-link') }}</section>
+</div>
+<div class="st-column">
+<section class="st-card st-system"><h2>Información del sistema</h2>
+<div class="st-meta"><span>Versión de la aplicación</span><strong>v{{ live.app_version }}</strong></div>
+<div class="st-meta"><span>Motor de base de datos</span><strong title="{{ database.engine or '' }}">{{ database.engine or '—' }}</strong></div>
+<div class="st-meta"><span>Modelo predictivo</span><strong title="El método se elige por producto según el backtest.">Automático por producto</strong></div>
+<div class="st-meta"><span>Base de datos</span><strong class="st-badge{{ '' if database.connected else ' is-error' }}">{{ 'Conectada' if database.connected else 'Error de conexión' }}</strong></div>
+<div class="st-meta st-storage"><span>Disco del servidor</span><small>{{ disk.used|filesizeformat }} / {{ disk.total|filesizeformat }}</small></div><div class="st-progress-row"><progress aria-label="Disco del servidor usado" value="{{ disk.percent }}" max="100"></progress><small>{{ disk.percent }}%</small></div></section>
+<section class="st-card st-activity"><h2>Actividad reciente</h2><div class="st-activity-empty"><span class="st-icon-block">{{ st.icon('clipboard') }}</span><strong>Sin historial de actividad</strong><p>Esta versión no registra un historial de cambios de configuración.</p></div>{{ st.unavailable('Ver historial completo', class='st-card-link') }}</section>
+</div>
+</div>

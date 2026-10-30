@@ -1,0 +1,90 @@
+{% extends "sales/_page.html" %}
+{# Cotizaciones (panel "5. Cotizaciones"): búsqueda, chips de filtro y tabla paginada.
+   En modo referencia las filas salen del fixture; en modo normal la misma geometría la llena
+   ix_quotes_live.js desde /api/quotes (búsqueda, rango de fechas, estado y Más filtros reales). #}
+{% set active_page = "sales_quotes" %}
+
+{% block title %}Cotizaciones — Ventas{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_quote_layers.css') }}">
+{% if not fixture %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_sale_product_layers.css') }}">{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% include 'sales/_quote_layers.html' %}
+{% if reference_mode and fixture %}
+<script src="{{ url_for('static', filename='js/ix_quote_layers.js') }}"></script>
+{% else %}
+{% with spl_target = "a la cotización" %}{% include 'sales/_sale_product_layers.html' %}{% endwith %}
+<script src="{{ url_for('static', filename='js/ix_sales_shared.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_sales_docs_live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_quotes_live.js') }}"></script>
+{% endif %}
+{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-list-page sa-index-page{% endblock %}
+
+{% block main %}
+{{ sa.header("Cotizaciones", "Crea y gestiona cotizaciones para tus clientes.",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{% if not fixture %}
+<div id="qv-live" class="sv-live" data-can-sell="{{ '1' if can_write_sales_documents else '0' }}" data-today="{{ commercial_today }}">
+{{ sa.toolbar("Buscar por número de cotización, cliente o producto...", ("Nueva cotización", "ti-plus"), filter_icon="ti-chevron-right") }}
+{{ sa.filters([("ti-calendar", "Todas las fechas"), ("ti-tag", "Todos los estados"), ("ti-filter", "Más filtros")]) }}
+<p class="sv-feedback" id="qv-feedback" role="status" hidden></p>
+<section class="ix-card sa-table-card" aria-label="Cotizaciones registradas">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-index-table sv-table">
+            <colgroup><col style="width: 128px"><col style="width: 116px"><col style="width: 229px"><col style="width: 149px"><col style="width: 122px"><col style="width: 106px"><col></colgroup>
+            <thead>
+                <tr>{% for c in ["#", "Fecha", "Cliente", "Validez", "Total", "Estado"] %}<th scope="col">{{ c }}</th>{% endfor %}<th scope="col">Acciones</th></tr>
+            </thead>
+            <tbody id="qv-rows" aria-busy="true"></tbody>
+        </table>
+        <p class="sv-empty" id="qv-empty" hidden>No se encontraron cotizaciones con estos filtros.</p>
+    </div>
+    <footer class="sa-pagination">
+        <span class="sa-pagination-summary" id="qv-summary">Cargando cotizaciones…</span>
+        <nav class="px-pages sa-pages" id="qv-pages" aria-label="Paginación"></nav>
+    </footer>
+</section>
+</div>
+{% else %}
+{{ sa.toolbar(fixture.search, fixture.primary, filter_icon="ti-chevron-right") }}
+{{ sa.filters(fixture.filters) }}
+
+<section class="ix-card sa-table-card" aria-label="Cotizaciones registradas">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-index-table">
+            <colgroup><col style="width: 128px"><col style="width: 116px"><col style="width: 229px"><col style="width: 149px"><col style="width: 122px"><col style="width: 106px"><col></colgroup>
+            <thead>
+                <tr>
+                    {% for c in fixture.columns %}
+                    {% if c %}<th scope="col">{{ c }}</th>
+                    {% else %}<th scope="col" aria-label="Acciones"><i class="ti ti-chevron-down sa-th-icon" aria-hidden="true"></i></th>{% endif %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for number, date, customer, validity, total, status in fixture.rows %}
+                <tr>
+                    <td><span class="sa-ref">{{ number }}</span></td>
+                    <td class="sa-muted">{{ date }}</td>
+                    <td class="sa-muted">{{ customer }}</td>
+                    <td class="sa-muted">{{ validity }}</td>
+                    <td><strong>{{ total }}</strong></td>
+                    <td>{{ sa.badge(status) }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ sa.pagination(fixture.pagination) }}
+</section>
+{% endif %}
+{% endblock %}

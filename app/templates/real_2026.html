@@ -1,0 +1,160 @@
+{% extends "ix_base.html" %}
+{% import "settings/_macros.html" as ui %}
+{% set active_page = "real_2026" %}
+{% block title %}Histórico real 2026 — El Conejo{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/real_2026.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive_sources.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+{% block main_class %} rh-page{% endblock %}
+{% block main %}
+<div id="real-history" data-available="{{ 'true' if available else 'false' }}"
+     data-can-confirm="{{ 'true' if can_confirm else 'false' }}"
+     data-can-analyze="{{ 'true' if can_analyze else 'false' }}">
+    <header class="rh-header">
+        <div><p class="rh-eyebrow">Análisis predictivo <span aria-hidden="true">/</span> Histórico</p>
+            <h1>Histórico real 2026</h1>
+            <p class="rh-subtitle">Explora la demanda observada y su pronóstico desde el corte histórico.</p></div>
+        {% if has_permission('historical_imports:read') %}<a class="rh-secondary-link" href="{{ url_for('pages.historical_imports') }}">{{ ui.icon('database') }} Importación 2025</a>{% endif %}
+    </header>
+    {% with current_source='real_2026' %}{% include "predictive/_source_selector.html" %}{% endwith %}
+    <div id="rh-feedback" role="status" aria-live="polite" tabindex="-1"></div>
+    {% if not available %}
+    <section class="rh-card rh-empty-state">{{ ui.icon('database') }}<h2>Histórico pendiente de habilitación</h2>
+        <p>Esta fuente todavía no está disponible en este entorno.</p></section>
+    {% else %}
+    <section aria-labelledby="rh-batch-title">
+        <div class="rh-card rh-version">
+            <div><h2 id="rh-batch-title">Datos del histórico</h2><p id="rh-batch-description" class="rh-sr-only">Selecciona la versión que deseas consultar.</p></div>
+            <div class="rh-version-picker"><label class="rh-sr-only" for="rh-batches">Versión de consulta</label>
+                <select id="rh-batches"><option value="">Cargando versiones…</option></select></div>
+        </div>
+        <div id="rh-batch-detail" hidden>
+            <div class="rh-source-status"><p id="rh-batch-state" class="rh-badge"></p>
+                <p>{{ ui.icon('shield') }} Fuente independiente · no modifica el inventario</p></div>
+            <section id="rh-kpis" class="rh-kpis" aria-label="Resumen de la versión histórica" hidden>
+                <article class="rh-kpi"><span class="rh-kpi-icon">{{ ui.icon('boxes') }}</span>
+                    <div><h3>Productos</h3><strong id="rh-kpi-products">—</strong><p>En el catálogo histórico</p></div></article>
+                <article class="rh-kpi"><span class="rh-kpi-icon is-green">{{ ui.icon('chart') }}</span>
+                    <div><h3>Observaciones</h3><strong id="rh-kpi-observations">—</strong><p>Registros diarios conservados</p></div></article>
+                <article class="rh-kpi rh-kpi-coverage"><span class="rh-kpi-icon is-amber">{{ ui.icon('calendar') }}</span>
+                    <div><h3>Cobertura</h3><strong id="rh-kpi-coverage">—</strong><p>Cobertura de la fuente</p></div></article>
+                <article class="rh-kpi"><span class="rh-kpi-icon">{{ ui.icon('clock') }}</span>
+                    <div><h3>Períodos</h3><strong id="rh-kpi-periods">—</strong><p>Días operativos del calendario</p></div></article>
+            </section>
+            {% if can_confirm %}<button type="button" id="rh-confirm" hidden>{{ ui.icon('check') }} Confirmar incorporación histórica</button>{% endif %}
+            <details class="rh-disclosure rh-trace">
+                <summary>{{ ui.icon('shield') }} <span>Procedencia y trazabilidad</span><span id="rh-trace-status" class="rh-summary-hint">Fuente, cobertura y archivos</span>{{ ui.icon('chevron') }}</summary>
+                <div class="rh-disclosure-body">
+                    <dl id="rh-provenance" class="rh-facts"></dl>
+                    <dl id="rh-summary" class="rh-facts"></dl>
+                    <p id="rh-source-warning" class="rh-notice"></p>
+                    <details class="rh-inner-details"><summary>Archivos y hashes de verificación</summary><ul id="rh-hashes"></ul></details>
+                    {% if can_revert %}
+                    <details id="rh-revert-panel" class="rh-inner-details rh-danger-zone" hidden><summary>Revertir la versión vigente</summary>
+                        <p>Se conserva la auditoría y, si existe, se reactiva la versión anterior sustituida.
+                            Revertir la primera versión deja el histórico sin versión activa. Subir de nuevo el mismo paquete no lo reactiva.</p>
+                        <form id="rh-revert-form"><label for="rh-revert-reason">Motivo de reversión</label>
+                            <textarea id="rh-revert-reason" maxlength="1000" minlength="10" required rows="2"></textarea>
+                            <button type="submit" id="rh-revert">Confirmar reversión histórica</button></form>
+                    </details>
+                    {% endif %}
+                </div>
+            </details>
+        </div>
+        <p id="rh-empty" class="rh-card rh-empty-message">Todavía no hay versiones cargadas.{% if can_upload %} Importa un paquete para comenzar.{% endif %}</p>
+    </section>
+    {% if can_upload %}
+    <details class="rh-disclosure rh-upload-panel" id="rh-upload-panel">
+        <summary>{{ ui.icon('upload') }} <span>Importar o corregir datos</span><span class="rh-summary-hint">Paquete histórico 2026</span>{{ ui.icon('chevron') }}</summary>
+        <div class="rh-disclosure-body">
+            <p class="rh-muted">Carga un paquete para validarlo antes de confirmar su incorporación. Los originales se conservan.</p>
+            <form id="rh-upload" class="rh-upload-grid">
+                <div class="rh-upload-wide"><label for="rh-files">Archivos del paquete</label>
+                    <input id="rh-files" name="files" type="file" multiple accept=".csv,.json,.md" required>
+                    <p class="rh-field-help">Selecciona los archivos requeridos. Máximo total: 64 MiB.</p></div>
+                <div><label for="rh-parent">Tipo de carga</label>
+                    <select id="rh-parent" name="supersedes_public_id"><option value="">Primera versión del histórico</option></select></div>
+                <div><label for="rh-reason">Motivo de corrección</label>
+                    <textarea id="rh-reason" name="revision_reason" maxlength="1000" rows="2" aria-describedby="rh-reason-help"></textarea>
+                    <p id="rh-reason-help" class="rh-field-help">Obligatorio al sustituir una versión.</p></div>
+                <div class="rh-upload-wide rh-upload-footer"><details class="rh-inner-details"><summary>Requisitos y archivos admitidos</summary>
+                    <ul><li>productos_2026.csv</li><li>empirical_2026_build_report.json</li>
+                        <li>empirical_2026_cohort_manifest.csv</li><li>empirical_2026_operational_calendar.csv</li>
+                        <li>empirical_2026_series_strict.csv</li><li>empirical_2026_series_sensitivity.csv</li></ul>
+                    <p>También se admiten demanda_limpia_2026.csv, movimientos_detalle_2026.csv y existencias_2026_final.csv como evidencia, sin sumarlos de nuevo a la demanda.</p>
+                    <p>Puede adjuntarse MANIFIESTO_SHA256.json para comprobar los hashes y tamaños de los cuatro originales. El paquete incluye cohortes, exclusiones y calendario auditado.</p>
+                </details><button type="submit" id="rh-preview-button">{{ ui.icon('upload') }} Validar y ver vista previa</button></div>
+            </form>
+        </div>
+    </details>
+    {% endif %}
+    <div class="rh-workspace">
+        <section id="rh-catalog" class="rh-card rh-catalog" hidden aria-labelledby="rh-catalog-title">
+            <header class="rh-card-head"><div><h2 id="rh-catalog-title">Catálogo histórico</h2><p>Selecciona un producto para explorar su demanda.</p></div>{{ ui.icon('boxes') }}</header>
+            <form id="rh-search-form" class="rh-search-form"><label class="rh-sr-only" for="rh-search">Código o nombre</label>
+                <div class="rh-search-input">{{ ui.icon('search') }}<input id="rh-search" type="search" maxlength="150" placeholder="Buscar por código o nombre…"></div>
+                <button type="submit">Buscar</button></form>
+            <div class="rh-table-wrap rh-catalog-scroll" tabindex="0" role="region" aria-label="Productos del histórico">
+                <table><thead><tr><th scope="col">Código</th><th scope="col">Producto</th>
+                    <th scope="col">Unidad</th><th scope="col">Cohorte</th><th scope="col"><span class="rh-sr-only">Consulta</span></th></tr></thead>
+                    <tbody id="rh-products"></tbody></table></div>
+            <footer class="rh-catalog-footer"><p id="rh-product-count" role="status"></p>
+                <nav class="rh-pagination" aria-label="Páginas de productos"><button type="button" id="rh-previous" aria-label="Página anterior">{{ ui.icon('chevron') }}</button>
+                    <span id="rh-pagination"></span><button type="button" id="rh-next" aria-label="Página siguiente">{{ ui.icon('chevron') }}</button></nav></footer>
+            <details class="rh-cohort-help"><summary>¿Qué significa cada cohorte?</summary>
+                <p><strong>Estricta (STRICT):</strong> serie del conjunto principal. <strong>Sensibilidad (SENSITIVITY):</strong> serie que conserva sus unidades originales.
+                    <strong>En revisión (QUARANTINE):</strong> producto conservado para auditoría, sin serie ni pronóstico habilitado.</p></details>
+        </section>
+        <aside id="rh-selection-empty" class="rh-card rh-empty-state rh-selection-empty" aria-label="Ficha del producto" hidden>
+            <span class="rh-empty-icon">{{ ui.icon('chart') }}</span><p class="rh-eyebrow">Ficha analítica</p>
+            <h2>Selecciona un producto</h2><p>Su historial, cobertura y opciones de pronóstico aparecerán aquí al pulsar «Ver historial».</p>
+            <span class="rh-empty-footnote">{{ ui.icon('shield') }} Consulta independiente del inventario actual</span>
+        </aside>
+        <section id="rh-product-detail" class="rh-card rh-product-detail" hidden aria-labelledby="rh-product-title">
+            <header class="rh-product-heading"><p class="rh-eyebrow">Ficha analítica <span id="rh-product-cohort" class="rh-cohort"></span></p>
+                <h2 id="rh-product-title">Demanda del producto</h2><p id="rh-product-metadata" class="rh-muted"></p></header>
+            <p id="rh-coverage" class="rh-coverage"></p>
+            <dl id="rh-history-summary" class="rh-history-stats"></dl>
+            <p id="rh-sufficiency" class="rh-sufficiency"></p>
+            <div class="rh-chart-heading"><h3>Demanda observada</h3><span class="rh-legend">Histórico</span></div>
+            <div id="rh-history-chart" class="rh-chart"></div>
+            <p class="rh-chart-note">Períodos operativos observados. No se añaden ceros fuera de la cobertura.</p>
+            <details class="rh-inner-details rh-exact-series"><summary>Serie original · valores exactos</summary>
+                <div class="rh-table-wrap rh-observations" tabindex="0" role="region" aria-label="Cantidades y fechas originales"><table><thead><tr><th scope="col">Fecha</th><th scope="col">Demanda observada</th></tr></thead>
+                    <tbody id="rh-observations"></tbody></table></div></details>
+            {% if can_analyze %}
+            <div class="rh-forecast-config"><h3>{{ ui.icon('chart') }} Pronóstico desde el corte</h3>
+                <form id="rh-analysis-form" class="rh-analysis-form">
+                    <div><label for="rh-model">Método</label><select id="rh-model">
+                        <option value="moving_average">Media móvil</option><option value="naive">Último valor (naive)</option>
+                        <option value="mean">Media histórica</option><option value="linear_trend">Tendencia lineal</option>
+                        <option value="arima">ARIMA</option><option value="random_forest">Random Forest</option>
+                    </select></div>
+                    <div><label for="rh-horizon">Horizonte operativo</label><select id="rh-horizon"><option value="7">7 períodos</option><option value="30">30 períodos</option></select></div>
+                    <button type="submit" id="rh-analyze">{{ ui.icon('chart') }} Generar análisis desde el corte</button>
+                </form>
+            </div>
+            {% endif %}
+            <section id="rh-analysis" class="rh-analysis" hidden aria-labelledby="rh-analysis-title"><h3 id="rh-analysis-title">Resultado del pronóstico</h3>
+                <p id="rh-forecast-status" role="status"></p><dl id="rh-forecast-summary" class="rh-history-stats"></dl>
+                <div id="rh-forecast-chart" class="rh-chart is-forecast"></div>
+                <details class="rh-inner-details"><summary>Detalle por período y datos del cálculo</summary>
+                    <p id="rh-forecast-metadata" class="rh-muted"></p>
+                    <div class="rh-table-wrap"><table><thead><tr><th scope="col">Período posterior al corte</th><th scope="col">Fecha operativa</th><th scope="col">Demanda estimada</th></tr></thead>
+                        <tbody id="rh-forecast-points"></tbody></table></div></details>
+            </section>
+            <details class="rh-inner-details rh-method-notes"><summary>Alcance del análisis</summary>
+                <p>Este análisis utiliza el calendario operativo y la preparación de 2026. El Predictivo operativo utiliza su propio calendario y registros.
+                    El cálculo por producto no reproduce ni certifica las métricas agregadas del Tomo II.
+                    El horizonte se expresa en períodos operativos posteriores al corte: la empresa trabaja de lunes a sábado y los domingos no son operativos.
+                    No se descuentan feriados ni cierres futuros porque no están documentados.</p>
+                <p>Las cantidades se muestran con un máximo de dos decimales para facilitar su lectura. La serie original conserva sus valores exactos.</p>
+            </details>
+        </section>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/real_2026.js') }}"></script>{% endblock %}

@@ -1,0 +1,45 @@
+@import "tailwindcss/utilities" source(none);
+@theme prefix(sltw) { --spacing: 0.25rem; }
+@source "../../templates/inventory/_supplier_layers.html";
+/* Only supplier dialog descendants; the approved base has no matching selectors. */
+.sl-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:462px;max-width:100vw;height:100dvh;max-height:100dvh;padding:0;border:0;border-radius:7px 0 0 7px;background:#fff;color:#192334;font:12px/1.45 Inter,Arial,sans-serif;box-shadow:-8px 0 30px #17233720;overflow:hidden}
+.sl-dialog:not([open]){display:none}
+.sl-dialog[open]{display:flex;flex-direction:column;animation:sl-enter .2s ease-out}
+.sl-dialog::backdrop{background:rgba(42,56,70,.51)}
+.sl-dialog *{box-sizing:border-box}
+.sl-dialog [hidden],.sl-feedback[hidden]{display:none!important}
+.sl-header{padding:16px 18px 25px 20px;display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0}
+.sl-header h2{font-size:18px;line-height:26px;font-weight:700;letter-spacing:-.4px;margin:0}
+.sl-header p{color:#6c7787;margin:3px 0 0;font-size:12px}
+.sl-close{display:flex;border:0;background:none;padding:12px 6px;color:#697586;cursor:pointer}
+.sl-icon{width:16px;height:16px;flex-shrink:0}
+#sl-form{display:flex;flex-direction:column;flex:1;min-height:0;margin:0}
+.sl-body{padding:0 18px 0 20px;overflow-y:auto;overscroll-behavior:contain;flex:1}
+.sl-body section+section{margin-top:24px}
+.sl-body h3{font-size:14px;line-height:21px;font-weight:700;margin:0 0 9px;letter-spacing:-.2px}
+.sl-grid{@apply sltw:grid sltw:grid-cols-2;column-gap:12px;row-gap:14px}
+.sl-wide{@apply sltw:col-span-2}
+.sl-field{display:block;min-width:0;font-size:11.5px;line-height:16px;font-weight:500;color:#374151;margin:0}
+.sl-field b{color:#e23c45;font-weight:600}
+.sl-field input,.sl-field select,.sl-body textarea{display:block;width:100%;height:33px;border:1px solid #e2e5e9;border-radius:6px;background:#fff;color:#273345;font:11.5px/1.5 Inter,Arial,sans-serif;padding:6px 12px;margin:5px 0 0;box-shadow:0 1px 2px #17233703}
+.sl-field input::placeholder,.sl-body textarea::placeholder{color:#818a99;opacity:1}
+.sl-select{display:block;position:relative}
+.sl-field select{appearance:none;padding-right:28px;cursor:pointer}
+.sl-select>.sl-icon{position:absolute;right:11px;top:10px;width:13px;height:13px;pointer-events:none;color:#6c7787}
+.sl-select:has(select:invalid) select{color:#6c7787}
+.sl-state:before{content:"";position:absolute;left:13px;top:13px;width:9px;height:9px;border-radius:50%;background:#16a338;pointer-events:none}
+.sl-state.is-inactive:before{background:#d64b55}
+.sl-state select{padding-left:29px}
+.sl-body textarea{height:75px;min-height:75px;resize:vertical;margin-top:0;padding:8px 12px}
+#sl-counter{display:block;text-align:right;font-size:10px;color:#788394;margin-top:3px}
+.sl-footer{padding:20px 18px 18px 20px;display:flex;justify-content:flex-end;gap:12px;flex-shrink:0;background:#fff}
+.sl-button{height:41px;min-width:125px;display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:0 20px;border:1px solid #e2e5ea;border-radius:6px;background:#fff;color:#253043;font:600 11.5px/16px Inter,Arial,sans-serif;cursor:pointer}
+.sl-primary{min-width:170px;background:#1967ed;border-color:#1967ed;color:#fff}
+.sl-dialog :focus-visible{outline:2px solid #1967ed;outline-offset:2px}
+#sl-title:focus{outline:none}
+.sl-dialog [aria-invalid=true]{border-color:#dc3545;background:#fffafa}
+.sl-error{color:#bd2634;font-size:11px;margin:12px 0 0}
+.sl-feedback{position:fixed;right:22px;bottom:22px;z-index:1100;max-width:calc(100vw - 44px);padding:14px 20px;background:#ecfdf3;color:#17683a;border:1px solid #b9e8c9;border-radius:8px;box-shadow:0 4px 20px #17233715;font:12px/1.5 Inter,Arial,sans-serif;margin:0}
+@keyframes sl-enter{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.sl-dialog[open]{animation:none}}
+@media(max-width:420px){.sl-grid{grid-template-columns:1fr}.sl-wide{grid-column:span 1}.sl-footer{gap:8px}.sl-button{min-width:0;flex:1;padding:0 10px}.sl-header{padding-bottom:20px}}

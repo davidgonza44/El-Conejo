@@ -1,0 +1,147 @@
+{% extends "predictive/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% set active_page = "model_accuracy" %}
+{# Referencia (?ref=1): fixture. LIVE: métricas exclusivamente de backtesting fuera de muestra
+   (BacktestService); WAPE/MAPE miden ERROR. #}
+{% set v = fixture if fixture else live_view %}
+{% set live = None if fixture else live_view %}
+{% set tab = live.tab if live else "summary" %}
+
+{% block title %}Precisión del modelo — Análisis predictivo{% endblock %}
+
+{% block main %}
+{{ px.header("Precisión del modelo",
+             "Evalúa el desempeño del modelo predictivo comparando las predicciones con los resultados reales.",
+             "Precisión del modelo", fixture.search_placeholder if fixture else "", "Actualizar análisis", reference_mode=reference_mode, live=live) }}
+
+{{ px.kpis(v.kpis) }}
+{{ px.filters(v.filters, extra_class="is-accuracy", live=live, hidden={"tab": tab if tab != "summary" else None}) }}
+
+<div class="px-body is-from-filters px-accuracy" style="--px-aside: 282px; column-gap: 26px">
+    <div class="px-main">
+        <nav class="px-tabs" aria-label="Vistas de precisión">
+            {% if live %}
+            {% for key, label, href in v.tabs %}
+            <a href="{{ href }}"{% if key == tab %} aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            {% else %}
+            {% for label in fixture.tabs %}
+            <a href="{{ url_for('pages.model_accuracy') }}{{ ref_qs }}"{% if loop.first %} aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            {% endif %}
+        </nav>
+
+        <div class="px-accuracy-grid">
+            <section class="ix-card px-metrics-card" aria-labelledby="metrics-title">
+                <h2 class="px-card-title" id="metrics-title">{{ v.metrics_title }}</h2>
+                {% if tab == "summary" %}
+                <table class="px-table px-metrics">
+                    <colgroup><col style="width: 122px"><col style="width: 196px"><col style="width: 73px"><col></colgroup>
+                    <thead>
+                        <tr><th scope="col">Métrica</th><th scope="col">Descripción</th><th scope="col">Valor</th><th scope="col">Interpretación</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for name, desc, value, verdict in (v.metrics if fixture else v.rows) %}
+                        <tr>
+                            <td><strong>{{ name }}</strong></td>
+                            <td class="px-cell-muted">{{ desc }}</td>
+                            <td><strong>{{ value }}</strong></td>
+                            <td>{{ px.badge(verdict) }}</td>
+                        </tr>
+                        {% else %}
+                        {{ px.empty_rows(v.state, 4) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <table class="px-table px-metrics is-groups">
+                    <colgroup><col style="width: 150px"><col style="width: 52px"><col style="width: 52px"><col style="width: 58px"><col style="width: 52px"><col style="width: 52px"><col style="width: 52px"><col></colgroup>
+                    <thead>
+                        <tr><th scope="col">{{ "Categoría" if tab == "category" else "Producto" }}</th><th scope="col">Prod.</th><th scope="col">Pares</th>
+                            <th scope="col">WAPE</th><th scope="col">MAE</th><th scope="col">RMSE</th><th scope="col">Sesgo</th><th scope="col">Interpretación</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for g in v.rows %}
+                        <tr>
+                            <td><strong class="px-wrap">{{ g.name }}</strong><br><small class="px-cell-muted">{{ g.model }}</small></td>
+                            <td>{{ g.count }}</td><td>{{ g.n }}</td><td><strong>{{ g.wape }}</strong></td><td>{{ g.mae }}</td><td>{{ g.rmse }}</td><td>{{ g.bias }}</td>
+                            <td>{{ px.badge(g.verdict) }}</td>
+                        </tr>
+                        {% else %}
+                        {{ px.empty_rows(v.state, 8) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </section>
+
+            <section class="ix-card px-accuracy-chart-card" aria-labelledby="accuracy-chart-title">
+                <h2 class="px-card-title" id="accuracy-chart-title">{{ v.chart.title }}</h2>
+                <ul class="px-line-legend">
+                    {% for label, kind in v.chart.legend %}
+                    <li><span class="px-line-swatch is-{{ kind }}" aria-hidden="true"></span>{{ label }}</li>
+                    {% endfor %}
+                </ul>
+                <div class="px-accuracy-plot">
+                    <span class="px-axis-title">{{ v.chart.y_label }}</span>
+                    {% if v.chart.real %}
+                    <div class="px-chart" data-accuracy-chart='{{ v.chart | tojson }}'>
+                        <canvas role="img" aria-label="{{ v.chart.title }}"></canvas>
+                    </div>
+                    {% else %}
+                    <p class="px-chart-empty">Sin predicciones fuera de muestra para graficar.</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <section class="ix-card px-ape-card" aria-labelledby="ape-title">
+            <h2 class="px-card-title" id="ape-title">{{ v.ape.title }}</h2>
+            {% if v.ape.segments %}
+            <div class="px-ape-bar" role="img" aria-label="{{ v.ape.title }}">
+                {% for _, _, tone, pct in v.ape.segments %}<span class="tone-{{ tone }}" style="width: {{ pct }}%"></span>{% endfor %}
+            </div>
+            <ul class="px-ape-legend">
+                {% for label, pct_text, tone, _ in v.ape.segments %}
+                <li><span class="px-ape-head"><span class="px-dot tone-{{ tone }}"></span>{{ label }}</span><strong>{{ pct_text }}</strong></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <p class="px-ape-note">{{ px.icon("svg:info") }}{{ v.ape.note }}</p>
+        </section>
+
+        {{ px.pagination(v.pagination) }}
+    </div>
+
+    <aside class="px-aside" aria-label="Desempeño del modelo">
+        {% if fixture %}
+        <article class="ix-card px-aside-card px-gauge-card">
+            <h2 class="px-card-title">{{ v.gauge.title }}</h2>
+            <div class="px-gauge" data-gauge="{{ v.gauge.value if v.gauge.value is not none else '' }}">
+                <canvas role="img" aria-label="{{ v.gauge.title }}: {{ v.gauge.label }}"></canvas>
+                <div class="px-gauge-center">
+                    <span class="px-gauge-value">{{ v.gauge.label }}</span>
+                    <span class="px-gauge-verdict{{ ' tone-' ~ v.gauge.tone if v.gauge.tone }}">{{ v.gauge.verdict }}</span>
+                </div>
+                <span class="px-gauge-min" aria-hidden="true">0%</span>
+                <span class="px-gauge-max" aria-hidden="true">100%</span>
+            </div>
+            <p class="px-gauge-text">{{ v.gauge.text }}</p>
+        </article>
+        {% endif %}
+
+        <article class="ix-card px-aside-card px-errors">
+            <h2 class="px-card-title">{{ v.errors.title }}</h2>
+            <ul class="px-errors-list">
+                {% for label, pct, tone in v.errors.rows %}
+                <li><span>{{ label }}</span><strong class="tone-{{ tone }}">{{ pct }}</strong></li>
+                {% else %}
+                <li><span>Sin productos evaluados.</span><strong class="tone-gray">N/D</strong></li>
+                {% endfor %}
+            </ul>
+        </article>
+
+        {{ px.info_card(v.info.title, v.info.text) }}
+    </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+name: ${COMPOSE_PROJECT_NAME:?Use --env-file .env.docker or .env.demo}
+
+x-runtime: &runtime
+  build: .
+  image: conejo-portable:${DOCKER_IMAGE_TAG:-local}
+  init: true
+  environment: &environment
+    CONEJO_CONTAINER: "1"
+    DOCKER_ENV_KIND: ${DOCKER_ENV_KIND:?Generate an isolated environment first}
+    ENVIRONMENT_ID: ${ENVIRONMENT_ID:?Required}
+    DB_HOST: db
+    DB_PORT: "3306"
+    DB_NAME: ${DB_NAME:?Required}
+    DB_USER: ${DB_USER:?Required}
+    DB_PASSWORD: ${DB_PASSWORD:?Required}
+    SECRET_KEY: ${SECRET_KEY:?Required}
+    SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:?Required}
+    APP_ENV: ${DOCKER_APP_ENV:-production}
+    APP_BASE_URL: http://localhost:${APP_PORT:-5000}
+    PYTHON_DOTENV_DISABLED: "1"
+    TZ: America/Caracas
+    DEMO_MODE: ${DEMO_MODE:-false}
+    DEMO_SEED_VERSION: ${DEMO_SEED_VERSION:-2}
+    MAIL_ENABLED: "false"
+    WHATSAPP_ENABLED: "false"
+    SMS_ENABLED: "false"
+    NOTIFICATIONS_DRY_RUN: "true"
+    MYSQLDUMP_BIN: /usr/bin/mariadb-dump
+    MYSQL_BIN: /usr/bin/mariadb
+    BACKUP_SCHEDULER: portable
+    INVENTORY_SNAPSHOT_ACTIVATED_AT: ${INVENTORY_SNAPSHOT_ACTIVATED_AT:-}
+    RECONCILIATION_ACTIVATED_ON: ${RECONCILIATION_ACTIVATED_ON:-}
+    RECONCILIATION_ACTIVATED_AT: ${RECONCILIATION_ACTIVATED_AT:-}
+    RECONCILIATION_AUTO_INGEST_ENABLED: ${RECONCILIATION_AUTO_INGEST_ENABLED:-true}
+  volumes:
+    - app_instance:/app/instance
+    - app_uploads:/app/uploads
+
+services:
+  db:
+    image: mariadb:10.11.14@sha256:dbe56e20372fc6d6b8e0e396866ba89c4c7f128c38c4f59aaa54d957db95790c
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:?Required}
+      MARIADB_USER: ${DB_USER:?Required}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Required}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Required}
+      MARIADB_ROOT_HOST: localhost
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MARIADB_PASSWORD\" mariadb --protocol=tcp -h 127.0.0.1 -u \"$$MARIADB_USER\" \"$$MARIADB_DATABASE\" --batch --skip-column-names -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+  init:
+    <<: *runtime
+    restart: "no"
+    command: ["python", "-m", "docker_support.bootstrap"]
+    environment:
+      <<: *environment
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Required}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Required}
+    depends_on:
+      db:
+        condition: service_healthy
+  app:
+    <<: *runtime
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-5000}:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "docker_support.healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+  scheduler:
+    <<: *runtime
+    restart: unless-stopped
+    command: ["python", "-m", "docker_support.scheduler"]
+    depends_on:
+      db:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+  verify:
+    <<: *runtime
+    profiles: ["test"]
+    command: ["python", "-m", "docker_support.verify"]
+    environment:
+      <<: *environment
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Required}
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:
+    name: ${COMPOSE_PROJECT_NAME}_db_data${DEMO_VOLUME_SUFFIX:-}
+  app_instance:
+    name: ${COMPOSE_PROJECT_NAME}_app_instance${DEMO_VOLUME_SUFFIX:-}
+  app_uploads:
+    name: ${COMPOSE_PROJECT_NAME}_app_uploads${DEMO_VOLUME_SUFFIX:-}

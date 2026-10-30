@@ -1,0 +1,13 @@
+{% set used_in = {'notifications': ('Notificaciones', 'notifications'), 'backup': ('Respaldo', 'backup'), 'login': ('Inicio de sesión', None)} %}
+{# Solo lectura: estado de configuración del servidor. Nunca muestra valores, solo nombres de variables faltantes. #}
+<section class="st-card st-integrations"><h2>Proveedores externos</h2><p class="st-section-description">Servicios que la aplicación puede usar si el servidor tiene sus credenciales. Esta pestaña no conecta ni prueba proveedores.</p>
+<div class="st-security-table-scroll" tabindex="0" role="region" aria-label="Estado de integraciones"><table class="st-security-table"><thead><tr><th scope="col">Integración</th><th scope="col">Se usa en</th><th scope="col">Estado</th><th scope="col">Variables pendientes en el servidor</th></tr></thead><tbody>
+{% for item in live.integrations %}{% set label, target = used_in[item.used_in] %}<tr>
+<td>{{ item.name }}</td>
+<td>{% if target and settings_tab_allowed(target) %}<a class="st-security-link" href="{{ url_for('pages.settings', tab=target) }}">{{ label }}</a>{% else %}{{ label }}{% endif %}</td>
+<td><span class="st-security-status{{ ' is-inactive' if item.missing }}">{{ 'Sin configurar' if item.missing else 'Configurado' }}</span></td>
+<td>{{ item.missing|join(', ') if item.missing else '—' }}</td>
+</tr>{% endfor %}
+</tbody></table></div>
+</section>
+{{ st.info('«Configurado» indica que existen las variables en el servidor; no certifica la entrega. Las credenciales se definen fuera de la aplicación y nunca se muestran. Cada canal se activa en Notificaciones o Respaldo cuando su proveedor está configurado.') }}

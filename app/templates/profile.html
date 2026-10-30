@@ -1,0 +1,67 @@
+{% extends "ix_base.html" %}
+{% import "settings/_macros.html" as st %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = 'profile' %}
+{% set sidebar_variant = 'settings' %}
+{% set ref_qs = '?ref=1' if reference_mode else '' %}
+{% macro link_tab(key) %}{{ url_for('pages.profile', tab=key, ref=1) if reference_mode else url_for('pages.profile', tab=key) }}{% endmacro %}
+{% block title %}Mi perfil — El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_profile.css') }}">{% endblock %}
+{% block main_class %} pr-page{% endblock %}
+{% block main %}
+<header class="pr-header"><div><h1>{{ 'Administrador' if profile.admin else 'Mi perfil' }}</h1><p>Gestiona tu perfil y preferencias del sistema</p></div><div class="ix-header-actions"><button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-label="Abrir menú" aria-controls="ix-sidebar" aria-expanded="false">{{ st.icon('sliders') }}</button>{{ iv.shell_chrome(reference_mode, 'Buscar productos, clientes, ventas...') }}</div></header>
+<nav class="pr-tabs" aria-label="Perfil de usuario">{% for key,label,ico in [('profile','Mi perfil','users'),('preferences','Preferencias','settings'),('activity','Actividad','clock'),('sessions','Sesiones','monitor')] %}<a href="{{ link_tab(key) }}"{% if tab == key %} aria-current="page"{% endif %}>{{ st.icon(ico) }}{{ label }}</a>{% endfor %}</nav>
+<div id="page-alert" class="pr-alert" role="status" hidden></div>
+<div id="profile-root" data-csrf="{{ csrf_token() }}" data-reference="{{ '1' if reference_mode else '0' }}">
+{% if tab == 'profile' %}
+<div class="pr-layout grid gap-4">
+<section class="pr-card rounded-lg border border-slate-200 bg-white"><h2>Información del {{ 'administrador' if profile.admin else 'usuario' }}</h2><p>Actualiza tu información personal y de acceso.</p>
+<form id="profile-form">
+<div class="pr-photo"><span id="profile-avatar" class="pr-avatar" data-initials="{{ profile.initials }}">{% if profile.avatar %}<img src="{{ profile.avatar }}" alt="Foto de perfil" id="profile-avatar-img">{% else %}<span id="profile-avatar-initials">{{ profile.initials }}</span>{% endif %}<span class="pr-camera">{{ st.icon('image') }}</span></span><div><button type="button" class="pr-btn pr-photo-button" id="btn-upload-photo">{{ st.icon('image') }}Cambiar foto</button><input type="file" id="profile-photo" accept=".png,.jpg,.jpeg,.webp" hidden><p>Formatos: PNG, JPG o WEBP. Máximo 2 MB.</p></div></div>
+<div id="profile-form-error" class="pr-alert" role="alert" hidden></div>
+{% if not profile.extended_available %}<p class="pr-alert">Cargo, teléfono y biografía no disponibles hasta aplicar la migración de perfil.</p>{% endif %}
+<div class="pr-fields grid grid-cols-2 gap-x-4 gap-y-5">
+<label for="profile-name">Nombre completo <span>*</span><input id="profile-name" name="name" value="{{ profile.name }}" maxlength="120" required autocomplete="name"></label>
+<label for="profile-email">Correo electrónico <span>*</span><input id="profile-email" name="email" value="{{ profile.email }}" type="email" maxlength="120" required autocomplete="email"></label>
+<label for="profile-username">Usuario <span>*</span><input id="profile-username" value="{{ profile.username }}" readonly aria-readonly="true" autocomplete="username"></label>
+<label for="profile-job">Cargo<input id="profile-job" name="job_title" value="{{ profile.job_title }}" maxlength="120"{% if not profile.extended_available %} disabled placeholder="No disponible"{% endif %}></label>
+<label class="pr-wide" for="profile-phone">Teléfono<input id="profile-phone" name="phone" value="{{ profile.phone }}" type="tel" maxlength="40" autocomplete="tel"{% if not profile.extended_available %} disabled placeholder="No disponible"{% endif %}></label>
+<label class="pr-wide" for="profile-bio">Biografía<textarea id="profile-bio" name="bio" maxlength="300" rows="4"{% if not profile.extended_available %} disabled placeholder="No disponible"{% endif %}>{{ profile.bio }}</textarea><small id="profile-counter">{{ profile.bio|length }}/300</small></label>
+</div><footer class="pr-form-footer"><button class="pr-btn" type="reset" id="profile-cancel">Cancelar</button><button class="pr-btn pr-primary" type="submit" id="profile-save">{{ st.icon('save') }}Guardar cambios</button></footer>
+</form></section>
+<aside class="pr-right"><section class="pr-card rounded-lg border border-slate-200 bg-white"><h2>Resumen de actividad</h2><p>Información de tu cuenta en el sistema.</p><div class="pr-summary grid grid-cols-2 gap-4">
+{% for ico,label,value,sub,positive in [('users','Rol de usuario',profile.role,'Acceso completo al sistema' if reference_mode else 'Rol asignado',false),('calendar','Miembro desde',profile.created,'Hace 1 año, 2 meses' if reference_mode else 'Fecha de creación',false),('check','Estado de la cuenta','Activa' if profile.active else 'Inactiva','Sin restricciones' if reference_mode else 'Estado de la cuenta',profile.active),('clock','Último acceso',profile.last_login,'Hace 2 horas' if reference_mode else 'Último inicio de sesión registrado',false)] %}<article class="pr-stat"><span class="pr-round{{ ' pr-green' if positive }}">{{ st.icon(ico) }}</span><div><p>{{ label }}</p><strong>{{ value }}</strong><small>{{ sub }}</small></div></article>{% endfor %}
+</div></section><section class="pr-card rounded-lg border border-slate-200 bg-white"><h2>Acciones rápidas</h2><p>{{ 'Funciones administrativas comunes.' if profile.admin else 'Funciones de tu cuenta.' }}</p><div class="pr-actions">
+<a href="#change-password" id="profile-password">{{ st.icon('lock') }}<span><strong>Cambiar contraseña</strong><small>Actualiza tu contraseña de acceso</small></span>{{ st.icon('chevron') }}</a>
+{% if has_permission('settings:read') %}<a href="{{ url_for('pages.settings', tab='notifications', ref=1) if reference_mode else url_for('pages.settings', tab='notifications') }}" id="profile-notifications">{{ st.icon('bell') }}<span><strong>Gestionar notificaciones</strong><small>Configura tus preferencias de notificaciones</small></span>{{ st.icon('chevron') }}</a>{% else %}<div class="pr-unavailable">{{ st.icon('bell') }}<span><strong>Gestionar notificaciones</strong><small>Configuración disponible para usuarios autorizados.</small></span></div>{% endif %}
+<a href="{{ link_tab('activity') }}" id="profile-history">{{ st.icon('reset') }}<span><strong>Ver historial de actividad</strong><small>Revisa el registro de tus acciones en el sistema</small></span>{{ st.icon('chevron') }}</a>
+</div></section></aside></div>
+{% elif tab == 'preferences' %}<section class="pr-card"><h2>Preferencias</h2><p class="pr-empty">No hay preferencias personales configurables en esta versión.</p>{% if has_permission('settings:read') %}<a class="pr-btn" href="{{ url_for('pages.settings', tab='notifications', ref=1) if reference_mode else url_for('pages.settings', tab='notifications') }}">{{ st.icon('bell') }}Gestionar notificaciones</a>{% endif %}</section>
+{% elif tab == 'activity' %}
+<section class="pr-card"><h2>Historial de actividad</h2><p>Consulta el registro de tus acciones en el sistema.</p>
+<form class="pr-filters" method="get" action="{{ url_for('pages.profile') }}" id="profile-activity-filters">
+<input type="hidden" name="tab" value="activity">{% if reference_mode %}<input type="hidden" name="ref" value="1">{% endif %}
+<label class="pr-search">Buscar en la actividad<input type="search" name="search" value="{{ activity_filters.search }}" placeholder="Buscar en la actividad..."></label>
+<label>Tipo<select name="type"><option value="">Todos</option><option value="login"{% if activity_filters.type == 'login' %} selected{% endif %}>Inicio de sesión</option></select></label>
+<label>Estado<select name="status">{% for value,label in [('', 'Todos'),('success','Exitoso'),('failed','Fallido')] %}<option value="{{ value }}"{% if activity_filters.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>Fecha desde<input type="date" name="date_from" value="{{ activity_filters.date_from }}"></label>
+<label>Fecha hasta<input type="date" name="date_to" value="{{ activity_filters.date_to }}"></label>
+<button class="pr-btn pr-primary" type="submit">Filtrar</button><a class="pr-btn" href="{{ link_tab('activity') }}">Limpiar filtros</a>
+</form>
+<div class="pr-table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Tipo</th><th>Descripción</th><th>IP</th><th>Estado</th></tr></thead><tbody>
+{% for item in activity['items'] %}<tr><td class="pr-nowrap">{{ item.date_label }}</td><td class="pr-nowrap">Inicio de sesión</td><td>{{ item.description }}</td><td>{{ item.ip_address }}</td><td><span class="pr-badge {{ 'is-success' if item.success else 'is-failed' }}">{{ 'Exitoso' if item.success else 'Fallido' }}</span></td></tr>
+{% else %}<tr><td colspan="5" class="pr-empty">{{ 'Sin eventos en la vista de referencia.' if reference_mode else 'No hay actividad que coincida con los filtros.' if activity.available else 'Historial no disponible.' }}</td></tr>{% endfor %}
+</tbody></table></div>
+<footer class="pr-pagination"><span>Mostrando {{ activity.first }} a {{ activity.last }} de {{ activity.total }} registros</span>
+<nav class="pr-pages" aria-label="Páginas de actividad">{% if activity.page > 1 %}<a class="pr-btn" href="{{ activity_url(activity.page-1) }}">Anterior</a>{% endif %}
+{% if activity.page > 3 %}<a class="pr-btn" href="{{ activity_url(1) }}">1</a><span>…</span>{% endif %}
+{% for number in activity.window %}<a class="pr-btn" href="{{ activity_url(number) }}"{% if number == activity.page %} aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}
+{% if activity.page < activity.pages-2 %}<span>…</span><a class="pr-btn" href="{{ activity_url(activity.pages) }}">{{ activity.pages }}</a>{% endif %}
+{% if activity.page < activity.pages %}<a class="pr-btn" href="{{ activity_url(activity.page+1) }}">Siguiente</a>{% endif %}</nav>
+<label class="pr-per-page">Por página<select name="per_page" form="profile-activity-filters" id="profile-per-page">{% for size in (5,10,20) %}<option value="{{ size }}"{% if size == activity.per_page %} selected{% endif %}>{{ size }}</option>{% endfor %}</select></label></footer></section>
+{% elif tab == 'sessions' %}<section class="pr-card"><div class="pr-section-heading"><div><h2>Sesiones</h2><p>Dispositivos con sesiones abiertas en tu cuenta.</p></div><button class="pr-btn" id="profile-revoke-others"{% if not sessions['items'] %} disabled{% endif %}>Cerrar todas las demás sesiones</button></div><div class="pr-table-wrap"><table><thead><tr><th>Dispositivo</th><th>IP</th><th>Inicio</th><th>Última actividad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{% for item in sessions['items'] %}<tr><td>{{ item.device }}{% if item.current %}<small class="pr-status">Sesión actual</small>{% endif %}</td><td>{{ item.ip_address }}</td><td>{{ item.created_at|replace('T',' ') }}</td><td>{{ item.last_seen_at|replace('T',' ') }}</td><td>{{ 'Activa' if item.status == 'active' else 'Sin actividad reciente' }}</td><td>{% if not item.current %}<button class="pr-btn" data-revoke-session="{{ item.id }}">Cerrar sesión</button>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="6" class="pr-empty">{{ 'Sin sesiones en la vista de referencia.' if reference_mode else 'No hay sesiones registradas.' if sessions.available else 'Registro de sesiones no disponible.' }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+</div>
+<dialog id="profile-password-dialog" class="pr-dialog" aria-labelledby="profile-password-title"><form id="profile-password-form"><h2 id="profile-password-title">Cambiar contraseña</h2><p>Actualiza tu contraseña de acceso.</p><div class="pr-fields">{% if current_user.password_hash %}<label for="profile-password-current">Contraseña actual<input type="password" id="profile-password-current" name="current_password" autocomplete="current-password" required></label>{% endif %}<label for="profile-password-new">Nueva contraseña<input type="password" id="profile-password-new" name="new_password" autocomplete="new-password" required></label><label for="profile-password-confirm">Confirmar nueva contraseña<input type="password" id="profile-password-confirm" name="confirm_password" autocomplete="new-password" required></label></div><p id="profile-password-error" role="alert"></p><footer class="pr-form-footer"><button class="pr-btn" id="profile-password-cancel" type="button">Cancelar</button><button class="pr-btn pr-primary" type="submit">Guardar contraseña</button></footer></form></dialog>
+<dialog id="profile-confirm-dialog" class="pr-dialog" aria-labelledby="profile-confirm-title"><h2 id="profile-confirm-title">Cerrar sesiones</h2><p>Los dispositivos seleccionados deberán iniciar sesión nuevamente.</p><footer class="pr-form-footer"><button class="pr-btn" id="profile-confirm-cancel">Cancelar</button><button class="pr-btn pr-primary" id="profile-confirm-accept">Cerrar sesión</button></footer></dialog>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/profile.js') }}"></script>{% endblock %}

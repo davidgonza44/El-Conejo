@@ -1,0 +1,123 @@
+{% extends "predictive/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% set active_page = "replenishment" %}
+{# Referencia (?ref=1): fixture + capas visuales sin escrituras. LIVE: live_view real + modal que
+   crea la solicitud de reposición (predictive_order.js) tras confirmación humana. #}
+{% set v = fixture if fixture else live_view %}
+{% set live = None if fixture else live_view %}
+{% set can_create = has_permission("replenishment:create") %}
+{% set can_pick = can_create and live and live.can_order and live.rows %}
+
+{% block title %}Reabastecimiento — Análisis predictivo{% endblock %}
+
+{% block head %}
+{{ super() }}
+{% if fixture or can_pick %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_replenishment_layers.css') }}">{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if reference_mode and fixture %}<script src="{{ url_for('static', filename='js/ix_replenishment_layers.js') }}"></script>{% endif %}
+{% if not reference_mode and can_create %}<script src="{{ url_for('static', filename='js/predictive_order.js') }}"></script>{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ px.header("Reabastecimiento",
+             "Prioriza productos que requieren reposición y sugiere cantidades de compra.",
+             "Reabastecimiento", fixture.search_placeholder if fixture else "", "Generar solicitud de reposición" if can_create else None,
+             primary_icon="ti-shopping-cart", reference_mode=reference_mode, live=live,
+             primary_attrs='id="px-order-open" aria-haspopup="dialog" aria-controls="rl-order" disabled' if can_create else None) }}
+
+{% set kpi_cols = "--px-kpi-cols: 1fr 1fr 1fr" if live and live.can_see_cost is defined and not live.can_see_cost else "--px-kpi-cols: 1fr 1fr 1fr 1.15fr" %}
+<div style="{{ kpi_cols }}">
+{{ px.kpis(v.kpis) }}
+
+<div class="px-body is-from-filters" style="--px-aside: 255px">
+    <div class="px-main">
+        {{ px.filters(v.filters, fill=True, extra_class="is-five", live=live) }}
+        {{ px.module_tabs("replenishment", ref_qs) }}
+        <section class="ix-card px-table-card is-replenishment" aria-labelledby="replenishment-title">
+            <h2 class="px-card-title" id="replenishment-title">{{ v.table_title }}
+                {% if can_pick %}<span class="px-selection" id="px-selection" aria-live="polite">Seleccione productos para generar una solicitud</span>{% endif %}
+            </h2>
+            <div class="px-table-wrap px-responsive-table" tabindex="0" role="region" aria-label="Tabla de reabastecimiento">
+                <table class="px-table is-dense" style="--px-row: 44px">
+                    <colgroup>
+                        <col style="width: 214px"><col style="width: 82px"><col style="width: 83px"><col style="width: 89px">
+                        <col style="width: 91px"><col style="width: 94px"><col style="width: 67px"><col style="width: 97px">
+                        {% if has_permission("products:view_cost") %}<col style="width: 96px">{% endif %}<col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Producto</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Stock actual</th>
+                            <th scope="col">Demanda estimada<br><span class="px-th-sub">({{ v.horizon or 30 }} días)</span></th>
+                            <th scope="col">Punto de reorden</th>
+                            <th scope="col">Cantidad sugerida</th>
+                            <th scope="col">Prioridad</th>
+                            <th scope="col">Fecha recomendada</th>
+                            {% if has_permission("products:view_cost") %}<th scope="col">Costo estimado</th>{% endif %}
+                            <th scope="col" class="is-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in v.rows %}
+                        <tr{% if live %} data-order-row data-product-id="{{ r.id }}" data-quantity="{{ r.quantity }}"
+                            data-name="{{ r.p.name }}" data-sku="{{ r.p.sku }}" data-qty-text="{{ r.qty }}"
+                            data-stock-text="{{ r.stock }}" data-prio-label="{{ r.prio[0] }}"
+                            data-reason="{{ r.reasons[0] if r.reasons else '' }}" data-src="{{ r.p.src or '' }}"{% endif %}>
+                            <td>
+                                {% if can_pick %}
+                                <label class="px-pick"><input type="checkbox" data-order-pick aria-label="Seleccionar {{ r.p.name }}"></label>
+                                {% endif %}
+                                {{ px.product_cell(r.p, wrap=True) }}
+                            </td>
+                            <td><span class="px-text-clamp" title="{{ r.cat }}">{{ r.cat }}</span></td>
+                            <td><strong class="tone-red">{{ r.stock }}</strong></td>
+                            <td>{{ r.demand }}</td>
+                            <td>{{ r.reorder }}</td>
+                            <td>{{ r.qty }}</td>
+                            <td>{{ px.badge(r.prio) }}</td>
+                            <td>{{ r.date }}</td>
+                            {% if has_permission("products:view_cost") %}<td><strong>{{ r.cost }}</strong></td>{% endif %}
+                            <td class="is-actions">{{ px.actions_cell(r) }}</td>
+                        </tr>
+                        {% else %}
+                        {{ px.empty_rows(v.state, 10 if has_permission("products:view_cost") else 9) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {{ px.pagination(v.pagination) }}
+        </section>
+    </div>
+
+    <aside class="px-aside" aria-label="Resumen de reabastecimiento">
+        {{ px.donut_card(v.donut, "replenishment-donut", "is-narrow") }}
+        <article class="ix-card px-aside-card px-top is-purchases">
+            <h2 class="px-card-title">{{ v.top.title }}</h2>
+            <ol class="px-top-list">
+                {% for p, qty, cost in v.top.rows %}
+                <li>
+                    <span class="px-top-rank">{{ loop.index }}</span>
+                    <span class="px-product">
+                        <span class="ix-thumb px-thumb"><i class="ti ti-package" aria-hidden="true"></i>{% import "inventory/_macros.html" as iv %}{{ iv.thumb_img(p) }}</span>
+                        <span class="px-product-text">
+                            <span class="px-product-name">{{ p.name }}</span>
+                            <span class="px-top-sub"><span>{{ qty }}</span>{% if cost %}<span aria-hidden="true">|</span><span>{{ cost }}</span>{% endif %}</span>
+                        </span>
+                    </span>
+                </li>
+                {% else %}
+                <li class="px-top-empty">Sin compras sugeridas.</li>
+                {% endfor %}
+            </ol>
+        </article>
+        {{ px.model_info_card(v.model_info, tinted=True) }}
+    </aside>
+</div>
+</div>
+{% if reference_mode and fixture %}{% include "predictive/_replenishment_layers.html" %}{% endif %}
+{% if not reference_mode and can_create %}{% include "predictive/_replenishment_order.html" %}{% endif %}
+{% endblock %}

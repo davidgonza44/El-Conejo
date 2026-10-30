@@ -1,0 +1,66 @@
+{% set backup = fixture.backup %}
+<div class="st-backup-grid grid">
+  <section class="st-card st-backup-summary">
+    <div class="st-card-header"><div class="st-backup-summary-heading"><span class="st-icon-block">{{ st.icon('database') }}</span><h2>Resumen de respaldos</h2></div></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Métricas de respaldos">
+    <dl class="st-backup-metrics grid">
+      <div><dt>Estado actual</dt><dd><span class="st-backup-success">{{ st.icon('check') }}{{ backup.status }}</span></dd></div>
+      <div><dt>Próximo respaldo automático</dt><dd>{{ backup.next }}</dd></div>
+      <div><dt>Último respaldo exitoso</dt><dd>{{ backup.last }}</dd></div>
+      <div><dt>Backups almacenados</dt><dd>{{ backup.count }}</dd></div>
+      <div><dt>Tamaño del último respaldo</dt><dd>{{ backup.size }}</dd></div>
+      <div><dt>Espacio utilizado</dt><dd class="st-backup-usage">{{ backup.usage }}<progress value="{{ backup.percent }}" max="100" aria-label="Espacio utilizado">{{ backup.percent }}%</progress></dd></div>
+    </dl>
+    </div>
+    <div class="st-card-footer"><button type="button" class="st-backup-link" data-preview-action>Ver historial de respaldos {{ st.icon('chevron') }}</button></div>
+  </section>
+  <section class="st-card st-backup-manual">
+    <div class="st-card-header"><h2>Realizar respaldo manual</h2><p class="st-section-description">Genera un respaldo completo de la base de datos y archivos del sistema.</p></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Opciones de respaldo manual">
+    <div class="st-backup-note">El respaldo incluirá todos los datos del sistema, configuraciones y archivos importantes.</div>
+    <fieldset><legend>Tipo de respaldo</legend>
+    {% for value, title, description in backup.types %}<label class="st-backup-radio"><input type="radio" name="backup_type" value="{{ value }}" {% if value == backup.selected_type %}checked{% endif %}><span><strong>{{ title }}</strong><small>{{ description }}</small></span></label>{% endfor %}
+    </fieldset>
+    </div>
+    <div class="st-card-footer">{{ st.action('Crear respaldo ahora', 'refresh', True) }}</div>
+  </section>
+  <section class="st-card st-backup-automatic">
+    <div class="st-card-header"><h2>Configuración de respaldo automático</h2><p class="st-section-description">Define la frecuencia y las opciones para los respaldos automáticos.</p></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Opciones de respaldo automático">
+    <div class="st-backup-fields grid">
+      <label><span>Frecuencia</span>{{ st.control('Frecuencia', backup.frequency) }}</label>
+      <label><span>Hora del respaldo</span><span class="st-control st-backup-time">{{ st.icon('clock') }}<input aria-label="Hora del respaldo" value="{{ backup.time }}"></span></label>
+      <label class="st-backup-wide"><span>Retener respaldos por</span>{{ st.control('Retener respaldos por', backup.retention) }}</label>
+      <label class="st-backup-wide"><span>Ubicación de almacenamiento</span>{{ st.control('Ubicación de almacenamiento', backup.location) }}</label>
+    </div>
+    </div>
+    <div class="st-card-footer">{{ st.info('Los respaldos automáticos se ejecutarán todos los días a las ' ~ backup.time ~ '.') }}</div>
+  </section>
+  <section class="st-card st-backup-storage">
+    <div class="st-card-header"><h2>Ubicación de almacenamiento</h2><p class="st-section-description">Gestiona dónde se guardan los respaldos del sistema.</p></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Ubicación de almacenamiento">
+    <h3>Ubicación primaria</h3><div class="st-backup-location">{{ st.icon('server') }}<span>{{ backup.path }}</span><span class="st-badge">En uso</span></div>
+    <p class="st-backup-helper">Espacio disponible: {{ backup.available }}</p>
+    <h3>Ubicación secundaria (opcional)</h3><div class="st-backup-drive"><div class="st-backup-location"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0f9d58" d="M8 2h8L6 20l-5-8Z"/><path fill="#fbbc04" d="m8 2 8 0 8 14h-8Z"/><path fill="#4285f4" d="M6 16h18l-4 6H3l-2-4 2-4Z"/></svg><span>{{ backup.secondary }}</span></div>{{ st.action('Conectar') }}</div>
+    <p class="st-backup-helper">Recomendado para mayor seguridad de tus respaldos.</p>
+    </div>
+  </section>
+  <section class="st-card st-backup-restore">
+    <div class="st-card-header"><h2>Restaurar respaldo</h2></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Opciones de restauración">
+    <p class="st-section-description">Restaura los datos del sistema desde un respaldo existente.</p>
+    <div class="st-backup-warning">{{ st.icon('alert') }}<p>Esta acción reemplazará los datos actuales del sistema con los del respaldo seleccionado.</p></div>
+    <label class="st-backup-selection"><span>Seleccionar respaldo</span>{{ st.control('Seleccionar respaldo', backup.selection) }}</label>
+    <p class="st-backup-helper">Tipo: Completo · Ubicación: Local</p>
+    </div>
+    <div class="st-card-footer"><div class="st-backup-danger">{{ st.action('Restaurar respaldo seleccionado', 'reset') }}</div></div>
+  </section>
+  <section class="st-card st-backup-tips">
+    <div class="st-card-header"><h2>Consejos y recomendaciones</h2></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Consejos de respaldos">
+    <ul>{% for recommendation in backup.recommendations %}<li>{{ st.icon('check') }}<span>{{ recommendation }}</span></li>{% endfor %}</ul>
+    </div>
+    <div class="st-card-footer"><button type="button" class="st-backup-link" data-preview-action>Ver guía completa de respaldos {{ st.icon('chevron') }}</button></div>
+  </section>
+</div>
+{{ st.info('Los respaldos son esenciales para la protección y recuperación de la información de tu negocio.') }}

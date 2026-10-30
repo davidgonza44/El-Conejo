@@ -1,0 +1,286 @@
+{% extends "inventory/_page.html" %}
+{# Gestión de Productos: una sola geometría aprobada. ?ref=1 usa fixture; live enlaza MySQL/API. #}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "products" %}
+{% set movements_live = not reference_mode %}
+{% set can_write = can_write|default(false) %}
+{% set can_view_cost = can_view_cost|default(false) %}
+{% set header_ph = fixture.search_placeholder if reference_mode else "Buscar productos, clientes, reportes..." %}
+{% set search_ph = fixture.search if reference_mode else "Buscar producto, código o categoría..." %}
+{% set prod_actions = fixture.actions if reference_mode else [
+    ("Filtros", "ti-filter", false),
+    ("Importar CSV", "ti-upload", false),
+    ("Exportar", "ti-download", false),
+    ("Nuevo producto", "ti-plus", true)
+] %}
+{% set catalog_title = fixture.catalog.title if reference_mode else "Catálogo de productos" %}
+{% set catalog_link = fixture.catalog.link if reference_mode else "Ver todo el catálogo" %}
+{% set catalog_cols = fixture.catalog.columns if reference_mode else [
+    "Imagen", "Código", "Producto", "Categoría", "Precio", "Stock", "Estado", "Última actualización", "Acciones"
+] %}
+{% set live_kpis = [
+    {"icon": "svg:cube", "tone": "blue", "label": "Productos activos", "value": "—", "value_id": "ix-kpi-total", "trend_id": "ix-kpi-total-trend", "sub_id": "ix-kpi-total-sub"},
+    {"icon": "svg:alert-triangle", "tone": "orange", "label": "Bajo stock", "value": "—", "value_id": "ix-kpi-low", "trend_id": "ix-kpi-low-trend", "sub_id": "ix-kpi-low-sub"},
+    {"icon": "svg:cube", "tone": "red", "label": "Sin stock", "value": "—", "value_id": "ix-kpi-out", "trend_id": "ix-kpi-out-trend", "sub_id": "ix-kpi-out-sub"},
+    {"icon": "svg:tag", "tone": "green", "label": "Categorías con productos activos", "value": "—", "value_id": "ix-kpi-cats", "trend_id": "ix-kpi-cats-trend", "sub_id": "ix-kpi-cats-sub"}
+] %}
+
+{% block title %}Gestión de Productos — Inventario{% endblock %}
+
+{% block main_class %} iv-page iv-prod-page{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_product_drawer.css') }}">
+<style>
+#ix-prod-filters{height:auto;min-height:52px;flex-wrap:wrap;gap:12px;padding:12px 18px}
+#ix-prod-filters .iv-inline-select{margin-left:0;max-width:100%;flex-wrap:wrap}
+#ix-prod-filters .px-select-box{position:relative}
+#ix-prod-filters select{appearance:none;opacity:1;inset:0;width:100%;height:100%;padding:0 28px 0 12px;border:0;border-radius:inherit;background:transparent;color:inherit;cursor:pointer;outline-offset:3px}
+#ix-prod-filters .px-select-box :is(i,svg){position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;width:14px;height:14px}
+#ix-prod-filters select:focus-visible{outline:2px solid #2563eb}
+.np-suppliers h3,.pl-suppliers h3{margin:12px 0 4px;font-size:14px}
+.ps-note{color:#64748b;font-size:12px;font-weight:400;margin:0 0 8px}
+.ps-row{border:1px solid #e2e7ef;border-radius:7px;padding:8px;margin:0 0 8px;font-weight:400}
+.ps-row button{margin:6px 6px 0 0}
+.ps-add{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ps-add label{font-size:12px;font-weight:600}
+.ps-add input,.ps-add select{width:100%;margin-top:4px;min-height:34px}
+.ps-add .ps-wide{grid-column:1 / -1}
+.product-approval-badge{display:block;width:fit-content;max-width:100%;white-space:normal;overflow-wrap:anywhere;margin-top:4px;padding:3px 6px;border-radius:4px;font-size:11px;line-height:1.2;background:#fff7ed;color:#9a3412}
+.product-approval-badge.is-approved{background:#ecfdf5;color:#047857}
+.product-approval-badge.is-rejected{background:#fef2f2;color:#b91c1c}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_product_layers.css') }}">
+{% if not reference_mode %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_products_refinement.css') }}">{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ix_product_history.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ix_product_image.js') }}"></script>
+{{ super() }}
+{% include "inventory/_product_drawer.html" %}
+{% include "inventory/_product_layers.html" %}
+{% if reference_mode %}
+<script src="{{ url_for('static', filename='js/ix_product_drawer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_product_layers.js') }}"></script>
+{% else %}
+<script>window.CAN_WRITE = {{ 'true' if can_write else 'false' }}; window.CAN_VIEW_COST = {{ 'true' if can_view_cost else 'false' }}; window.CAN_READ_SUPPLIERS = {{ has_permission('suppliers:read')|tojson }}; window.CAN_APPROVE_PRODUCTS = {{ has_permission('products:approve')|tojson }};</script>
+<script src="{{ url_for('static', filename='js/ix_product_proposals.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_product_filters.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_products_live.js') }}"></script>
+{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ iv.header("Gestión de Productos", "Administra catálogo, stock y precios",
+             header_ph, reference_mode=reference_mode, chrome=true) }}
+
+<div class="iv-toolbar iv-prod-toolbar">
+    <label class="px-search iv-toolbar-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input {% if not reference_mode %}id="ix-prod-search" {% endif %}type="search" placeholder="{{ search_ph }}" aria-label="{{ search_ph }}">
+    </label>
+    <div class="px-actions iv-toolbar-actions">{{ iv.buttons(prod_actions) }}</div>
+</div>
+
+<form {% if not reference_mode %}id="ix-prod-filters" {% endif %}class="ix-card iv-mov-filters iv-prod-filters" role="search" aria-label="Filtros" onsubmit="return false;">
+    {% if reference_mode %}
+    {% for label, value in fixture.filters.inline if label != 'Proveedor' or current_user.role != 'vendedor' %}
+    <label class="iv-inline-select">
+        <span class="iv-inline-label">{{ label }}</span>
+        <span class="px-select-box"><span>{{ value }}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></span>
+    </label>
+    {% endfor %}
+    <button type="reset" class="px-clear"><i class="ti ti-refresh" aria-hidden="true"></i>{{ fixture.filters["clear"] }}</button>
+    {% else %}
+    <label class="iv-inline-select">
+        <span class="iv-inline-label">Categoría</span>
+        <span class="px-select-box">
+            <select id="ix-filter-category" aria-label="Categoría"><option value="">Todas</option></select>
+            <i class="ti ti-chevron-down" aria-hidden="true"></i>
+        </span>
+    </label>
+    <label class="iv-inline-select">
+        <span class="iv-inline-label">Estado operativo</span>
+        <span class="px-select-box">
+            <select id="ix-filter-status" aria-label="Estado operativo">
+                <option value="">Todos</option>
+                <option value="disponible">Disponible</option>
+                <option value="bajo_stock">Bajo stock</option>
+                <option value="agotado">Agotado</option>
+                <option value="inactivo">Inactivo</option>
+            </select>
+            <i class="ti ti-chevron-down" aria-hidden="true"></i>
+        </span>
+    </label>
+    {% if has_permission('suppliers:read') %}
+    <label class="iv-inline-select">
+        <span class="iv-inline-label">Proveedor</span>
+        <span class="px-select-box">
+            <select id="ix-filter-supplier" aria-label="Proveedor" disabled aria-busy="true">
+                <option value="">Cargando proveedores…</option>
+            </select>
+            <i class="ti ti-chevron-down" aria-hidden="true"></i>
+        </span>
+    </label>
+    {% endif %}
+    <label class="iv-inline-select">
+        <span class="iv-inline-label">Estado de aprobación</span>
+        <span class="px-select-box">
+            <select id="ix-filter-approval" aria-label="Estado de aprobación">
+                <option value="">Todos</option>
+                <option value="pending">Pendiente</option>
+                <option value="approved">Aprobado</option>
+                <option value="rejected">Rechazado</option>
+            </select>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+    </label>
+    <button type="button" id="ix-clear-filters" class="px-clear"><i class="ti ti-refresh" aria-hidden="true"></i>Limpiar filtros</button>
+    {% endif %}
+</form>
+
+<section class="iv-prod-history" id="ix-product-history" aria-label="Análisis histórico" data-reference-date="{{ '2026-09-30' if reference_mode else '' }}" data-commercial-today="{{ commercial_today|default('') }}">
+    <div class="iv-history-period">
+        <span class="iv-history-label" id="ix-history-label">
+            <svg class="iv-history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 14h2m4 0h2m-8 4h2"/></svg>
+            Período de análisis
+        </span>
+        <button type="button" class="iv-history-range" id="ix-history-range" aria-labelledby="ix-history-label ix-history-range-text" aria-controls="ix-history-custom" aria-expanded="false">
+            <span id="ix-history-range-text" aria-live="polite">Selecciona un período</span>
+            <svg class="iv-history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 14h2m4 0h2"/></svg>
+        </button>
+    </div>
+    <label class="iv-history-compare" for="ix-history-compare"><span>Comparar con</span>
+        <select id="ix-history-compare" aria-describedby="ix-history-info">
+            <option value="previous">Período anterior</option>
+            <option value="year">Mismo período del año anterior</option>
+            <option value="none">Sin comparación</option>
+        </select>
+    </label>
+    <span class="iv-history-info" id="ix-history-info" tabindex="0" aria-label="Comparación no disponible. Estos controles no modifican los indicadores actuales." title="Comparación no disponible. Estos controles no modifican los indicadores actuales.">
+        <svg class="iv-history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+    </span>
+    <div class="iv-history-presets" role="group" aria-label="Períodos de análisis">
+        {% for key, label in [('today', 'Hoy'), ('7days', 'Últimos 7 días'), ('30days', 'Últimos 30 días'), ('month', 'Este mes'), ('previous-month', 'Mes pasado'), ('custom', 'Personalizado')] %}
+        <button type="button" data-history-preset="{{ key }}" aria-pressed="{{ 'true' if key == '30days' else 'false' }}"{% if key == 'custom' %} aria-controls="ix-history-custom" aria-expanded="false"{% endif %}>{{ label }}</button>
+        {% endfor %}
+    </div>
+    <form class="iv-history-custom" id="ix-history-custom" aria-label="Período personalizado" hidden>
+        <label for="ix-history-start">Fecha de inicio<input type="date" id="ix-history-start" required aria-describedby="ix-history-error"></label>
+        <label for="ix-history-end">Fecha de fin<input type="date" id="ix-history-end" required aria-describedby="ix-history-error"></label>
+        <p id="ix-history-error" role="alert" hidden>La fecha de inicio no puede ser posterior a la fecha de fin.</p>
+        <div class="iv-history-custom-actions"><button type="button" id="ix-history-cancel">Cancelar</button><button type="submit">Aplicar</button></div>
+    </form>
+    {% if not reference_mode %}<p id="ix-history-note" class="iv-history-note" role="status">Los indicadores cuentan productos activos, sin filtros del catálogo.</p>{% endif %}
+</section>
+
+{{ iv.kpis(fixture.kpis if reference_mode else live_kpis) }}
+
+<section class="iv-prod-body" aria-label="Catálogo, categorías y alertas">
+    <article class="ix-card iv-catalog">
+        {{ iv.card_head(catalog_title, catalog_link) }}
+        <div class="px-table-wrap iv-table-wrap"{% if not reference_mode %} id="ix-catalog-wrap" aria-busy="true" tabindex="0" role="region" aria-label="Catálogo de productos; desplazamiento horizontal si es necesario"{% endif %}>
+            <table class="px-table iv-table iv-catalog-table">
+                <colgroup>
+                    <col style="width: 53px"><col style="width: 76px"><col style="width: 175px"><col style="width: 127px">
+                    <col style="width: 81px"><col style="width: 56px"><col style="width: 97px"><col style="width: 133px"><col>
+                </colgroup>
+                <thead>
+                    <tr>{% for c in catalog_cols %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody{% if not reference_mode %} id="ix-catalog-body"{% endif %}>
+                    {% if reference_mode %}
+                    {% for r in fixture.catalog.rows %}
+                    <tr>
+                        <td><span class="ix-thumb iv-catalog-thumb"><img src="{{ url_for('static', filename=r.product.thumb) }}" alt=""></span></td>
+                        <td class="iv-code" title="{{ r.code }}">{{ r.code }}</td>
+                        <td>
+                            <span class="px-product-text">
+                                <span class="px-product-name" title="{{ r.product.name }}">{{ r.product.name }}</span>
+                                <span class="px-product-sku" title="{{ r.brand }}">{{ r.brand }}</span>
+                            </span>
+                        </td>
+                        <td class="px-cell-muted" title="{{ r.category }}">{{ r.category }}</td>
+                        <td class="iv-price">{{ r.price }}</td>
+                        <td><strong class="iv-num is-{{ r.stock_tone }}">{{ r.stock }}</strong></td>
+                        <td><span class="px-badge iv-badge-dot is-{{ r.status[1] }}">{{ r.status[0] }}</span></td>
+                        <td class="px-cell-muted">{{ r.updated }}</td>
+                        <td>{{ iv.row_actions() }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr><td colspan="9" class="px-cell-muted">Cargando productos…</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if reference_mode %}
+        {{ px.pagination(fixture.catalog.pagination) }}
+        {% else %}
+        <p class="iv-catalog-note">Cada precio muestra su moneda registrada: USD ($) o VES (Bs.). Sin conversión.</p>
+        <footer class="px-pagination" id="ix-pagination">
+            <span class="px-pagination-summary" id="ix-page-summary"></span>
+            <nav class="px-pages" id="ix-pages" aria-label="Paginación"></nav>
+            <label class="px-select px-per-page"><span class="px-select-box"><span id="ix-per-page-text">8 por página</span><i class="ti ti-chevron-down" aria-hidden="true"></i></span></label>
+        </footer>
+        {% endif %}
+    </article>
+
+    <div class="iv-prod-aside">
+        <article class="ix-card iv-cat-summary">
+            {{ iv.card_head(fixture.categories.title if reference_mode else "Categorías", fixture.categories.link if reference_mode else "Ver todas") }}
+            <ul class="iv-cat-rows"{% if not reference_mode %} id="ix-cat-rows"{% endif %}>
+                {% if reference_mode %}
+                {% for name, count, pct, width in fixture.categories.rows %}
+                <li>
+                    <span class="iv-cat-row-name">{{ name }}</span>
+                    <span class="iv-cat-row-num">{{ count }}</span>
+                    <span class="iv-cat-row-num">{{ pct }}</span>
+                    <span class="px-bar iv-bar iv-cat-bar" aria-hidden="true"><span style="width: {{ width }}%"></span></span>
+                </li>
+                {% endfor %}
+                {% endif %}
+            </ul>
+        </article>
+
+        <article class="ix-card iv-alerts iv-prod-alerts">
+            {{ iv.card_head(fixture.alerts.title if reference_mode else "Alertas de inventario", fixture.alerts.link if reference_mode else "Ver todas") }}
+            <ul class="iv-alert-list"{% if not reference_mode %} id="ix-alert-list"{% endif %}>
+                {% if reference_mode %}
+                {% for p, stock, badge in fixture.alerts.rows %}
+                <li>
+                    <span class="iv-alert-icon is-{{ badge[1] }}" aria-hidden="true">{{ iv.icon("svg:alert-triangle" if badge[1] == "orange" else "svg:x-circle") }}</span>
+                    <span class="ix-thumb iv-alert-thumb"><img src="{{ url_for('static', filename=p.thumb) }}" alt=""></span>
+                    <span class="ix-row-text">
+                        <span class="ix-row-title">{{ p.name }}</span>
+                        <span class="ix-row-desc">{{ stock }}</span>
+                    </span>
+                    {{ px.badge(badge) }}
+                </li>
+                {% endfor %}
+                {% endif %}
+            </ul>
+        </article>
+
+        <article class="ix-card iv-recent">
+            {{ iv.card_head(fixture.recent.title if reference_mode else "Productos recientes", fixture.recent.link if reference_mode else "Ver todos") }}
+            <div class="iv-recent-row"{% if not reference_mode %} id="ix-recent"{% endif %}>
+                {% if reference_mode %}
+                <span class="ix-thumb iv-recent-thumb"><img src="{{ url_for('static', filename=fixture.recent.product.thumb) }}" alt=""></span>
+                <span class="ix-row-text">
+                    <span class="ix-row-title">{{ fixture.recent.product.name }}</span>
+                    <span class="ix-row-desc">{{ fixture.recent.code }}</span>
+                </span>
+                <span class="ix-row-side">
+                    <span class="iv-recent-stock">{{ fixture.recent.stock }}</span>
+                    <span class="ix-row-time">{{ fixture.recent.when }}</span>
+                </span>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}Ferretería El Conejo{% endblock %}</title>
+    <!-- Tabler incluye su propio Bootstrap 5: no agregar otro Bootstrap. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1/dist/css/tabler.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="page">
+
+        <!-- Sidebar lateral -->
+        <aside class="navbar navbar-vertical navbar-expand-lg app-sidebar">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#sidebar-menu" aria-controls="sidebar-menu"
+                        aria-expanded="false" aria-label="Abrir menú">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-brand">
+                    <a href="{{ home_path() }}" class="app-brand text-decoration-none">
+                        <img src="{{ url_for('static', filename='img/logo_oficial_el_conejo.png') }}"
+                             alt="Logo de Ferretería y Construcciones El Conejo C.A." class="app-brand-logo">
+                        <span class="app-brand-text">
+                            <span class="app-brand-name">El Conejo C.A.</span>
+                            <span class="app-brand-sub">Ferretería y Construcciones</span>
+                        </span>
+                    </a>
+                </div>
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        {% if nav_allowed('dashboard') %}
+                        <li class="nav-item {{ 'active' if active_page == 'dashboard' }}">
+                            <a class="nav-link" href="/dashboard"
+                               {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
+                                <span class="nav-link-icon"><i class="ti ti-home"></i></span>
+                                <span class="nav-link-title">Inicio</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('products') or nav_allowed('categories') or nav_allowed('catalog') or nav_allowed('chatbot') or nav_allowed('inventory') %}
+                        <li class="app-nav-section" aria-hidden="true">Inventario</li>
+                        {% endif %}
+                        {% if nav_allowed('products') %}
+                        <li class="nav-item {{ 'active' if active_page == 'products' }}">
+                            <a class="nav-link" href="/products">
+                                <span class="nav-link-icon"><i class="ti ti-box"></i></span>
+                                <span class="nav-link-title">Productos</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('categories') %}
+                        <li class="nav-item {{ 'active' if active_page == 'categories' }}">
+                            <a class="nav-link" href="/categories">
+                                <span class="nav-link-icon"><i class="ti ti-category"></i></span>
+                                <span class="nav-link-title">Categorías</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('catalog') %}
+                        <li class="nav-item {{ 'active' if active_page == 'catalog' }}">
+                            <a class="nav-link" href="/catalog">
+                                <span class="nav-link-icon"><i class="ti ti-layout-grid"></i></span>
+                                <span class="nav-link-title">Catálogo visual</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('chatbot') %}
+                        <li class="nav-item {{ 'active' if active_page == 'chatbot' }}">
+                            <a class="nav-link" href="/chatbot">
+                                <span class="nav-link-icon"><i class="ti ti-message-chatbot"></i></span>
+                                <span class="nav-link-title">Asistente de inventario</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('inventory') %}
+                        <li class="nav-item {{ 'active' if active_page == 'inventory' }}">
+                            <a class="nav-link" href="/inventory">
+                                <span class="nav-link-icon"><i class="ti ti-arrows-exchange"></i></span>
+                                <span class="nav-link-title">Inventario</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('delivery_notes') or nav_allowed('historical_imports') %}
+                        <li class="app-nav-section" aria-hidden="true">Operaciones</li>
+                        {% endif %}
+                        {% if nav_allowed('delivery_notes') %}
+                        <li class="nav-item {{ 'active' if active_page == 'delivery_notes' }}">
+                            <a class="nav-link" href="/delivery-notes">
+                                <span class="nav-link-icon"><i class="ti ti-file-invoice"></i></span>
+                                <span class="nav-link-title">Notas de entrega</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('historical_imports') %}
+                        <li class="nav-item {{ 'active' if active_page == 'historical_imports' }}">
+                            <a class="nav-link"
+                               href="{{ url_for('pages.historical_imports') }}"
+                               {% if active_page == 'historical_imports' %}aria-current="page"{% endif %}>
+                                <span class="nav-link-icon"><i class="ti ti-file-upload"></i></span>
+                                <span class="nav-link-title">Importación histórica</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('predictions') %}
+                        <li class="app-nav-section" aria-hidden="true">Análisis</li>
+                        <li class="nav-item {{ 'active' if active_page == 'predictions' }}">
+                            <a class="nav-link"
+                               href="{{ url_for('pages.predictions') }}"
+                               {% if active_page == 'predictions' %}aria-current="page"{% endif %}>
+                                <span class="nav-link-icon"><i class="ti ti-chart-line"></i></span>
+                                <span class="nav-link-title">Análisis predictivo</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if nav_allowed('reports') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ '/dashboard' if nav_allowed('dashboard') else url_for('pages.report_sales') }}">
+                                <span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span>
+                                <span class="nav-link-title">Reportes</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    <div class="app-sidebar-footer mt-auto">
+                        <a href="/profile" class="app-user-card" title="Mi perfil">
+                            <span class="avatar app-user-avatar bg-primary-lt">
+                                {% if current_user.profile_photo_url %}
+                                <img src="{{ current_user.profile_photo_url }}" alt="">
+                                {% else %}
+                                {{ (current_user.name or "U")[:1] | upper }}
+                                {% endif %}
+                            </span>
+                            <span class="app-user-text">
+                                <span class="app-user-name">{{ current_user.name }}</span>
+                                <span class="app-user-meta">{{ current_user.email }}</span>
+                            </span>
+                            <i class="ti ti-chevron-right app-user-chevron" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="page-wrapper">
+            <!-- Navbar superior -->
+            <header class="navbar navbar-expand-md d-print-none app-topbar">
+                <div class="{% block container_class %}container-xl{% endblock %}">
+                    <div class="app-topbar-title flex-fill">{% block header_title %}{% endblock %}</div>
+                    <div class="navbar-nav flex-row order-md-last ms-auto align-items-center gap-2">
+                        {% block header_actions %}{% endblock %}
+                        <span class="badge bg-blue-lt d-none d-sm-inline-flex">{{ current_user.role | capitalize }}</span>
+                        <a href="/profile" class="avatar avatar-sm" title="Mi perfil">
+                            {% if current_user.profile_photo_url %}
+                            <img src="{{ current_user.profile_photo_url }}" alt="Foto de perfil">
+                            {% else %}
+                            <span class="avatar avatar-sm bg-primary-lt">
+                                {{ (current_user.name or "U")[:1] | upper }}
+                            </span>
+                            {% endif %}
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="logout()">
+                            <i class="ti ti-logout me-1"></i>Cerrar sesión
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <div class="{{ self.container_class() }}">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+
+            <footer class="footer footer-transparent d-print-none">
+                <div class="container-xl text-center text-secondary small">
+                    Ferretería El Conejo — Sistema de control de inventario y reabastecimiento
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1/dist/js/tabler.min.js"></script>
+    <script>window.bootstrap = window.bootstrap || (window.tabler && window.tabler.bootstrap);</script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

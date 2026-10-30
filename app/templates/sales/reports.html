@@ -1,0 +1,45 @@
+{% extends "sales/_page.html" %}
+{# Reportes de ventas (panel "8. Reportes de Ventas"): rango de fechas y comparación,
+   pestañas con "Resumen" activo, KPI y tendencia de ventas (barras + línea) del fixture. #}
+{% set active_page = "sales_reports" %}
+
+{% block title %}Reportes de ventas — Ventas{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-reports-page{% endblock %}
+
+{% block main %}
+{% call sa.header("Reportes de ventas", "Analiza el desempeño de tus ventas.", "",
+                  reference_mode=reference_mode, search=False) %}
+    {{ sa.btn(fixture.export[0], fixture.export[1], chevron=True) }}
+{% endcall %}
+
+{% if not fixture %}
+{{ sa.unavailable("Reportes de ventas") }}
+{% else %}
+{{ sa.date_bar(fixture.date_range, fixture.compare) }}
+
+<nav class="px-tabs sa-tabs sa-report-tabs" aria-label="Secciones del reporte">
+    {% for tab in fixture.tabs %}
+    <a href="#" {% if loop.first %}aria-current="page"{% else %}aria-disabled="true"{% endif %}>{{ tab }}</a>
+    {% endfor %}
+</nav>
+
+{{ iv.kpis(fixture.kpis) }}
+
+{% set t = fixture.trend %}
+<article class="ix-card sa-trend-card">
+    <div class="ix-card-head sa-card-head sa-trend-head">
+        <h2 class="ix-card-title">{{ t.title }}</h2>
+        <ul class="ix-chart-legend sa-legend sa-trend-legend">
+            {% for label, tone in t.legend %}
+            <li><span class="ix-swatch is-{{ tone }}"></span><span>{{ label }}</span></li>
+            {% endfor %}
+        </ul>
+        <button type="button" class="ix-diario sa-range" aria-haspopup="listbox" aria-expanded="false">{{ t.range }}<i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+    </div>
+    <div class="ix-chart sa-trend" data-trend-chart='{{ t | tojson }}'>
+        <canvas role="img" aria-label="{{ t.title }}"></canvas>
+    </div>
+</article>
+{% endif %}
+{% endblock %}

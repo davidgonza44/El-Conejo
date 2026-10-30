@@ -1,0 +1,59 @@
+{% macro switch(label, checked) %}<input class="st-notification-switch" type="checkbox" role="switch" aria-label="{{ label }}" {% if checked %}checked{% endif %}>{% endmacro %}
+<div class="st-notification-grid grid">
+    <div class="st-column">
+        <section class="st-card st-channels">
+            <h2>Canales de notificación</h2>
+            <p class="st-section-description">Selecciona los canales por los que deseas recibir las notificaciones del sistema.</p>
+            <div class="st-channel-list">
+            {% for symbol, color, label, description, recommended, checked in fixture.notification_channels %}
+                <label class="st-channel-row">
+                    <span class="st-notification-icon st-tone-{{ color }}">{{ st.icon(symbol) }}</span>
+                    <span class="st-channel-copy"><strong>{{ label }}</strong><span>{{ description }}</span></span>
+                    {% if recommended %}<span class="st-badge">Recomendado</span>{% endif %}
+                    {{ switch('Canal: ' ~ label, checked) }}
+                </label>
+            {% endfor %}
+            </div>
+        </section>
+        <section class="st-card st-email">
+            <h2>Configuración de correo electrónico</h2>
+            <p class="st-section-description">Personaliza el contenido y la frecuencia de los correos.</p>
+            <div class="st-email-fields grid grid-cols-2">
+                <label><span>Correo de notificaciones</span><span class="st-control"><input type="email" value="{{ fixture.notification_email }}"></span></label>
+                <label><span>Frecuencia de resumen</span><span class="st-email-frequency">{{ st.control('Frecuencia de resumen',fixture.notification_frequency) }}<span class="st-calendar" aria-hidden="true">{{ st.icon('calendar') }}</span></span></label>
+                <label><span>Hora de envío</span>{{ st.control('Hora de envío',fixture.notification_time) }}</label>
+                <label><span>Formato del correo</span>{{ st.control('Formato del correo',fixture.notification_format) }}</label>
+            </div>
+            <div class="st-email-note">{{ st.info('Se enviarán solo las notificaciones seleccionadas en la sección de tipos de notificaciones.') }}</div>
+        </section>
+    </div>
+    <div class="st-column">
+        <section class="st-card st-notification-types">
+            <h2>Tipos de notificaciones</h2>
+            <p class="st-section-description">Selecciona qué eventos del sistema generarán notificaciones.</p>
+            <div class="st-matrix-scroll" tabindex="0" role="region" aria-label="Canales por evento">
+                <table class="st-notification-matrix">
+                    <thead><tr><th scope="col">Evento</th>{% for channel in ['App','Correo','WhatsApp','SMS'] %}<th scope="col">{{ channel }}</th>{% endfor %}</tr></thead>
+                    <tbody>{% for symbol, label, description, states in fixture.notification_events %}<tr>
+                        <th scope="row"><span class="st-event">{{ st.icon(symbol) }}<span><strong>{{ label }}</strong><span>{{ description }}</span></span></span></th>
+                        {% for checked in states %}<td>{{ switch(label ~ ': ' ~ ['App','Correo','WhatsApp','SMS'][loop.index0],checked) }}</td>{% endfor %}
+                    </tr>{% endfor %}</tbody>
+                </table>
+            </div>
+        </section>
+        <section class="st-card st-recent-notifications">
+            <h2>Notificaciones recientes</h2>
+            <p class="st-section-description">Últimas notificaciones enviadas por el sistema.</p>
+            <ul class="st-recent-list">
+            {% for symbol, color, label, description, time, channel in fixture.recent_notifications %}
+                <li class="st-recent-row">
+                    <span class="st-notification-icon st-tone-{{ color }}">{{ st.icon(symbol) }}</span>
+                    <div class="st-recent-copy"><strong>{{ label }}</strong><p>{{ description }}</p></div>
+                    <span class="st-recent-time">{{ time }}</span><span class="st-delivery-badge">{{ channel }}</span>
+                    <button class="st-button" type="button" data-preview-action aria-label="Ver detalle: {{ label }}">Ver detalle</button>
+                </li>
+            {% endfor %}
+            </ul>
+        </section>
+    </div>
+</div>

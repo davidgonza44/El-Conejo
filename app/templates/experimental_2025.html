@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Evaluación experimental 2025 — Ferretería El Conejo</title>
+    <style>
+        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f5f7fb; }
+        * { box-sizing: border-box; }
+        body { margin: 0; }
+        main { max-width: 1200px; margin: auto; padding: 24px; }
+        h1 { font-size: 1.7rem; margin-top: 0; }
+        h2 { font-size: 1.2rem; overflow-wrap: anywhere; }
+        p { line-height: 1.55; }
+        a { color: #1655c0; }
+        a:focus-visible, summary:focus-visible, .table-wrap:focus-visible { outline: 3px solid #1655c0; outline-offset: 4px; }
+        .card { padding: 20px; background: white; border: 1px solid #dce2ed; border-radius: 14px; margin: 18px 0; }
+        .muted { color: #526079; }
+        .notice { border-left: 5px solid #e89c1c; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        caption { text-align: left; font-weight: 600; padding-bottom: 12px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e5eaf1; white-space: nowrap; }
+        th { background: #f5f7fb; }
+        pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+        .metric { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+        .metric-label { min-width: 150px; }
+        svg { width: 240px; max-width: 100%; height: 18px; }
+        @media (max-width: 600px) { main { padding: 16px; } .card { padding: 14px; } .metric { flex-wrap: wrap; } }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Evaluación experimental 2025</h1>
+    <p class="muted">Ferretería y Construcciones El Conejo C.A.</p>
+    <section class="card notice" aria-label="Procedencia y uso de la evaluación">
+        <p>2025: <strong>synthetic_structured</strong>. 2026: <strong>real_observed</strong>, cuando exista evidencia evaluable.</p>
+        <p>Propósito: <strong>experimental_evaluation</strong>. Las vistas mantienen separada la procedencia de entrenamiento y evaluación. Los resultados describen escenarios experimentales; cualquier decisión de compra requiere revisión humana.</p>
+        <p>Los ceros de 2025 dependen de un escenario explícito de completitud sintética. Las fechas con actividad de ese conjunto no demuestran un calendario empresarial real. El stock de cierre se usa como contexto y sensibilidad identificada; los parámetros de simulación son experimentales.</p>
+    </section>
+    {% if not report.available %}
+    <section class="card" role="status">
+        <h2>Reporte no disponible</h2>
+        <p>Falta un reporte experimental válido y configurado explícitamente.</p>
+        <p class="muted">Motivo técnico: {{ report.reason }}</p>
+    </section>
+    {% else %}
+    <p><a href="{{ url_for('experimental_2025.readiness') }}">Consultar resultados agregados en JSON</a></p>
+    <section class="card" aria-label="Rangos temporales de las fuentes">
+        <p>Demanda sintética 2025: {{ report.source_ranges['2025'].start or 'N/D' }} a {{ report.source_ranges['2025'].end or 'N/D' }}. Evaluación real 2026: {{ report.source_ranges['2026'].start or 'N/D' }} a {{ report.source_ranges['2026'].end or 'N/D' }}.</p>
+        <p class="muted">El rango de último movimiento del snapshot de inventario no es una serie de demanda.</p>
+    </section>
+    {% if report.metadata.get('sources') is mapping %}
+    <section class="card" aria-labelledby="source-title">
+        <h2 id="source-title">Fuentes 2025</h2>
+        <ul>{% for role, source in report.metadata.sources.items() %}<li>{{ {'demand': 'Series de demanda', 'movements': 'Trazabilidad', 'inventory': 'Contexto de inventario'}.get(role, role) }}: {{ source.source_id or 'N/D' }}{% if source.row_count is number %} — {{ source.row_count }} filas{% endif %}</li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+    {% if report.segment_chart %}
+    <section class="card" aria-labelledby="segment-title">
+        <h2 id="segment-title">Distribución del perfil de demanda 2025</h2>
+        <p class="muted">Porcentaje de SKU dentro del universo caracterizado.</p>
+        {% for row in report.segment_chart %}
+        {% set segment_label = {'regular': 'Regular', 'intermittent': 'Intermitente', 'extremely_intermittent': 'Extremadamente intermitente', 'unavailable': 'Sin observaciones'}.get(row.segment, row.segment) %}
+        <div class="metric"><span class="metric-label">{{ segment_label }}</span><svg viewBox="0 0 240 18" role="img" aria-label="{{ segment_label }}: {{ row.count }} SKU, {{ '%.1f'|format(row.percent) }} %"><rect x="0" y="0" width="240" height="18" rx="4" fill="#edf2f9"/><rect x="0" y="0" width="{{ row.percent * 2.4 }}" height="18" rx="4" fill="#2463c5"/></svg><span>{{ row.count }} ({{ '%.1f'|format(row.percent) }} %)</span></div>
+        {% endfor %}
+    </section>
+    {% endif %}
+    {% if report.characterization %}
+    <section class="card">
+        <details><summary>Caracterización de la demanda: ADI, CV² y evaluabilidad</summary><pre>{{ report.characterization|tojson(indent=2) }}</pre></details>
+    </section>
+    {% endif %}
+    {% if report.metric_rows %}
+    <section class="card" aria-labelledby="metrics-title">
+        <h2 id="metrics-title">Métricas por vista, horizonte y modelo</h2>
+        <p class="muted">WAPE se expresa en porcentaje; MAE, RMSE y sesgo en unidades. MASE y RMSSE usan escalas del entrenamiento. N/D indica ausencia de evidencia o escala válida. El horizonte distingue días calendario de períodos operativos.</p>
+        <p class="muted">La cobertura de volumen es un índice de cantidades registradas: el catálogo combina unidades diferentes. La cobertura nominal es el nivel solicitado; la cobertura observada describe su comportamiento en evaluación y no garantiza calibración.</p>
+        <div class="table-wrap" tabindex="0" aria-label="Tabla de métricas con desplazamiento horizontal">
+            <table>
+                <caption>Resultados separados por procedencia</caption>
+                <thead><tr><th scope="col">Vista</th><th scope="col">Períodos</th><th scope="col">Unidad temporal</th><th scope="col">Modelo</th>{% for metric in ['WAPE', 'MAE', 'RMSE', 'Bias', 'MASE', 'RMSSE'] %}<th scope="col">{{ metric }}</th>{% endfor %}</tr></thead>
+                <tbody>{% for row in report.metric_rows %}<tr><th scope="row">{{ row.view }}</th><td>{{ row.horizon }}</td><td>{{ {'calendar_day': 'Días calendario', 'operational_day': 'Días operativos'}.get(row.time_unit, 'N/D') }}</td><td>{{ row.model }}</td>{% for metric in ['wape', 'mae', 'rmse', 'bias', 'mase', 'rmsse'] %}{% set value = row[metric] %}<td>{{ '%.4f'|format(value) if value is number else 'N/D' }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+    {% if report.configuration %}
+    <section class="card">
+        <details>
+            <summary>Configuración declarada de la corrida</summary>
+            <p class="muted">ADIDA utiliza el tamaño de agregación declarado; esta evaluación no demuestra un tamaño óptimo universal.</p>
+            <pre>{{ report.configuration|tojson(indent=2) }}</pre>
+        </details>
+    </section>
+    {% endif %}
+    {% if report.temporal_comparison %}
+    <section class="card">
+        <details>
+            <summary>Comparación temporal sobre los mismos pares reales</summary>
+            <p class="muted">Las diferencias corresponden a historia expandida menos historia real 2026. Se informa el soporte común; la comparación conserva ambos escenarios.</p>
+            <pre>{{ report.temporal_comparison|tojson(indent=2) }}</pre>
+        </details>
+    </section>
+    {% endif %}
+    {% for name, view in report.views.items() %}
+    <section class="card" aria-labelledby="view-{{ loop.index }}">
+        <h2 id="view-{{ loop.index }}">{{ name }}</h2>
+        <p class="muted">Entrenamiento: {{ view.provenance.training }}. Evaluación: {{ view.provenance.evaluation }}.</p>
+        {% if view.available is sameas false or view.status == 'unavailable' %}
+        <p role="status">Evidencia insuficiente. Motivo: {{ view.reason or view.unavailable_reason or 'unavailable' }}.</p>
+        {% endif %}
+        <details>
+            <summary>Perfil, cobertura, segmentos, incertidumbre y simulación</summary>
+            <pre>{{ view|tojson(indent=2) }}</pre>
+        </details>
+    </section>
+    {% else %}
+    <section class="card" role="status"><p>No hay vistas evaluables en el reporte.</p></section>
+    {% endfor %}
+    {% endif %}
+</main>
+</body>
+</html>

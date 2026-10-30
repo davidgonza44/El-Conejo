@@ -1,0 +1,61 @@
+{# Diálogos de seguridad, fuera de #st-live-form: un <form> anidado sería descartado por el parser HTML. #}
+{% set sec = live.security %}{% set policy = sec.policy %}
+<dialog class="st-dialog" id="st-password-dialog" aria-labelledby="st-password-title">
+<form method="dialog" id="st-password-form" novalidate><h2 id="st-password-title">{{ 'Cambiar contraseña' if sec.has_password else 'Establecer contraseña' }}</h2>
+<label id="st-password-current-wrap"{% if not sec.has_password %} hidden{% endif %}><span>Contraseña actual</span><span class="st-control"><input type="password" name="current_password" autocomplete="current-password"{% if sec.has_password %} required{% endif %}></span></label>
+<label><span>Nueva contraseña</span><span class="st-control"><input type="password" name="new_password" autocomplete="new-password" minlength="{{ policy.min_length }}" required></span></label>
+<label><span>Confirmar nueva contraseña</span><span class="st-control"><input type="password" name="confirm_password" autocomplete="new-password" required></span></label>
+<p class="st-dialog-hint" id="st-password-hint">Mínimo <span id="st-password-hint-min">{{ policy.min_length }}</span> caracteres.</p>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cancelar</button><button type="submit" class="st-button st-primary">{{ 'Actualizar contraseña' if sec.has_password else 'Establecer contraseña' }}</button></div>
+</form></dialog>
+
+<dialog class="st-dialog" id="st-policy-dialog" aria-labelledby="st-policy-title">
+<form method="dialog" id="st-policy-form" novalidate><h2 id="st-policy-title">Editar política de contraseñas</h2>
+<label><span>Longitud mínima (6–64)</span><span class="st-control"><input type="number" name="security.password_min_length" min="6" max="64" step="1" value="{{ policy.min_length }}" required></span></label>
+<div class="st-dialog-checks">
+<label class="st-dialog-check"><input type="checkbox" name="security.password_require_uppercase"{% if policy.require_uppercase %} checked{% endif %}><span>Exigir mayúsculas</span></label>
+<label class="st-dialog-check"><input type="checkbox" name="security.password_require_lowercase"{% if policy.require_lowercase %} checked{% endif %}><span>Exigir minúsculas</span></label>
+<label class="st-dialog-check"><input type="checkbox" name="security.password_require_number"{% if policy.require_number %} checked{% endif %}><span>Exigir números</span></label>
+<label class="st-dialog-check"><input type="checkbox" name="security.password_require_special"{% if policy.require_special %} checked{% endif %}><span>Exigir caracteres especiales</span></label>
+</div>
+<div class="st-dialog-grid">
+<label><span>Expiración (días, 0 = nunca)</span><span class="st-control"><input type="number" name="security.password_expiration_days" min="0" max="365" step="1" value="{{ policy.expiration_days }}" required></span></label>
+<label><span>Historial no reutilizable (0–24)</span><span class="st-control"><input type="number" name="security.password_history_count" min="0" max="24" step="1" value="{{ policy.history_count }}" required></span></label>
+</div>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cancelar</button><button type="submit" class="st-button st-primary">Guardar política</button></div>
+</form></dialog>
+
+<dialog class="st-dialog" id="st-mfa-dialog" aria-labelledby="st-mfa-title">
+<form method="dialog" id="st-mfa-form" novalidate><h2 id="st-mfa-title">Activar verificación en dos pasos</h2>
+<div id="st-mfa-enroll-step">
+<p class="st-dialog-hint">Escanea el código con Google Authenticator, Microsoft Authenticator o similar, o introduce la clave manualmente.</p>
+<div class="st-mfa-qr" id="st-mfa-qr" aria-label="Código QR de enrolamiento"></div>
+<p class="st-dialog-hint">Clave manual: <code id="st-mfa-setup-key"></code></p>
+<label><span>Código de 6 dígitos de la aplicación</span><span class="st-control"><input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" required></span></label>
+</div>
+<div id="st-mfa-codes-step" hidden>
+<p class="st-dialog-hint"><strong>Guarda estos códigos de recuperación.</strong> Cada uno sirve una sola vez y no volverán a mostrarse.</p>
+<ul class="st-mfa-code-list" id="st-mfa-code-list"></ul>
+</div>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cerrar</button><button type="submit" class="st-button st-primary" id="st-mfa-submit">Verificar y activar</button></div>
+</form></dialog>
+
+<dialog class="st-dialog" id="st-reauth-dialog" aria-labelledby="st-reauth-title">
+<form method="dialog" id="st-reauth-form" novalidate><h2 id="st-reauth-title">Confirmar identidad</h2>
+<p class="st-dialog-hint" id="st-reauth-text"></p>
+<label><span>Código de la aplicación o de recuperación</span><span class="st-control"><input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" required></span></label>
+<label id="st-reauth-password-wrap"{% if not sec.has_password %} hidden{% endif %}><span>Contraseña actual</span><span class="st-control"><input type="password" name="current_password" autocomplete="current-password"></span></label>
+<label id="st-reauth-label-wrap" hidden><span>Nombre del dispositivo</span><span class="st-control"><input type="text" name="label" maxlength="120" autocomplete="off"></span></label>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cancelar</button><button type="submit" class="st-button st-primary" id="st-reauth-submit">Confirmar</button></div>
+</form></dialog>
+
+<dialog class="st-dialog st-dialog-wide" id="st-list-dialog" aria-labelledby="st-list-title">
+<form method="dialog"><h2 id="st-list-title"></h2>
+<div class="st-security-table-scroll st-dialog-scroll" tabindex="0"><table class="st-security-table"><thead id="st-list-head"></thead><tbody id="st-list-body"></tbody></table></div>
+<div class="st-dialog-pager"><button type="button" class="st-button" id="st-list-prev" aria-label="Página anterior">‹</button><span id="st-list-page"></span><button type="button" class="st-button" id="st-list-next" aria-label="Página siguiente">›</button></div>
+<div class="st-dialog-actions"><button type="submit" class="st-button">Cerrar</button></div>
+</form></dialog>

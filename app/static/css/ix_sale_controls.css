@@ -1,0 +1,48 @@
+/* Only reference sale interactions; no rules change the closed base geometry. */
+.sc-trigger{cursor:pointer}
+.sc-trigger:focus-visible,.sc-trigger[aria-expanded="true"]{outline:1px solid #2780ed;outline-offset:0}
+.sc-panel,.sc-panel *{box-sizing:border-box}
+.sc-panel{position:fixed;inset:auto;margin:0;padding:6px;border:1px solid #e4e7ec;border-radius:8px;background:white;color:#182131;font:12px/1.4 Inter,Arial,sans-serif;box-shadow:0 6px 18px #1c27341c;max-height:calc(100dvh - 24px);overflow:auto}
+.sc-panel::backdrop{background:transparent}
+.sc-panel button{font:inherit;cursor:pointer;border:0;background:transparent;color:inherit}
+.sc-panel :focus-visible{outline:2px solid #2680ed;outline-offset:-2px}
+.sc-icon{width:15px;height:15px;flex-shrink:0;color:#354151;display:inline-block}
+.sc-icon.green{color:#10a45c}.sc-icon.purple{color:#7135d5}.sc-icon.blue{color:#0878ed}.sc-icon.orange{color:#e77e15}.sc-icon.red{color:#c23731}
+.sc-option{display:flex;align-items:center;gap:12px;width:100%;min-height:30px;padding:6px 9px;text-align:left;border-radius:4px}
+.sc-option:hover,.sc-save-option:hover{background:#f4f7fb}
+.sc-option[aria-checked="true"]{background:#eaf3ff}
+.sc-check{margin-left:auto;stroke-width:3}
+.sc-seller{padding:8px 6px}
+.sc-seller .sc-option{min-height:34px}
+.sc-search{display:flex;align-items:center;gap:12px;border:1px solid #e4e7ec;border-radius:6px;height:36px;margin:0 5px 8px;padding:0 10px}
+.sc-search input{min-width:0;width:100%;border:0;background:transparent;font:inherit;color:inherit;outline-offset:1px}
+.sc-search input::placeholder{color:#838b99}
+.sc-search:focus-within{border-color:#8dbcf5;box-shadow:0 0 0 1px #eaf3ff}
+.sc-search input:focus-visible{outline:none}
+.sc-empty{padding:8px;color:#6b7280}
+.sc-save{padding:8px 12px}
+.sc-save-option{display:flex;align-items:center;gap:17px;width:100%;padding:10px 6px;text-align:left;border-radius:4px}
+.sc-save-option .sc-icon{width:18px;height:18px}
+.sc-save-option strong{display:block;font-size:12px;font-weight:600}
+.sc-save-option small{display:block;color:#747c8a;font-size:11px;margin-top:1px}
+.sc-save hr{border:0;border-top:1px solid #eef0f3;margin:5px 2px}
+.sc-date{padding:8px 6px 12px}
+.sc-date-body{display:flex;min-height:211px}
+.sc-date nav{width:150px;flex-shrink:0;padding-right:6px;border-right:1px solid #f1f3f5}
+.sc-date nav button{display:block;width:100%;padding:8px 10px;text-align:left;border-radius:4px;min-height:33px}
+.sc-date nav button[aria-pressed="true"],.sc-days button[aria-pressed="true"]{color:white;background:#087af5}
+.sc-calendars{display:grid;grid-template-columns:1fr 1fr;flex:1;gap:22px;padding:0 10px 0 14px}
+.sc-month header{display:flex;justify-content:space-between;align-items:center;height:32px;margin-bottom:10px}
+.sc-month header strong{text-transform:capitalize;font-size:12px}
+.sc-month header button{display:flex;padding:6px}
+.sc-month header .sc-icon{width:13px;height:13px;color:#677181}
+.sc-week,.sc-days{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10px;gap:0}
+.sc-week{color:#7b8392;margin-bottom:5px}
+.sc-days button{height:25px;max-width:32px;width:100%;border-radius:4px;color:#515d70;font-size:10px;padding:0;justify-self:center}
+.sc-days button:hover:not([aria-pressed="true"]){background:#eaf3ff}
+.sc-date footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 8px 0;font-size:11px;color:#4c5768}
+.sc-date footer>div{display:flex;gap:12px}
+.sc-date footer button{border:1px solid #dfE8f4;border-radius:6px;padding:8px 20px;color:#1677dc;font-size:12px;font-weight:600}
+.sc-date footer [data-apply]{color:white;background:#087af5;border-color:#087af5;min-width:96px}
+.sc-toast{position:fixed;bottom:24px;right:24px;z-index:1000;max-width:calc(100vw - 48px);padding:14px 20px;background:#eff8ff;border:1px solid #b9dcff;border-radius:8px;box-shadow:0 5px 20px #1c27341c;color:#194d7b;font:13px/1.5 Inter,Arial,sans-serif}
+@media(max-width:650px){.sc-date-body{flex-direction:column}.sc-date nav{display:grid;grid-template-columns:repeat(2,1fr);width:100%;border:0;padding:0 0 8px}.sc-calendars{gap:10px;padding:0 4px}.sc-date footer{flex-wrap:wrap}.sc-date footer>div{margin-left:auto}}

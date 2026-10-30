@@ -1,0 +1,29 @@
+{# Diálogos de notificaciones, fuera de #st-live-form. #}
+{% set s = live.settings %}
+<dialog class="st-dialog" id="st-channel-dialog" aria-labelledby="st-channel-title">
+<form method="dialog" id="st-channel-form" novalidate><h2 id="st-channel-title">Configurar canal</h2>
+<div class="st-dialog-status" id="st-channel-status"></div>
+<label id="st-channel-destination-wrap"><span id="st-channel-destination-label">Destino</span><span class="st-control"><input name="destination" maxlength="120" autocomplete="off"></span></label>
+<label class="st-dialog-check"><input type="checkbox" name="enabled"><span>Canal activo</span></label>
+<details class="st-dialog-help"><summary>Cómo configurar el proveedor</summary><div id="st-channel-help"></div></details>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cancelar</button><button type="submit" class="st-button st-primary">Guardar canal</button></div>
+</form></dialog>
+
+<dialog class="st-dialog" id="st-test-dialog" aria-labelledby="st-test-title">
+<form method="dialog" id="st-test-form" novalidate><h2 id="st-test-title">Probar notificaciones</h2>
+<p class="st-dialog-hint">Se enviará una notificación de prueba real por cada canal seleccionado (solo canales activos y configurados).</p>
+<div class="st-dialog-checks" id="st-test-channels"></div>
+<ul class="st-dialog-results" id="st-test-results" hidden></ul>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cerrar</button><button type="submit" class="st-button st-primary" id="st-test-submit">Enviar prueba</button></div>
+</form></dialog>
+
+<dialog class="st-dialog" id="st-notification-dialog" aria-labelledby="st-notification-title">
+<form method="dialog"><h2 id="st-notification-title"></h2>
+<p class="st-dialog-hint" id="st-notification-message"></p>
+<dl class="st-dialog-meta" id="st-notification-meta"></dl>
+<h3 class="st-dialog-subtitle">Entregas</h3>
+<ul class="st-dialog-results" id="st-notification-deliveries"></ul>
+<div class="st-dialog-actions"><a class="st-button" id="st-notification-link" hidden>Ir al registro</a><button type="submit" class="st-button st-primary">Cerrar</button></div>
+</form></dialog>

@@ -1,0 +1,177 @@
+{# Shared layers. Reference keeps its approved fixture icons. #}
+{% import "inventory/_category_icons.html" as category_icons %}
+{% if not reference_mode %}
+<style>
+.cl-comparison{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}
+.cl-comparison th,.cl-comparison td{padding:9px 6px;border-bottom:1px solid #e8edf3;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.cl-comparison th:first-child{width:24%}
+</style>
+{% endif %}
+{% macro icon(name) -%}
+<svg class="cl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="m18 6-12 12M6 6l12 12"/>
+{% elif name == 'check' %}<path d="m20 6-11 11-5-5"/>
+{% elif name == 'eye' %}<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+{% elif name == 'edit' %}<path d="m16 3 5 5M4 16 16 4a3 3 0 0 1 4 4L8 20l-5 1 1-5Z"/>
+{% elif name == 'copy' %}<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+{% elif name == 'toggle' %}<rect x="2" y="6" width="20" height="12" rx="6"/><circle cx="8" cy="12" r="2"/>
+{% elif name == 'trash' %}<path d="M3 6h18M19 6l-1 14H6L5 6M9 6V3h6v3M10 10v7m4-7v7"/>
+{% elif name == 'chevron' %}<path d="m9 18 6-6-6-6"/>
+{% elif name == 'save' %}<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>
+{% elif name == 'download' %}<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+{% elif name == 'box' %}<path d="m12 3 9 5v8l-9 5-9-5V8l9-5Zm0 9 9-4M12 12 3 8m9 4v9M7.5 5.5l9 5"/>
+{% elif name == 'coins' %}<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14a8 3 0 0 0 16 0V5M4 12a8 3 0 0 0 16 0"/>
+{% elif name == 'chart' %}<path d="M3 3v18h18M7 14l4-4 4 3 5-7"/>
+{% elif name == 'tag' %}<path d="m20 13-7 7a2 2 0 0 1-3 0l-8-8V2h10l8 8a2 2 0 0 1 0 3Z"/><circle cx="7" cy="7" r="1"/>
+{% elif name == 'bolt' %}<path d="m13 2-3 8h9L11 22l3-8H5L13 2Z" fill="currentColor"/>
+{% elif name == 'wrench' %}<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-7 7a2.1 2.1 0 0 1-3-3l7-7a6 6 0 0 1 7.9-7.9Z"/>
+{% elif name == 'hammer' %}<path d="m15 12-8.4 8.4a2 2 0 0 1-3-3L12 9M18 15l4-4L11 0 7 4l11 11Z"/>
+{% elif name == 'shield' %}<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/>
+{% elif name == 'dots' %}<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>
+{% else %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% macro palette() %}
+<div class="cl-palette" role="group" aria-label="Color de la categoría">
+{% for name, hex, tone in [('Azul','#1477f5','blue'),('Verde','#20aa58','green'),('Naranja','#ff941c','orange'),('Violeta','#8658d4','purple'),('Turquesa','#13b9b1','teal'),('Rojo','#ee4a4e','red'),('Rosa','#e93d94','pink'),('Amarillo','#fbc21b','yellow'),('Marrón','#92400e','brown'),('Azul marino','#1e3a8a','navy'),('Gris','#87929f','gray')] %}
+<button type="button" style="--cl-color:{{ hex }}" data-cl-color="{{ hex }}" data-cl-tone="{{ tone }}" aria-label="{{ name }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ icon('check') }}</button>
+{% endfor %}
+</div>
+{% endmacro %}
+{% macro badge() %}<span class="cl-badge" data-cl-status>Activa</span>{% endmacro %}
+{# Métricas: en referencia reciben valores del fixture; en live llegan como "—" y los llena ix_categories_live.js. #}
+{% macro metrics(products, value, share, compact=False, rank='', total='', show_value=True) %}
+<section class="cl-section cl-metrics{% if compact %} cl-compact{% endif %}">
+<h3>{% if not compact %}{{ icon('chart') }}{% endif %}{{ 'Información de la categoría' if compact else 'Métricas principales' }}</h3>
+<div class="cltw:grid {{ 'cltw:grid-cols-3' if compact else 'cltw:grid-cols-2' }} cltw:gap-[8px]">
+{% set value_entries = [('coins','Valor en inventario',value,'Valor total actual','purple','value'),('tag','% del inventario' if compact else '% del inventario total',share,'Del inventario total','orange','share')] if show_value else [] %}
+{% set entries = [('box','Total de productos' if compact else 'Productos',products,'En esta categoría','blue','products')] + value_entries %}
+{% for glyph, label, text, hint, tone, key in entries %}
+<div class="cl-metric"><span class="cl-metric-icon cl-{{ tone }}">{{ icon(glyph) }}</span><div><small>{{ label }}</small><strong data-cl-metric="{{ key }}">{{ text }}</strong><small>{{ hint }}</small></div></div>
+{% endfor %}
+{% if not compact and show_value %}<div class="cl-metric"><span class="cl-metric-icon cl-green">{{ icon('chart') }}</span><div><small>Posición por valor</small><strong data-cl-metric="rank">#{{ rank }}</strong><small>de <span data-cl-metric="total">{{ total }}</span> categorías</small></div></div>{% endif %}
+</div></section>
+{% endmacro %}
+{% macro footer(label, action, primary) %}
+<footer class="cl-footer"><button type="button" class="cl-button" data-cl-cancel>{{ label }}</button>{% if reference_mode or action != 'edit' or can_propose %}<button type="button" class="cl-button cl-primary" data-cl-action="{{ action }}">{{ icon('edit' if action == 'edit' else ('download' if action == 'export' else 'save')) }}{{ primary }}</button>{% endif %}</footer>
+{% endmacro %}
+{% if reference_mode %}<script type="application/json" id="cl-fixture">{{ fixture.table.rows | tojson }}</script>{% endif %}
+<dialog id="cl-dialog" class="cl-dialog"{% if not reference_mode %} data-live{% endif %} aria-labelledby="cl-title">
+<header class="cl-header"><div><h2 id="cl-title" tabindex="-1"></h2><p id="cl-subtitle"></p></div><button type="button" class="cl-close" data-cl-close aria-label="Cerrar panel">{{ icon('x') }}</button></header>
+<div id="cl-content"></div>
+</dialog>
+<div id="cl-menu" class="cl-menu" role="menu" aria-label="Acciones de categoría" hidden>
+{% for action,label,glyph in [('detail','Ver detalle','eye'),('edit','Editar categoría','edit'),('duplicate','Duplicar categoría','copy'),('status','Cambiar estado','toggle'),('delete','Eliminar','trash')] %}
+{% if reference_mode or action == 'detail' or (can_propose and action in ['edit','duplicate']) %}
+{% if action == 'delete' %}<hr>{% endif %}
+<button type="button" role="menuitem" data-cl-action="{{ action }}"{% if action == 'status' %} aria-haspopup="menu" aria-expanded="false" aria-controls="cl-submenu"{% endif %}>{{ icon(glyph) }}<span>{{ label }}</span>{% if action == 'status' %}{{ icon('chevron') }}{% endif %}</button>
+{% endif %}
+{% endfor %}
+{% if not reference_mode and can_approve %}
+<button type="button" role="menuitem" data-cl-action="approve">{{ icon('check') }}<span>Aprobar categoría</span></button>
+<button type="button" role="menuitem" data-cl-action="reject">{{ icon('x') }}<span>Rechazar categoría</span></button>
+{% endif %}
+<div id="cl-submenu" class="cl-submenu" role="menu" aria-label="Cambiar estado" hidden><button type="button" role="menuitem" data-cl-action="active">Activa</button><button type="button" role="menuitem" data-cl-action="inactive">Inactiva</button></div>
+</div>
+<div id="cl-feedback" class="cl-feedback" role="status" aria-live="polite" hidden></div>
+
+<template id="cl-form-template">
+{% if reference_mode or can_propose %}
+<form method="dialog" class="cl-form">
+<div class="cl-body">
+<div class="cl-selected" data-cl-edit-only hidden><span class="cl-avatar" data-cl-avatar></span><div><strong data-cl-selected-name></strong><small>Categoría seleccionada</small></div></div>
+<section class="cl-basic cl-section">
+<h3 data-cl-new-only>Información básica</h3>
+<label class="cl-field" for="cl-name">Nombre de la categoría <b>*</b><input id="cl-name" required maxlength="120" placeholder="Ej. Herramientas de jardín" autocomplete="off"></label>
+<label class="cl-field" for="cl-description">Descripción<textarea id="cl-description" maxlength="200" placeholder="Describe brevemente el tipo de productos que incluirá esta categoría..." aria-describedby="cl-counter"></textarea><small id="cl-counter" class="cl-counter">0/200</small></label>
+</section>
+<section class="cl-section cl-colors">
+{% if reference_mode %}<h3 data-cl-new-only>Identificación visual</h3><p data-cl-new-only>Selecciona un color para identificar la categoría en el sistema.</p><h3 data-cl-edit-only hidden>Color / Identificador visual</h3>{{ palette() }}<p data-cl-edit-only hidden>Este color se mostrará en la lista de categorías y otros módulos.</p>
+{% else %}<h3>Identificación visual</h3><fieldset><legend>Color</legend>{{ palette() }}</fieldset>{{ category_icons.picker() }}{% endif %}
+</section>
+<section class="cl-section cl-state"><h3 data-cl-new-only>Estado</h3><p data-cl-new-only>{% if reference_mode %}Define si la categoría estará disponible en el catálogo.{% else %}La propuesta quedará pendiente e inactiva hasta que otro usuario administrador la apruebe.{% endif %}</p><label class="cl-field" for="cl-state">Estado <b>*</b><span class="cl-select"><select id="cl-state" required><option>Activa</option><option>Inactiva</option></select></span></label><p data-cl-edit-only hidden>Solo las categorías aprobadas y activas pueden seleccionarse en productos. Los cambios propuestos requieren aprobación.</p></section>
+<section class="cl-section cl-preview"{% if reference_mode %} data-cl-new-only{% endif %}><h3>Vista previa</h3><p>Así se verá la categoría en el sistema.</p><div class="cl-preview-card"><span class="cl-avatar" data-cl-preview-avatar>{{ icon('tag') }}</span><div><strong data-cl-preview-name>Nombre de la categoría</strong><p data-cl-preview-description>Descripción de la categoría aparecerá aquí en dos líneas máximo.</p></div>{{ badge() }}</div></section>
+<div data-cl-edit-metrics hidden></div>
+</div>
+{{ footer('Cancelar','save','Guardar categoría') }}
+</form>
+{% else %}{{ palette() }}{{ category_icons.picker() }}{% endif %}
+</template>
+
+{% if reference_mode %}
+{% for c in fixture.table.rows %}
+<template id="cl-avatar-{{ loop.index0 }}">{{ icon(c.icon[4:]) }}</template>
+<template id="cl-metrics-{{ loop.index0 }}">{{ metrics(c.products.split(' ')[0], c.value, fixture.donut['items'][loop.index0][1], True) }}</template>
+<template id="cl-detail-{{ loop.index0 }}">
+<div class="cl-body">
+<div class="cl-detail-summary"><span class="cl-avatar cl-tone-{{ c.tone }}">{{ icon(c.icon[4:]) }}</span><div><strong>{{ c.name }}</strong><p>{{ c.description }}</p>{{ badge() }}</div></div>
+<section class="cl-section cl-general"><h3>{{ icon('file') }}Información general</h3><dl>
+{% for label,value in [('Nombre de la categoría',c.name),('Descripción',c.description),('Estado','Activa'),('Fecha de creación',fixture.layers.created),('Última actualización',fixture.layers.updated)] %}
+<div><dt>{{ label }}</dt><dd>{% if label == 'Estado' %}{{ badge() }}{% else %}{{ value }}{% endif %}</dd></div>
+{% endfor %}
+</dl></section>
+{{ metrics(c.products.split(' ')[0], c.value, fixture.donut['items'][loop.index0][1], False, loop.index, fixture.table.rows | length) }}
+<section class="cl-section cl-recent"><h3>{{ icon('box') }}Productos recientes<button type="button" data-cl-action="all">Ver todos →</button></h3>
+{% if loop.first %}<ul>{% for p in fixture.layers.recent %}<li><span class="cl-thumb">{% if p.thumb %}<img src="{{ url_for('static', filename=p.thumb) }}" alt="">{% else %}{{ icon('box') }}{% endif %}</span><span>{{ p.name }}<small>{{ p.sku }}</small></span><span>{{ p.price }}</span></li>{% endfor %}</ul>
+{% else %}<p class="cl-empty">No hay productos recientes en esta demostración.</p>{% endif %}
+</section>
+</div>{{ footer('Cerrar','edit','Editar categoría') }}
+</template>
+{% endfor %}
+{% else %}
+{# Live: mismos bloques; ix_categories_live.js llena los data-cl-* con datos reales. #}
+<template id="cl-metrics-live">{{ metrics('—', '—', '—', True, show_value=can_view_cost) }}</template>
+<template id="cl-detail-template">
+<div class="cl-body">
+<div class="cl-detail-summary"><span class="cl-avatar" data-cl-detail-avatar>{{ icon('tag') }}</span><div><strong data-cl-detail="name"></strong><p data-cl-detail="description"></p>{{ badge() }}</div></div>
+<section class="cl-section cl-general"><h3>{{ icon('file') }}Información general</h3><dl>
+<div><dt>Nombre de la categoría</dt><dd data-cl-detail="name"></dd></div>
+<div><dt>Descripción</dt><dd data-cl-detail="description"></dd></div>
+<div><dt>Estado</dt><dd>{{ badge() }}</dd></div>
+<div><dt>Color</dt><dd data-cl-detail="color"></dd></div>
+<div><dt>Icono</dt><dd data-cl-detail="icon"></dd></div>
+<div><dt>Fecha de creación</dt><dd data-cl-detail="created"></dd></div>
+<div><dt>Aprobación</dt><dd data-cl-detail="approval"></dd></div>
+<div><dt>Fecha de decisión</dt><dd data-cl-detail="decided"></dd></div>
+<div><dt>Motivo de rechazo</dt><dd data-cl-detail="reason"></dd></div>
+</dl></section>
+<section class="cl-section" data-cl-proposal hidden aria-label="Propuesta de modificación">
+    <h3>Propuesta de modificación · <span data-cl-proposal-status></span></h3>
+    <dl class="cl-general">
+        <div><dt>Propuesto por</dt><dd data-cl-proposed-by></dd></div>
+        <div><dt>Revisado por</dt><dd data-cl-reviewed-by></dd></div>
+        <div><dt>Motivo de rechazo</dt><dd data-cl-proposal-reason></dd></div>
+    </dl>
+    <table class="cl-comparison"><thead><tr><th>Campo</th><th>Valor actual</th><th>Valor propuesto</th></tr></thead><tbody data-cl-comparison></tbody></table>
+</section>
+{% if can_approve %}
+<section class="cl-section" data-cl-review hidden aria-label="Decidir propuesta de categoría">
+    <h3>Revisar propuesta</h3>
+    <label class="cl-field">Motivo de rechazo<textarea data-cl-rejection-reason maxlength="1000" rows="2"></textarea></label>
+    <div class="cl-footer">
+        <button type="button" class="cl-button cl-primary" data-cl-action="approve">{{ icon('check') }}Aprobar</button>
+        <button type="button" class="cl-button" data-cl-action="reject">{{ icon('x') }}Rechazar</button>
+    </div>
+    <p data-cl-review-feedback role="alert" hidden></p>
+</section>
+{% endif %}
+{{ metrics('—', '—', '—', False, '—', '—', can_view_cost) }}
+<section class="cl-section cl-recent"><h3>{{ icon('box') }}Productos recientes</h3><ul data-cl-recent></ul><p class="cl-empty" data-cl-recent-empty hidden>No hay productos activos en esta categoría.</p></section>
+</div>{{ footer('Cerrar','edit','Editar categoría') }}
+</template>
+{% endif %}
+
+<template id="cl-export-template">
+<div class="cl-body">
+<fieldset class="cl-formats"><legend>Formato de archivo</legend><div class="cltw:grid cltw:grid-cols-3 cltw:gap-[12px]">
+{% for value,label,hint,tone in [('xlsx','Excel (XLSX)','Ideal para análisis en hojas de cálculo','green'),('csv','CSV','Formato de texto compatible','gray'),('pdf','PDF','Ideal para imprimir o compartir','red')] %}
+<label class="cl-format"><input type="radio" name="cl-format" value="{{ value }}"{% if loop.first %} checked{% endif %}><span class="cl-file-icon cl-{{ tone }}">{{ icon('file') }}</span><strong>{{ label }}</strong><small>{{ hint }}</small></label>
+{% endfor %}
+</div></fieldset>
+<fieldset class="cl-options"><legend>Opciones de exportación</legend><div class="cltw:grid cltw:grid-cols-2 cltw:gap-[12px]">
+{% for text, name in [('Incluir descripción','include_description'),('Incluir estado','include_status'),('Incluir productos por categoría','include_products'),('Incluir valor en inventario','include_value')] %}
+{% if name != 'include_value' or reference_mode or can_view_cost %}<label><input type="checkbox"{% if not reference_mode %} name="{{ name }}"{% endif %} checked>{{ text }}</label>{% endif %}
+{% endfor %}
+</div></fieldset>
+</div>{{ footer('Cancelar','export','Exportar') }}
+</template>

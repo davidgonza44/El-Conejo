@@ -1,0 +1,70 @@
+{# Reference-only visual simulation. Native dialog form cannot submit to HTTP. #}
+{% macro icon(name) -%}
+<svg class="sl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="M18 6 6 18M6 6l12 12"/>
+{% elif name == 'save' %}<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7H7v7M7 3v5h8"/>
+{% else %}<path d="m6 9 6 6 6-6"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% macro field(id, label, placeholder, required=false, type='text') %}
+<label class="sl-field" for="sl-{{ id }}">{{ label }}{% if required %} <b aria-hidden="true">*</b>{% endif %}
+<input id="sl-{{ id }}" type="{{ type }}" placeholder="{{ placeholder }}"{% if required %} required{% endif %}>
+</label>
+{% endmacro %}
+<dialog id="sl-dialog" class="sl-dialog" aria-labelledby="sl-title" aria-describedby="sl-subtitle">
+    <header class="sl-header">
+        <div><h2 id="sl-title" tabindex="-1">Nuevo proveedor</h2><p id="sl-subtitle">Registra un nuevo proveedor en el sistema</p></div>
+        <button type="button" class="sl-close" data-sl-close aria-label="Cerrar nuevo proveedor">{{ icon('x') }}</button>
+    </header>
+    <form id="sl-form" method="dialog" novalidate>
+        <div class="sl-body">
+            <section aria-labelledby="sl-basic">
+                <h3 id="sl-basic">Información básica</h3>
+                <div class="sl-grid">
+                    {{ field('name', 'Nombre o razón social', 'Ej. Ferremax, C.A.', true) }}
+                    {{ field('rif', 'RIF', 'Ej. J-12345678-9', true) }}
+                    {{ field('contact', 'Contacto principal', 'Nombre del contacto', true) }}
+                    {{ field('role', 'Cargo', 'Ej. Gerente de Ventas') }}
+                </div>
+            </section>
+            <section aria-labelledby="sl-contact-info">
+                <h3 id="sl-contact-info">Información de contacto</h3>
+                <div class="sl-grid">
+                    {{ field('phone', 'Teléfono', 'Ej. 0412-555.1234', true, 'tel') }}
+                    {{ field('email', 'Correo electrónico', 'Ej. contacto@proveedor.com', true, 'email') }}
+                    <div class="sl-wide">{{ field('address', 'Dirección', 'Ej. Av. Principal, Centro Empresarial, Piso 3, Oficina 12') }}</div>
+                    {{ field('city', 'Ciudad', 'Ej. Valencia') }}
+                    <label class="sl-field" for="sl-province">Estado/Provincia
+                        <span class="sl-select"><select id="sl-province"><option value="">Seleccionar...</option>
+                        {% for state in ['Amazonas', 'Anzoátegui', 'Apure', 'Aragua', 'Barinas', 'Bolívar', 'Carabobo', 'Cojedes', 'Delta Amacuro', 'Distrito Capital', 'Falcón', 'Guárico', 'Lara', 'La Guaira', 'Mérida', 'Miranda', 'Monagas', 'Nueva Esparta', 'Portuguesa', 'Sucre', 'Táchira', 'Trujillo', 'Yaracuy', 'Zulia'] %}<option>{{ state }}</option>{% endfor %}
+                        </select>{{ icon('chevron') }}</span>
+                    </label>
+                </div>
+            </section>
+            <section aria-labelledby="sl-classification">
+                <h3 id="sl-classification">Clasificación</h3>
+                <div class="sl-grid">
+                    <label class="sl-field" for="sl-category">Categoría principal <b aria-hidden="true">*</b>
+                        <span class="sl-select"><select id="sl-category" required><option value="">Seleccionar categoría...</option>
+                        {% for category in fixture.table.rows | map(attribute='category') | map('first') | unique %}<option>{{ category }}</option>{% endfor %}
+                        </select>{{ icon('chevron') }}</span>
+                    </label>
+                    <label class="sl-field" for="sl-state">Estado <b aria-hidden="true">*</b>
+                        <span class="sl-select sl-state"><select id="sl-state" required><option>Activo</option><option>Inactivo</option></select>{{ icon('chevron') }}</span>
+                    </label>
+                </div>
+            </section>
+            <section aria-labelledby="sl-notes-title">
+                <h3 id="sl-notes-title"><label for="sl-notes">Notas adicionales</label></h3>
+                <textarea id="sl-notes" maxlength="300" placeholder="Información adicional sobre el proveedor..." aria-describedby="sl-counter"></textarea>
+                <output id="sl-counter" for="sl-notes">0/300</output>
+            </section>
+            <p id="sl-error" class="sl-error" role="alert" hidden>Completa los campos obligatorios e introduce un correo electrónico válido.</p>
+        </div>
+        <footer class="sl-footer">
+            <button type="button" class="sl-button" data-sl-close>Cancelar</button>
+            <button type="submit" class="sl-button sl-primary">{{ icon('save') }}Guardar proveedor</button>
+        </footer>
+    </form>
+</dialog>
+<p id="sl-feedback" class="sl-feedback" role="status" hidden></p>

@@ -1,0 +1,213 @@
+{# Sidebar compartido del shell "ix" (Inicio y Análisis predictivo).
+
+   Variables:
+   - reference_mode: True en debug con ?ref=1 (fixtures; destinos reales conservan ?ref=1).
+   - pro_shell: True para la cáscara visual Ferretería Pro sin fixtures ni ?ref=1.
+   - La marca, el árbol y el pie Pro se muestran si reference_mode OR pro_shell.
+   - active_page: clave de la pantalla actual.
+   - sidebar_variant: "inicio" reproduce 01_inicio.png; "predictive" reproduce el sidebar de
+     04_analisis_predictivo (grupo Análisis predictivo desplegado); "inventory" reproduce el
+     sidebar de las referencias de Inventario (grupo Inventario desplegado y teñido, con
+     Análisis predictivo también desplegado); "reports" reproduce el sidebar de Dashboard de
+     Reportes (Reportes activo, grupos Inventario y Análisis predictivo plegados); "sales"
+     reproduce el sidebar del collage de Ventas (grupo Ventas desplegado con destinos reales,
+     Inventario y Análisis predictivo plegados pero con sus destinos intactos).
+   - compras_open: True solo cuando la referencia muestra el grupo Compras desplegado.
+   #}
+{% set pro_shell = pro_shell|default(false) %}
+{% set approved_shell = reference_mode or pro_shell %}
+{# Las variantes de maqueta no cambian la geometría ni los iconos del menú en vivo. #}
+{% set live_sidebar = pro_shell and not reference_mode %}
+{% set ref_qs = "?ref=1" if reference_mode else "" %}
+{% set purchase_children = [("replenishment_requests", "Solicitudes de reposición", url_for("purchases.requests") ~ ref_qs), ("purchases", "Órdenes de compra", url_for("purchases.page") ~ ref_qs), ("suppliers", "Proveedores", url_for("pages.suppliers") ~ ref_qs), ("receipts", "Recepciones", url_for("purchases.receptions") ~ ref_qs)] %}
+{% set approval_link = [('purchase_approvals', 'Pendientes de aprobación', url_for('purchases.page', status='pending_approval', start='', end='') ~ ('&ref=1' if reference_mode else ''))] %}
+{% set purchase_children = purchase_children + (approval_link if nav_allowed('purchase_approvals', reference_mode) else []) %}
+{% set sales_href = url_for("pages.sales") ~ ref_qs %}
+{% set chatbot_href = url_for("pages.chatbot") ~ ref_qs %}
+{% set sales_children = [
+    ("sales_new", "Nueva venta", url_for("pages.sales_new") ~ ref_qs),
+    ("sales_list", "Listado", url_for("pages.sales_list") ~ ref_qs),
+    ("sales_customers", "Clientes", url_for("pages.sales_customers") ~ ref_qs),
+    ("sales_quotes", "Cotizaciones", url_for("pages.sales_quotes") ~ ref_qs),
+    ("sales_orders", "Pedidos", url_for("pages.sales_orders") ~ ref_qs),
+    ("delivery_notes", "Notas de entrega", url_for("pages.delivery_notes") ~ ref_qs),
+] %}
+{% set pred_children = [
+    ("demand_forecast", "Pronóstico de demanda", url_for("pages.demand_forecast") ~ ref_qs),
+    ("replenishment", "Reabastecimiento", url_for("pages.replenishment") ~ ref_qs),
+    ("critical_products", "Productos críticos", url_for("pages.critical_products") ~ ref_qs),
+    ("trends", "Tendencias", url_for("pages.trends") ~ ref_qs),
+    ("model_accuracy", "Precisión del modelo", url_for("pages.model_accuracy") ~ ref_qs),
+] %}
+{% set inv_children = [
+    ("inventory_summary", "Resumen", url_for("pages.inventory_summary") ~ ref_qs),
+    ("products", "Productos", url_for("pages.products") ~ ref_qs),
+    ("categories", "Categorías", url_for("pages.categories") ~ ref_qs),
+    ("inventory", "Movimientos", url_for("pages.inventory") ~ ref_qs),
+    ("reconciliation", "Cortes y conciliaciones", url_for("reconciliation.page") ~ ref_qs),
+] %}
+{% set purchase_children = visible_nav(purchase_children, reference_mode) %}
+{% set sales_children = visible_nav(sales_children, reference_mode) %}
+{% set pred_children = visible_nav(pred_children, reference_mode) %}
+{% if not reference_mode and has_permission('historical_imports:read') %}
+{% set pred_children = pred_children + [('real_2026', 'Histórico real 2026', url_for('real_2026.page'))] %}
+{% endif %}
+{% set pred_active = active_page in (pred_children | map(attribute=0) | list) %}
+{% set inv_children = visible_nav(inv_children, reference_mode) %}
+{% set notification_sidebar = reference_mode and sidebar_variant == 'settings' and tab is defined and tab == 'notifications' %}
+{% set account_sidebar = reference_mode and sidebar_variant == 'settings' and tab is defined and tab in ('users', 'security', 'backup') %}
+{% set lucide_sidebar = notification_sidebar or account_sidebar %}
+{% macro sidebar_icon(name) %}{% if lucide_sidebar %}{{ st.icon({'ti-home':'home','ti-package':'boxes','ti-shopping-cart':'cart','ti-shopping-bag':'bag','ti-users':'users','ti-chart-line':'chart','ti-chart-bar':'chart','ti-message-chatbot':'message','ti-settings':'settings'}.get(name,'settings')) }}{% else %}<i class="ti {{ name }}" aria-hidden="true"></i>{% endif %}{% endmacro %}
+{% macro sidebar_chevron(direction) %}{% if lucide_sidebar %}<span class="ti-chevron-{{ direction }} ix-nav-chevron" aria-hidden="true">{{ st.icon("chevron") }}</span>{% else %}<i class="ti ti-chevron-{{ direction }} ix-nav-chevron" aria-hidden="true"></i>{% endif %}{% endmacro %}
+{% macro nav_link(href, icon, label, current=False, chevron=None) %}
+<li><a href="{{ href }}" {% if current %}aria-current="page"{% elif href == "#" %}aria-disabled="true"{% endif %}>{{ sidebar_icon(icon) }}{{ label }}{% if chevron %}{{ sidebar_chevron(chevron) }}{% endif %}</a></li>
+{% endmacro %}
+
+{# soft=True: cabecera azul sin fondo propio (Inventario y Análisis predictivo en las referencias
+   de Inventario); tinted=True: todo el grupo sobre un fondo apenas teñido; href: la cabecera
+   navega a esa ruta (Ventas) en lugar de plegar/desplegar el grupo. #}
+{% macro nav_group(id, icon, label, children, open, active_child=None, soft=False, tinted=False, href=None) %}
+{% if (children or href) and (id != 'ix-nav-pred' or reference_mode or has_permission('predictions:read')) %}
+<li class="ix-nav-group{{ ' is-open' if open }}{{ ' is-soft' if soft }}{{ ' is-tinted' if tinted and open }}">
+    {% if href %}
+    <a href="{{ href }}" class="ix-nav-group-link{{ ' is-active' if open }}"{% if open and not active_child %} aria-current="page"{% endif %}>
+        {{ sidebar_icon(icon) }}{{ label }}{{ sidebar_chevron('up' if open else 'right') }}
+    </a>
+    {% else %}
+    <button type="button" class="{{ 'is-active' if open }}" aria-expanded="{{ 'true' if open else 'false' }}" aria-controls="{{ id }}">
+        {{ sidebar_icon(icon) }}{{ label }}{{ sidebar_chevron('up' if open else 'right') }}
+    </button>
+    {% endif %}
+    <ul id="{{ id }}" class="ix-nav-children"{% if not open %} hidden{% endif %}>
+        {% for key, text, href in children %}
+        <li><a href="{{ href }}" {% if key == active_child %}aria-current="page"{% elif href == "#" %}aria-disabled="true"{% endif %}>{{ text }}</a></li>
+        {% endfor %}
+    </ul>
+</li>
+{% endif %}
+{% endmacro %}
+
+<aside class="ix-sidebar{% if reference_mode and sidebar_variant %} is-{{ sidebar_variant }}{% endif %}{{ " is-notifications" if notification_sidebar }}{{ " is-account is-" ~ tab if account_sidebar }}" id="ix-sidebar" aria-label="Navegación principal">
+    <a href="{{ '/dashboard' ~ ref_qs if reference_mode else home_path() }}" class="ix-brand">
+        {% if approved_shell %}
+        {% set company_logo_url = get_company_logo_url() if not reference_mode else none %}
+        <span class="ix-brand-logo is-image" data-company-logo>
+            {% if company_logo_url %}
+            <img src="{{ company_logo_url }}" alt="Logo de la empresa" width="40" height="40">
+            {% else %}
+            <img src="{{ url_for('static', filename='img/logo_oficial_el_conejo.png') }}"
+                 alt="Logo de Ferretería y Construcciones El Conejo C.A." width="40" height="40">
+            {% endif %}
+        </span>
+        <span class="ix-brand-text">
+            <span class="ix-brand-name">El Conejo</span>
+            <span class="ix-brand-sub">Sistema de Inventario</span>
+        </span>
+        {% else %}
+        <span class="ix-brand-logo is-image">
+            <img src="{{ url_for('static', filename='img/logo_oficial_el_conejo.png') }}"
+                 alt="Logo de Ferretería y Construcciones El Conejo C.A.">
+        </span>
+        <span class="ix-brand-text">
+            <span class="ix-brand-name">El Conejo C.A.</span>
+            <span class="ix-brand-sub">Ferretería y Construcciones</span>
+        </span>
+        {% endif %}
+    </a>
+
+    <nav class="ix-nav">
+        <ul>
+            {% if nav_allowed('dashboard', reference_mode) %}{{ nav_link("/dashboard" ~ ref_qs, "ti-home", "Inicio", current=(active_page == "dashboard")) }}{% endif %}
+            {% if approved_shell %}
+            {# Cáscara Ferretería Pro: árbol de la maqueta. ?ref=1 solo si reference_mode. #}
+            {% if live_sidebar %}
+            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, active_page in (inv_children | map(attribute=0) | list), active_page) }}
+            {% set sales_active = active_page in (sales_children | map(attribute=0) | list) %}
+            {{ nav_group("ix-nav-sales", "ti-shopping-cart", "Ventas", sales_children, active_page == 'sales' or sales_active, (active_page if sales_active else none), href=(sales_href if nav_allowed('sales') else none)) }}
+            {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras", purchase_children, active_page in (purchase_children | map(attribute=0) | list), active_page) }}
+            {% if nav_allowed('chatbot') %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot"), chevron="right") }}{% endif %}
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, pred_active, active_page) }}
+            {% elif sidebar_variant == "inventory" %}
+            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, True, active_page, soft=True, tinted=True) }}
+            {% if nav_allowed('sales', reference_mode) %}{{ nav_link(sales_href, "ti-shopping-cart", "Ventas", chevron="right") }}{% endif %}
+            {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras", purchase_children, sidebar_variant == "purchases", active_page) }}
+            {% if nav_allowed('chatbot', reference_mode) %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot"), chevron="right") }}{% endif %}
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, True, active_page, soft=True) }}
+            {% elif sidebar_variant in ("reports", "settings") %}
+            {# Dashboard de Reportes: grupos plegados con destinos reales; Reportes activo. #}
+            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, False) }}
+            {% if nav_allowed('sales', reference_mode) %}{{ nav_link(sales_href, "ti-shopping-cart", "Ventas", chevron="right") }}{% endif %}
+            {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras", purchase_children, sidebar_variant == "purchases", active_page) }}
+            {% if nav_allowed('chatbot', reference_mode) %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot"), chevron="right") }}{% endif %}
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, sidebar_variant == "settings" and not notification_sidebar) }}
+            {% elif sidebar_variant == "sales" %}
+            {# Módulo Ventas: grupo Ventas desplegado (la cabecera navega al dashboard de ventas);
+               Inventario y Análisis predictivo plegados con sus destinos reales. #}
+            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, False) }}
+            {{ nav_group("ix-nav-sales", "ti-shopping-cart", "Ventas", sales_children, True, active_page, href=(sales_href if nav_allowed('sales', reference_mode) else none)) }}
+            {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras", purchase_children, sidebar_variant == "purchases", active_page) }}
+            {% if nav_allowed('chatbot', reference_mode) %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot")) }}{% endif %}
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, False) }}
+            {% else %}
+            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, False) }}
+            {% if nav_allowed('sales', reference_mode) %}{{ nav_link(sales_href, "ti-shopping-cart", "Ventas", chevron="right") }}{% endif %}
+            {% if sidebar_variant == "predictive" %}
+            {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras",
+                         purchase_children,
+                         compras_open) }}
+            {% if nav_allowed('chatbot', reference_mode) %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot")) }}{% endif %}
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, True, active_page) }}
+            {% else %}
+            {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras", purchase_children, sidebar_variant == "purchases", active_page) }}
+            {% if nav_allowed('chatbot', reference_mode) %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot"), chevron="right") }}{% endif %}
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, False) }}
+            {% endif %}
+            {% endif %}
+            {% if nav_allowed('reports', reference_mode) %}{{ nav_link(url_for("pages.report_sales") ~ ref_qs, "ti-chart-bar", "Reportes", current=(active_page == "reports"),
+                        chevron=(None if active_page == "reports" else "right")) }}{% endif %}
+            {% if nav_allowed('settings', reference_mode) %}
+            {{ nav_link(url_for("pages.settings") ~ ref_qs, "ti-settings", "Configuración", current=(active_page == "settings"), chevron=("up" if active_page == "settings" else "right")) }}
+            {% if notification_sidebar %}<li class="st-sidebar-settings"><ul class="ix-nav-children">{% for key, label in tabs if settings_tab_allowed(key, reference_mode) %}<li><a href="{{ url_for('pages.settings', tab=key) ~ ref_qs }}" {% if key == tab %}aria-current="page"{% endif %}>{{ label }}</a></li>{% endfor %}</ul></li>{% endif %}
+            {% endif %}
+            {% else %}
+            {% if nav_allowed('products') or nav_allowed('categories') or nav_allowed('catalog') or nav_allowed('chatbot') or nav_allowed('inventory') %}
+            <li class="ix-nav-section" aria-hidden="true">Inventario</li>
+            {% endif %}
+            {% if nav_allowed('products') %}{{ nav_link("/products", "ti-box", "Productos", current=(active_page == "products")) }}{% endif %}
+            {% if nav_allowed('categories') %}{{ nav_link("/categories", "ti-category", "Categorías", current=(active_page == "categories")) }}{% endif %}
+            {% if nav_allowed('catalog') %}{{ nav_link("/catalog", "ti-layout-grid", "Catálogo visual", current=(active_page == "catalog")) }}{% endif %}
+            {% if nav_allowed('chatbot') %}{{ nav_link("/chatbot", "ti-message-chatbot", "Asistente de inventario", current=(active_page == "chatbot")) }}{% endif %}
+            {% if nav_allowed('inventory') %}{{ nav_link("/inventory", "ti-arrows-exchange", "Inventario", current=(active_page == "inventory")) }}{% endif %}
+            {% if nav_allowed('delivery_notes') or nav_allowed('historical_imports') %}
+            <li class="ix-nav-section" aria-hidden="true">Operaciones</li>
+            {% endif %}
+            {% if nav_allowed('delivery_notes') %}{{ nav_link("/delivery-notes", "ti-file-invoice", "Notas de entrega", current=(active_page == "delivery_notes")) }}{% endif %}
+            {% if nav_allowed('historical_imports') %}
+            {{ nav_link(url_for("pages.historical_imports"), "ti-file-upload", "Importación histórica", current=(active_page == "historical_imports")) }}
+            {% endif %}
+            {% if nav_allowed('predictions') %}
+            <li class="ix-nav-section" aria-hidden="true">Análisis</li>
+            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, pred_active, active_page) }}
+            {{ nav_link(url_for("pages.predictions"), "ti-database-search", "Diagnóstico de historial", current=(active_page == "predictions")) }}
+            {% endif %}
+            {% if nav_allowed('reports') %}{{ nav_link(url_for("pages.report_sales"), "ti-chart-bar", "Reportes", current=(active_page == "reports")) }}{% endif %}
+            {% if nav_allowed('settings') %}{{ nav_link(url_for("pages.settings"), "ti-settings", "Configuración", current=(active_page == "settings")) }}{% endif %}
+            {% endif %}
+        </ul>
+    </nav>
+
+    <div class="ix-sidebar-footer">
+        <div class="ix-divider" role="presentation"></div>
+        {% import "settings/_macros.html" as account_icons %}
+        <button type="button" class="ix-user ix-account-toggle" id="ix-account-toggle" aria-expanded="false" aria-controls="ix-account-menu">
+            <span class="ix-user-avatar" aria-hidden="true">{% if not reference_mode and current_user.profile_photo_url %}<img src="{{ current_user.profile_photo_url }}" alt="">{% else %}{{ "AD" if reference_mode else (current_user.name or 'U')[:2]|upper }}{% endif %}</span>
+            <span class="ix-user-text"><span class="ix-user-name">{{ "Administrador" if reference_mode else current_user.name }}</span><span class="ix-user-meta">{{ "admin" if reference_mode else current_user.username }}</span></span>
+            {{ account_icons.icon('chevron') }}
+        </button>
+        <nav id="ix-account-menu" class="ix-account-menu" aria-label="Mi cuenta" hidden>
+            <a href="{{ url_for('pages.profile') ~ ref_qs }}"{% if active_page == 'profile' %} aria-current="page"{% endif %}>{{ account_icons.icon('users') }}Mi perfil</a>
+            <a href="{{ url_for('pages.profile') ~ ref_qs }}#change-password">{{ account_icons.icon('lock') }}Cambiar contraseña</a>
+            <button type="button" id="ix-account-logout"{% if reference_mode %} disabled title="La referencia no cierra sesiones"{% endif %}>{{ account_icons.icon('reset') }}Cerrar sesión</button>
+        </nav>
+    </div>
+</aside>

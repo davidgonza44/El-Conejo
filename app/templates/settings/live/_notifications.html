@@ -1,0 +1,75 @@
+{% set s = live.settings %}{% set channels = live.channels %}{% set inbox = live.notifications %}{% set matrix_key = live.matrix_key %}
+{% set channel_by_key = {} %}{% for c in channels %}{% set _ = channel_by_key.update({c.channel: c}) %}{% endfor %}
+{% macro switch(label, name, checked=False, blocked=False, help='') %}<input class="st-notification-switch{{ ' is-blocked' if blocked }}" type="checkbox" role="switch" aria-label="{{ label }}" name="{{ name }}"{% if blocked %} title="{{ help }}" aria-disabled="true"{% endif %}{% if checked %} checked{% endif %}>{% endmacro %}
+{% set channel_meta = {'app': ('bell', 'blue', 'Notificaciones en la app', 'Bandeja y campana del sistema para todos los eventos activados.'),
+                       'email': ('mail', 'purple', 'Correo electrónico', 'Envío por SMTP al correo de notificaciones configurado.'),
+                       'whatsapp': ('phone', 'green', 'WhatsApp', 'Mensajes vía WhatsApp Business (Meta Cloud API).'),
+                       'sms': ('message', 'orange', 'SMS', 'Mensajes de texto vía Twilio.')} %}
+<div class="st-notification-grid grid" id="st-notifications" data-channels='{{ channels|tojson }}'>
+    <div class="st-column">
+        <section class="st-card st-channels">
+            <h2>Canales de notificación</h2>
+            <p class="st-section-description">Canales habilitados para toda la aplicación. La app interna siempre está disponible; los externos requieren un proveedor configurado en el servidor.</p>
+            <div class="st-channel-list">
+            {% for c in channels %}{% set icon, tone, title, desc = channel_meta[c.channel] %}
+                <label class="st-channel-row{{ ' is-disabled' if not c.configured }}" data-channel-row="{{ c.channel }}">
+                    <span class="st-notification-icon st-tone-{{ tone }}">{{ st.icon(icon) }}</span>
+                    <span class="st-channel-copy"><strong>{{ title }}</strong><span title="{{ desc }}">{% if c.configured %}{{ desc }}{% if c.channel != 'app' %} Destino: {{ c.destination or 'sin definir' }}.{% endif %}{% else %}Proveedor no configurado: falta {{ c.missing|join(', ') }}.{% endif %}</span></span>
+                    <span class="st-channel-actions">{% if c.channel != 'app' and has_permission('settings:write') %}<button type="button" class="st-button st-channel-config" data-channel-config="{{ c.channel }}" aria-label="Configurar canal {{ title }}">Configurar</button>{% endif %}<span class="st-badge{{ '' if c.configured else ' is-muted' }}" data-channel-badge="{{ c.channel }}">{{ 'Disponible' if c.channel == 'app' else 'Configurado' if c.configured else 'Proveedor no configurado' }}</span></span>
+                    {{ switch('Canal: ' ~ title, 'notifications.' ~ c.channel ~ '_enabled', c.enabled, not c.configured, 'Configure el proveedor en el servidor (' ~ c.missing|join(', ') ~ ') para activar este canal.') }}
+                </label>
+            {% endfor %}
+            </div>
+        </section>
+        <section class="st-card st-email">
+            <h2>Configuración de correo electrónico</h2>
+            <p class="st-section-description">{{ 'Destino y frecuencia de los correos de notificación.' if channel_by_key.email.configured else 'SMTP no configurado en el servidor (' ~ channel_by_key.email.missing|join(', ') ~ '); los valores se guardan y se usarán al configurarlo.' }}</p>
+            <div class="st-email-fields grid grid-cols-2">
+                <label><span>Correo de notificaciones</span><span class="st-control"><input type="email" name="notifications.email_to" aria-label="Correo de notificaciones" value="{{ s['notifications.email_to'] }}" maxlength="120" placeholder="alertas@empresa.com"></span></label>
+                <label><span>Frecuencia de resumen</span><span class="st-email-frequency"><span class="st-control"><select name="notifications.digest_frequency" aria-label="Frecuencia de resumen">{% for value, label in [('immediate', 'Inmediato'), ('daily', 'Resumen diario'), ('weekly', 'Resumen semanal')] %}<option value="{{ value }}"{% if s['notifications.digest_frequency'] == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></span><span class="st-calendar" aria-hidden="true">{{ st.icon('calendar') }}</span></span></label>
+                <label><span>Hora de envío (no programada)</span><span class="st-control"><input type="time" name="notifications.digest_time" aria-label="Hora de envío (no programada)" value="{{ s['notifications.digest_time'] }}" disabled title="Esta pantalla no programa el envío: la hora la fija la tarea externa que ejecute el resumen."></span></label>
+                <label><span>Formato del correo</span><span class="st-control"><select name="notifications.email_format" aria-label="Formato del correo">{% for value, label in [('html', 'HTML'), ('text', 'Texto plano')] %}<option value="{{ value }}"{% if s['notifications.email_format'] == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></span></label>
+            </div>
+            <div class="st-email-note">{{ st.info('Los resúmenes diario y semanal dependen de una tarea externa que ejecute scripts/send_notification_digest.py; esta pantalla no la registra y la hora guardada no la programa. «Inmediato» envía cada evento al momento solo si el correo está configurado y activo.') }}</div>
+        </section>
+    </div>
+    <div class="st-column">
+        <section class="st-card st-notification-types">
+            <h2>Tipos de notificaciones</h2>
+            <p class="st-section-description">Preferencias globales por evento y canal: aplican a todas las cuentas que reciben ese aviso. Los canales externos requieren proveedor configurado y canal activo.</p>
+            <div class="st-matrix-scroll" tabindex="0" role="region" aria-label="Canales por evento">
+                <table class="st-notification-matrix">
+                    <thead><tr><th scope="col">Evento</th>{% for c in channels %}<th scope="col">{{ {'app': 'App', 'email': 'Correo', 'whatsapp': 'WhatsApp', 'sms': 'SMS'}[c.channel] }}</th>{% endfor %}</tr></thead>
+                    <tbody>
+                    {% set event_meta = {'low_stock': ('boxes', 'Productos por debajo del mínimo o sin existencias.'),
+                                         'replenishment': ('truck', 'Cambios de estado de órdenes de compra, para quienes consultan compras. No proviene del pronóstico.'),
+                                         'sales': ('cart', 'Ventas registradas, pedidos nuevos y cambios de estado.'),
+                                         'critical': ('alert', 'Productos agotados con ventas en los últimos 30 días.'),
+                                         'maintenance': ('settings', 'Respaldos, restauraciones y tareas del sistema.'),
+                                         'security': ('shield', 'Cambios de contraseña, 2FA, sesiones, roles y usuarios.')} %}
+                    {% for e in live.events %}{% set symbol, desc = event_meta[e.key] %}<tr>
+                        <th scope="row"><span class="st-event">{{ st.icon(symbol) }}<span><strong>{{ e.label }}</strong><span>{{ desc }}</span></span></span></th>
+                        {% for c in channels %}{% set key = matrix_key(e.key, c.channel) %}<td>{{ switch(e.label ~ ': ' ~ c.label, key, s[key] and (c.channel == 'app' or c.enabled), c.channel != 'app' and not (c.configured and c.enabled), ('Proveedor no configurado (' ~ c.missing|join(', ') ~ ').') if not c.configured else 'Active el canal para asignarle eventos.') }}</td>{% endfor %}
+                    </tr>{% endfor %}</tbody>
+                </table>
+            </div>
+            <p class="st-section-description st-matrix-note">Los avisos de cortes de conciliación se envían por la app a quienes tienen permiso de conciliación; no tienen fila propia y respetan el canal App.</p>
+        </section>
+        <section class="st-card st-recent-notifications">
+            <div class="st-card-heading"><div><h2>Notificaciones recientes</h2><p class="st-section-description" id="st-recent-summary">{% if inbox.available %}Tu bandeja personal: {{ inbox.total }} · {{ inbox.unread }} sin leer. Cada cuenta tiene su propia bandeja.{% else %}Bandeja no migrada: ejecute scripts/migrate_settings_full.py.{% endif %}</p></div><button type="button" class="st-security-link" id="st-recent-read-all"{% if not inbox.unread %} disabled{% endif %}>Marcar todas como leídas</button></div>
+            <ul class="st-recent-list" id="st-recent-list">
+            {% for item in inbox['items'] %}
+                <li class="st-recent-row{{ '' if item.read else ' is-unread' }}" data-notification-id="{{ item.id }}">
+                    <span class="st-notification-icon st-tone-{{ {'critical': 'red', 'warning': 'orange'}.get(item.severity, 'blue') }}">{{ st.icon(event_meta[item.event][0] if item.event in event_meta else 'bell') }}</span>
+                    <div class="st-recent-copy"><strong title="{{ item.title }}">{{ item.title }}</strong><p title="{{ item.message }}">{{ item.message }}</p></div>
+                    <span class="st-recent-time" data-iso="{{ item.created_at }}">{{ item.created_at }}</span><span class="st-delivery-badge">{{ item.channels|map('capitalize')|join(' · ') }}</span>
+                    <button type="button" class="st-button" data-notification-detail="{{ item.id }}" aria-label="Ver detalle: {{ item.title }}">Ver detalle</button>
+                </li>
+            {% else %}
+                <li class="st-recent-row st-recent-empty">{{ 'Sin notificaciones en tu bandeja.' if inbox.available else 'Bandeja no disponible.' }}</li>
+            {% endfor %}
+            </ul>
+            <div class="st-users-footer st-recent-footer"><span id="st-recent-page-text">{{ 'Página ' ~ inbox.page ~ ' de ' ~ inbox.pages if inbox.pages else '' }}</span><div><button type="button" class="st-button" id="st-recent-prev" disabled aria-label="Página anterior">‹</button><button type="button" class="st-button" id="st-recent-next" aria-label="Página siguiente"{% if inbox.pages <= 1 %} disabled{% endif %}>›</button></div></div>
+        </section>
+    </div>
+</div>

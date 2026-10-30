@@ -1,0 +1,754 @@
+{% extends "base_app.html" %}
+{% set active_page = "historical_imports" %}
+
+{% block title %}Importación histórica 2025 — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/historical_imports.css') }}">
+{% endblock %}
+
+{% block content %}
+<section id="imports-view" aria-labelledby="imports-title">
+    <div class="page-header mb-3">
+        <div class="row g-3 align-items-center">
+            <div class="col">
+                <div class="page-pretitle">Datos históricos · CSV v1</div>
+                <h1 class="page-title mb-1" id="imports-title">
+                    <i class="ti ti-file-upload me-2 text-primary" aria-hidden="true"></i>
+                    Importación histórica 2025
+                </h1>
+                <div class="text-secondary">
+                    Carga auditable de demanda histórica, separada de la operación diaria.
+                </div>
+            </div>
+            <div class="col-auto d-flex flex-wrap gap-2">
+                {% if has_permission('historical_imports:read') %}
+                <a class="btn btn-outline-primary" href="{{ url_for('real_2026.page') }}">Histórico real 2026</a>
+                {% endif %}
+                {% if can_export %}
+                <button type="button" class="btn btn-outline-primary" id="btn-download-template">
+                    <i class="ti ti-download me-1" aria-hidden="true"></i>
+                    Plantilla CSV vacía
+                </button>
+                {% endif %}
+                {% if can_upload %}
+                <button type="button" class="btn btn-primary" id="btn-new-import">
+                    <i class="ti ti-plus me-1" aria-hidden="true"></i>
+                    Nueva importación
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="historical-safety-banner mb-3" role="status">
+        <span class="historical-safety-icon" aria-hidden="true">
+            <i class="ti ti-shield-check"></i>
+        </span>
+        <div>
+            <strong>Esta importación no modifica el inventario actual.</strong>
+            <span>Los lotes se validan y confirman únicamente en el módulo histórico.</span>
+        </div>
+    </div>
+
+    <div id="page-alert" class="alert d-none" role="alert" aria-live="assertive" tabindex="-1"></div>
+    <div id="page-status" class="visually-hidden" role="status" aria-live="polite"></div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title mb-1">Lotes históricos</h2>
+                        <div class="text-secondary small" id="imports-count">Cargando lotes…</div>
+                    </div>
+                    <div class="card-actions">
+                        <button type="button" class="btn btn-icon btn-ghost-secondary" id="btn-refresh-imports"
+                                aria-label="Actualizar listado" title="Actualizar listado">
+                            <i class="ti ti-refresh" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body border-bottom py-3">
+                    <form id="imports-filter-form" class="row g-2 align-items-end" autocomplete="off">
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <label class="form-label mb-1" for="imports-status-filter">Estado</label>
+                            <select class="form-select form-select-sm" id="imports-status-filter">
+                                <option value="">Todos los estados</option>
+                                <option value="uploaded">Cargado</option>
+                                <option value="previewed">Previsualizado</option>
+                                <option value="dry_run_ready">Simulación lista</option>
+                                <option value="confirmed">Confirmado</option>
+                                <option value="reverted">Revertido</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-auto">
+                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="ti ti-filter me-1" aria-hidden="true"></i>Aplicar filtro
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-responsive historical-table-wrap">
+                    <table class="table table-vcenter table-hover card-table historical-imports-table">
+                        <caption class="visually-hidden">Listado paginado de lotes de importación histórica</caption>
+                        <thead>
+                            <tr>
+                                <th>Lote / estado</th>
+                                <th>Archivo</th>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                                <th>Conteos</th>
+                                <th>SHA-256</th>
+                                <th class="w-1">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="imports-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="text-secondary small" id="imports-page-label">Página —</span>
+                    <div class="btn-list">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="imports-prev-page">
+                            <i class="ti ti-chevron-left" aria-hidden="true"></i>Anterior
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="imports-next-page">
+                            Siguiente<i class="ti ti-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card h-100 historical-guide-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="ti ti-info-circle me-2 text-primary" aria-hidden="true"></i>
+                        Requisitos del archivo
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <ul class="historical-requirements">
+                        <li><span>Formato</span><strong>CSV; no XLSX</strong></li>
+                        <li><span>Tamaño máximo</span><strong>10 MiB</strong></li>
+                        <li><span>Codificación</span><strong>UTF-8 con BOM</strong></li>
+                        <li><span>Separador</span><strong><code>;</code> (punto y coma)</strong></li>
+                        <li><span>Periodo admitido</span><strong>Solo 2025</strong></li>
+                        <li><span>Máximo</span><strong>50.000 filas</strong></li>
+                    </ul>
+                    <div class="alert alert-info mb-0 small" role="note">
+                        La validación del navegador es orientativa. El servidor es la autoridad final.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <button class="btn btn-ghost-secondary p-0 historical-doc-toggle" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#csv-columns-doc"
+                    aria-expanded="false" aria-controls="csv-columns-doc">
+                <span>
+                    <strong>Columnas CSV v1</strong>
+                    <small class="text-secondary d-block">Referencia breve de la plantilla canónica</small>
+                </span>
+                <i class="ti ti-chevron-down" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="collapse" id="csv-columns-doc">
+            <div class="table-responsive">
+                <table class="table table-sm table-vcenter card-table mb-0">
+                    <caption class="visually-hidden">Documentación de columnas del CSV histórico v1</caption>
+                    <thead>
+                        <tr>
+                            <th>Columna</th>
+                            <th>Obligatoria</th>
+                            <th>Contenido esperado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>event_date</code></td><td>Sí</td><td>Fecha exacta YYYY-MM-DD del año 2025.</td></tr>
+                        <tr><td><code>product_code</code></td><td>Sí</td><td>Código histórico del producto.</td></tr>
+                        <tr><td><code>product_name</code></td><td>No</td><td>Nombre usado solo como sugerencia de revisión.</td></tr>
+                        <tr><td><code>quantity</code></td><td>Sí</td><td>Decimal positivo, máximo dos decimales.</td></tr>
+                        <tr><td><code>record_type</code></td><td>Sí</td><td>sale, return, cancellation o correction.</td></tr>
+                        <tr><td><code>record_status</code></td><td>Sí</td><td>issued, active, cancelled, voided o superseded.</td></tr>
+                        <tr><td><code>document_number</code></td><td>Condicional</td><td>Requerido para devolución, cancelación y corrección. Reciba aquí el número original de factura del sistema comercial cuando la fuente identifique el documento como factura; se conserva como texto (ceros iniciales y prefijos incluidos) y separado del valor normalizado. Importar no crea ventas, salidas de stock ni facturas.</td></tr>
+                        <tr><td><code>source_record_id</code></td><td>No</td><td>Identificador del registro en el sistema de origen.</td></tr>
+                        <tr><td><code>source_line_id</code></td><td>No</td><td>Identificador de línea; fortalece la deduplicación.</td></tr>
+                        <tr><td><code>unit_price</code></td><td>No</td><td>Decimal no negativo, máximo dos decimales.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="import-detail-view" class="d-none" aria-labelledby="detail-title">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <button type="button" class="btn btn-ghost-secondary px-0" id="btn-back-to-imports">
+            <i class="ti ti-arrow-left me-1" aria-hidden="true"></i>Volver a lotes
+        </button>
+        <div class="btn-list historical-detail-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-refresh-detail">
+                <i class="ti ti-refresh me-1" aria-hidden="true"></i>Actualizar
+            </button>
+            {% if can_export %}
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-export-errors">
+                <i class="ti ti-file-type-csv me-1" aria-hidden="true"></i>Exportar errores
+            </button>
+            {% endif %}
+            {% if can_review %}
+            <button type="button" class="btn btn-sm btn-primary" id="btn-preview-import">
+                <i class="ti ti-eye me-1" aria-hidden="true"></i>Preview
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-dry-run">
+                <i class="ti ti-player-play me-1" aria-hidden="true"></i>Ejecutar simulación
+            </button>
+            {% endif %}
+            {% if can_confirm %}
+            <button type="button" class="btn btn-sm btn-success" id="btn-confirm-import">
+                <i class="ti ti-check me-1" aria-hidden="true"></i>Confirmar importación
+            </button>
+            {% endif %}
+            {% if can_revert %}
+            <button type="button" class="btn btn-sm btn-outline-danger" id="btn-revert-import">
+                <i class="ti ti-history me-1" aria-hidden="true"></i>Revertir
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="detail-alert" class="alert d-none" role="alert" aria-live="assertive" tabindex="-1"></div>
+
+    <div class="card mb-3 historical-detail-hero">
+        <div class="card-body">
+            <div class="row g-3 align-items-start">
+                <div class="col-12 col-lg">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h1 class="h2 mb-0" id="detail-title">Lote histórico</h1>
+                        <span id="detail-status-badge"></span>
+                    </div>
+                    <div class="historical-uuid" id="detail-id">—</div>
+                    <div class="text-secondary mt-2" id="detail-source">—</div>
+                </div>
+                <div class="col-12 col-lg-auto historical-detail-meta">
+                    <div><span>Archivo</span><strong id="detail-filename">No disponible para este rol</strong></div>
+                    <div><span>Creado</span><strong id="detail-created-at">—</strong></div>
+                    <div><span>Usuario</span><strong id="detail-created-by">No disponible para este rol</strong></div>
+                    <div><span>SHA-256</span><strong id="detail-sha">No disponible para este rol</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards mb-3">
+        <div class="col-6 col-lg">
+            <div class="card historical-count-card">
+                <div class="card-body">
+                    <span class="historical-count-icon bg-green-lt text-green"><i class="ti ti-check" aria-hidden="true"></i></span>
+                    <strong id="detail-count-valid">—</strong>
+                    <span>Registros válidos</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card historical-count-card">
+                <div class="card-body">
+                    <span class="historical-count-icon bg-yellow-lt text-yellow"><i class="ti ti-alert-triangle" aria-hidden="true"></i></span>
+                    <strong id="detail-count-warnings">—</strong>
+                    <span>Warnings</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card historical-count-card">
+                <div class="card-body">
+                    <span class="historical-count-icon bg-red-lt text-red"><i class="ti ti-x" aria-hidden="true"></i></span>
+                    <strong id="detail-count-errors">—</strong>
+                    <span>Errores</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card historical-count-card">
+                <div class="card-body">
+                    <span class="historical-count-icon bg-blue-lt text-blue"><i class="ti ti-user-question" aria-hidden="true"></i></span>
+                    <strong id="detail-count-pending">—</strong>
+                    <span>Revisiones pendientes</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card historical-count-card">
+                <div class="card-body">
+                    <span class="historical-count-icon bg-purple-lt text-purple"><i class="ti ti-copy" aria-hidden="true"></i></span>
+                    <strong id="detail-count-duplicates">—</strong>
+                    <span>Posibles duplicados</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3" id="dry-run-summary-card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title mb-1">Resultado de simulación</h2>
+                <div class="text-secondary small">Resumen del último dry run válido; nunca activa demanda por sí solo.</div>
+            </div>
+        </div>
+        <div class="card-body" id="dry-run-summary">
+            <div class="historical-empty-inline">Todavía no hay una simulación disponible.</div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title mb-1">Mapping de columnas</h2>
+                <div class="text-secondary small">
+                    Relación explícita: campo canónico → encabezado exacto del CSV.
+                </div>
+            </div>
+        </div>
+        <form id="mapping-form">
+            <div class="card-body border-bottom py-3">
+                <div id="mapping-alert" class="alert alert-info mb-0" role="status"></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-vcenter card-table mb-0">
+                    <caption class="visually-hidden">Mapping de campos canónicos a encabezados del archivo</caption>
+                    <thead>
+                        <tr>
+                            <th>Campo canónico</th>
+                            <th>Encabezado del archivo</th>
+                            <th>Regla</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-tbody"></tbody>
+                </table>
+            </div>
+            {% if can_review %}
+            <div class="card-footer text-end">
+                <button type="submit" class="btn btn-primary" id="btn-save-preview">
+                    <i class="ti ti-eye me-1" aria-hidden="true"></i>Generar preview con este mapping
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-header historical-tabs-header">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist" aria-label="Contenido del lote">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="records-tab" data-historical-tab="records"
+                            type="button" role="tab" aria-selected="true" aria-controls="records-panel">
+                        Registros
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="errors-tab" data-historical-tab="errors"
+                            type="button" role="tab" aria-selected="false" aria-controls="errors-panel">
+                        Errores
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-tab" data-historical-tab="pending"
+                            type="button" role="tab" aria-selected="false" aria-controls="pending-panel">
+                        Productos pendientes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="duplicates-tab" data-historical-tab="duplicates"
+                            type="button" role="tab" aria-selected="false" aria-controls="duplicates-panel">
+                        Duplicados
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div id="records-panel" data-historical-panel="records" role="tabpanel" aria-labelledby="records-tab">
+            <div class="table-responsive historical-table-wrap">
+                <table class="table table-vcenter table-hover card-table historical-records-table">
+                    <caption class="visually-hidden">Registros históricos validados del lote</caption>
+                    <thead>
+                        <tr>
+                            <th>Fila</th>
+                            <th>Fecha</th>
+                            <th>Producto histórico</th>
+                            <th>Tipo / estado</th>
+                            <th class="text-end">Cantidad</th>
+                            <th>Match</th>
+                            <th>Fingerprint</th>
+                            <th class="w-1">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-tbody"></tbody>
+                </table>
+            </div>
+            <div class="card-footer historical-pagination">
+                <span class="text-secondary small" id="records-page-label">Página —</span>
+                <div class="btn-list">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="records-prev-page">Anterior</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="records-next-page">Siguiente</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="errors-panel" class="d-none" data-historical-panel="errors" role="tabpanel"
+             aria-labelledby="errors-tab" hidden>
+            <div class="card-body border-bottom py-3">
+                <form id="errors-filter-form" class="row g-2 align-items-end" autocomplete="off">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label mb-1" for="errors-severity">Severidad</label>
+                        <select class="form-select form-select-sm" id="errors-severity">
+                            <option value="">Todas</option>
+                            <option value="error">Error</option>
+                            <option value="warning">Warning</option>
+                            <option value="review">Revisión</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label mb-1" for="errors-resolution">Resolución</label>
+                        <select class="form-select form-select-sm" id="errors-resolution">
+                            <option value="">Todas</option>
+                            <option value="unresolved">Pendiente</option>
+                            <option value="resolved">Resuelta</option>
+                            <option value="not_required">No requerida</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-sm btn-outline-primary w-100">Aplicar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive historical-table-wrap">
+                <table class="table table-vcenter table-hover card-table">
+                    <caption class="visually-hidden">Errores, warnings y revisiones del lote</caption>
+                    <thead>
+                        <tr>
+                            <th>Fila</th>
+                            <th>Severidad</th>
+                            <th>Campo / código</th>
+                            <th>Mensaje</th>
+                            <th>Resolución</th>
+                            <th class="w-1">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="errors-tbody"></tbody>
+                </table>
+            </div>
+            <div class="card-footer historical-pagination">
+                <span class="text-secondary small" id="errors-page-label">Página —</span>
+                <div class="btn-list">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="errors-prev-page">Anterior</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="errors-next-page">Siguiente</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pending-panel" class="d-none" data-historical-panel="pending" role="tabpanel"
+             aria-labelledby="pending-tab" hidden>
+            <div class="card-body border-bottom py-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label mb-1" for="pending-match-status">Estado de match</label>
+                        <select class="form-select form-select-sm" id="pending-match-status">
+                            <option value="unmatched">Sin coincidencia</option>
+                            <option value="name_suggested">Sugerencia por nombre</option>
+                            <option value="inactive_review">Producto inactivo</option>
+                            <option value="code_collision">Colisión de código</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <p class="text-secondary small mb-1">
+                            La API filtra un estado de match por vez y solo expone los identificadores de producto enlazado o sugerido.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive historical-table-wrap">
+                <table class="table table-vcenter table-hover card-table">
+                    <caption class="visually-hidden">Registros con producto pendiente de revisión</caption>
+                    <thead>
+                        <tr>
+                            <th>Fila</th>
+                            <th>Código / nombre histórico</th>
+                            <th>Estado</th>
+                            <th>Candidato entregado por API</th>
+                            <th class="w-1">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-tbody"></tbody>
+                </table>
+            </div>
+            <div class="card-footer historical-pagination">
+                <span class="text-secondary small" id="pending-page-label">Página —</span>
+                <div class="btn-list">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="pending-prev-page">Anterior</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="pending-next-page">Siguiente</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="duplicates-panel" class="d-none" data-historical-panel="duplicates" role="tabpanel"
+             aria-labelledby="duplicates-tab" hidden>
+            <div class="card-body border-bottom py-3">
+                <p class="text-secondary small mb-0">
+                    Los hallazgos de deduplicación se filtran y paginan en el servidor.
+                </p>
+            </div>
+            <div class="table-responsive historical-table-wrap">
+                <table class="table table-vcenter table-hover card-table">
+                    <caption class="visually-hidden">Hallazgos de posibles duplicados del lote</caption>
+                    <thead>
+                        <tr>
+                            <th>Fila</th>
+                            <th>Tipo</th>
+                            <th>Mensaje</th>
+                            <th>Resolución</th>
+                            <th class="w-1">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="duplicates-tbody"></tbody>
+                </table>
+            </div>
+            <div class="card-footer historical-pagination">
+                <span class="text-secondary small" id="duplicates-page-label">Página —</span>
+                <div class="btn-list">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="duplicates-prev-page">Anterior</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="duplicates-next-page">Siguiente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if can_upload %}
+<div class="modal" id="upload-modal" tabindex="-1" aria-labelledby="upload-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h3" id="upload-modal-title">Nueva importación histórica</h2>
+                    <div class="text-secondary small">El archivo se guarda en almacenamiento privado.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="upload-form" enctype="multipart/form-data" novalidate>
+                <div class="modal-body">
+                    <div id="upload-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+                    <div class="historical-modal-safety mb-3">
+                        <i class="ti ti-shield-check" aria-hidden="true"></i>
+                        <strong>Esta importación no modifica el inventario actual.</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="upload-file">Archivo CSV</label>
+                        <input class="form-control" type="file" id="upload-file" name="file"
+                               accept=".csv,text/csv" required aria-describedby="upload-file-hint upload-file-status">
+                        <div class="form-hint" id="upload-file-hint">
+                            Solo .csv, máximo 10 MiB, UTF-8 con BOM, separador “;” y fechas de 2025.
+                        </div>
+                        <div class="small mt-2" id="upload-file-status" role="status"></div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required" for="upload-source-system">Sistema de origen</label>
+                            <input class="form-control" type="text" id="upload-source-system"
+                                   name="source_system" maxlength="100" required
+                                   placeholder="Ej.: SISTEMA_ANTERIOR">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="upload-document-type">Tipo documental del lote</label>
+                            <input class="form-control" type="text" id="upload-document-type"
+                                   name="document_type" maxlength="50" value="historical_demand">
+                            <div class="form-hint">Opcional en el contrato; el servidor usa historical_demand por defecto.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-upload-submit">
+                        <i class="ti ti-upload me-1" aria-hidden="true"></i>Guardar lote
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_confirm %}
+<div class="modal" id="confirm-modal" tabindex="-1" aria-labelledby="confirm-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h3" id="confirm-modal-title">Confirmar importación</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="confirm-form">
+                <div class="modal-body">
+                    <div id="confirm-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Operación todo-o-nada.</strong>
+                        La confirmación es atómica. Si una validación falla, no se confirma ninguna fila.
+                    </div>
+                    <div class="historical-modal-safety mb-3">
+                        <i class="ti ti-shield-check" aria-hidden="true"></i>
+                        <strong>Esta importación no modifica el inventario actual.</strong>
+                    </div>
+                    <div id="confirm-summary" class="historical-confirm-summary mb-3"></div>
+                    <label class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirm-atomic" required>
+                        <span class="form-check-label">
+                            Comprendo que se confirmará el lote histórico completo con el token de la simulación.
+                        </span>
+                    </label>
+                    <div class="form-hint mt-2">
+                        El token vive solo en la memoria de esta pestaña y expira a los 15 minutos.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btn-confirm-submit">
+                        <i class="ti ti-check me-1" aria-hidden="true"></i>Confirmar importación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_revert %}
+<div class="modal" id="revert-modal" tabindex="-1" aria-labelledby="revert-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h3" id="revert-modal-title">Revertir lote histórico</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="revert-form">
+                <div class="modal-body">
+                    <div id="revert-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+                    <div class="alert alert-info" role="alert">
+                        La reversión es lógica y auditable. No borra el lote y no modifica stock.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="revert-reason">Motivo</label>
+                        <textarea class="form-control" id="revert-reason" rows="4" maxlength="1000"
+                                  required placeholder="Explique por qué se revierte este lote"></textarea>
+                        <div class="form-hint"><span id="revert-reason-count">0</span>/1000 caracteres</div>
+                    </div>
+                    <label class="form-check">
+                        <input class="form-check-input" type="checkbox" id="revert-confirmation" required>
+                        <span class="form-check-label">Confirmo la reversión lógica de este lote.</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" id="btn-revert-submit">
+                        <i class="ti ti-history me-1" aria-hidden="true"></i>Revertir lote
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_review %}
+<div class="modal" id="review-modal" tabindex="-1" aria-labelledby="review-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h3" id="review-modal-title">Revisión manual</h2>
+                    <div class="text-secondary small" id="review-record-context">—</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="review-form">
+                <div class="modal-body">
+                    <div id="review-error" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+                    <div class="alert alert-info small" id="review-contract-note" role="note">
+                        Solo se pueden enviar identificadores de candidatos entregados y validados por la API.
+                    </div>
+
+                    <div class="mb-3" id="review-product-group">
+                        <label class="form-label" for="review-product-id">Producto candidato</label>
+                        <select class="form-select" id="review-product-id"></select>
+                        <div class="form-hint" id="review-product-hint"></div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="review-relationship-group">
+                        <label class="form-label" for="review-related-record-id">Registro relacionado candidato</label>
+                        <select class="form-select" id="review-related-record-id"></select>
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2"
+                             id="review-related-pagination">
+                            <span class="form-hint" id="review-related-page-label" aria-live="polite">Página —</span>
+                            <div class="btn-list">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        id="review-related-prev-page">Anterior</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        id="review-related-next-page">Siguiente</button>
+                            </div>
+                        </div>
+                        <div class="form-hint" id="review-related-hint">
+                            Solo venta/corrección vigente del mismo documento y producto; el servidor vuelve a validarla.
+                        </div>
+                    </div>
+
+                    <fieldset>
+                        <legend class="form-label">Aprobaciones explícitas aplicables</legend>
+                        <div class="historical-review-checks">
+                            <label class="form-check d-none" id="review-weak-wrap">
+                                <input class="form-check-input" type="checkbox" id="review-weak-duplicate">
+                                <span class="form-check-label">Aprobar posible duplicado débil</span>
+                            </label>
+                            <label class="form-check d-none" id="review-inactive-wrap">
+                                <input class="form-check-input" type="checkbox" id="review-inactive-product">
+                                <span class="form-check-label">Permitir producto inactivo</span>
+                            </label>
+                            <label class="form-check d-none" id="review-negative-wrap">
+                                <input class="form-check-input" type="checkbox" id="review-negative-net">
+                                <span class="form-check-label">Aprobar demanda neta negativa</span>
+                            </label>
+                            <label class="form-check d-none" id="review-relationship-wrap">
+                                <input class="form-check-input" type="checkbox" id="review-relationship">
+                                <span class="form-check-label">Aprobar relación seleccionada</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-review-submit">
+                        <i class="ti ti-check me-1" aria-hidden="true"></i>Guardar revisión
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.HISTORICAL_IMPORT_CONFIG = Object.freeze({
+        canUpload: {{ can_upload | tojson }},
+        canReview: {{ can_review | tojson }},
+        canConfirm: {{ can_confirm | tojson }},
+        canRevert: {{ can_revert | tojson }},
+        canExport: {{ can_export | tojson }},
+        csrfToken: {{ historical_csrf_token | tojson }},
+        apiBase: "/api/historical-imports"
+    });
+</script>
+<script src="{{ url_for('static', filename='js/historical_imports.js') }}"></script>
+{% endblock %}
+

@@ -1,0 +1,41 @@
+{# Diálogos de respaldos, fuera de #st-live-form. #}
+<dialog class="st-dialog st-dialog-wide" id="st-restore-dialog" aria-labelledby="st-restore-title">
+<form method="dialog" id="st-restore-form" novalidate><h2 id="st-restore-title">Restaurar respaldo</h2>
+<div class="st-backup-warning">{{ st.icon('alert') }}<p><strong>Acción irreversible.</strong> Los datos actuales se reemplazarán por los del respaldo. Se creará antes un respaldo de seguridad; si no puede crearse, la restauración se cancela.</p></div>
+<dl class="st-dialog-meta" id="st-restore-meta"></dl>
+<p class="st-dialog-status" id="st-restore-integrity"></p>
+<label><span>Escribe <code>RESTAURAR</code> para confirmar</span><span class="st-control"><input name="confirmation" autocomplete="off" required pattern="RESTAURAR"></span></label>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cancelar</button><button type="submit" class="st-button st-danger" id="st-restore-submit" disabled>Restaurar ahora</button></div>
+</form></dialog>
+
+<dialog class="st-dialog st-dialog-wide" id="st-inspect-dialog" aria-labelledby="st-inspect-title">
+<form method="dialog"><h2 id="st-inspect-title">Detalle del respaldo</h2>
+<dl class="st-dialog-meta" id="st-inspect-meta"></dl>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="submit" class="st-button st-primary">Cerrar</button></div>
+</form></dialog>
+
+<dialog class="st-dialog st-dialog-wide" id="st-guide-dialog" aria-labelledby="st-guide-title">
+<form method="dialog"><h2 id="st-guide-title">Guía completa de respaldos</h2>
+<div class="st-guide">
+<h3>1. Tipos de respaldo</h3>
+<ul><li><strong>Solo base de datos:</strong> volcado SQL generado con mysqldump (estructura y datos de la base de la aplicación).</li><li><strong>Solo archivos:</strong> ZIP con las carpetas de la aplicación (imágenes de productos y usuarios, importaciones históricas y logo de la empresa).</li><li><strong>Completo:</strong> ZIP con <code>database/</code>, <code>files/</code> y <code>manifest.json</code> (huellas SHA-256, sin secretos).</li><li>Ninguno es una imagen del servidor: variables de entorno, claves de cifrado y configuración del contenedor deben conservarse por un procedimiento externo.</li></ul>
+<h3>2. Respaldos automáticos</h3>
+<ul><li>Define frecuencia, hora, tipo y retención, pulsa <strong>Guardar cambios</strong> y luego <strong>Registrar tarea</strong>.</li><li>El planificador del servidor crea el respaldo, aplica la retención y, si está activo, copia a Google Drive.</li><li>«Próximo respaldo automático» se lee del planificador; si no hay tarea registrada se muestra «No programado».</li></ul>
+<h3>3. Verificación e integridad</h3>
+<ul><li>Cada respaldo registra su tamaño y SHA-256. Usa <strong>Verificar</strong> en el historial para recalcularlo; un archivo alterado se marca como corrupto.</li><li>Descarga los respaldos y conserva copias fuera del servidor.</li></ul>
+<h3>4. Restauración</h3>
+<ul><li>Solo respaldos registrados cuyo SHA-256 coincide al momento de restaurar. Requiere el cliente <code>mysql</code> (<code>MYSQL_BIN</code>) y el permiso <code>backups:restore</code>.</li><li>Antes de modificar la base se validan el ZIP (rutas seguras, manifiesto, SQL) y las carpetas destino; una carpeta conocida que falte se recrea vacía y luego recibe su contenido. Después se crea un respaldo de seguridad, se restaura la base y se reemplazan las carpetas incluidas en el respaldo.</li><li>Base y archivos no forman una única transacción: si el reemplazo de carpetas fallara después del SQL, use el respaldo de seguridad registrado.</li><li>Debes escribir <code>RESTAURAR</code>; cada intento queda en el historial de restauraciones.</li></ul>
+<h3>5. Google Drive</h3>
+<ul><li>Requiere credenciales OAuth propias (<code>GOOGLE_DRIVE_CLIENT_ID</code>, <code>GOOGLE_DRIVE_CLIENT_SECRET</code>, <code>GOOGLE_DRIVE_REDIRECT_URI</code>) con el alcance <code>drive.file</code>.</li><li>Los tokens se guardan cifrados y nunca se muestran. «Desconectar» revoca el acceso en Google.</li></ul>
+</div>
+<div class="st-dialog-actions"><button type="submit" class="st-button st-primary">Cerrar</button></div>
+</form></dialog>
+
+<dialog class="st-dialog" id="st-drive-help-dialog" aria-labelledby="st-drive-help-title">
+<form method="dialog"><h2 id="st-drive-help-title">Configurar Google Drive</h2>
+<p class="st-dialog-hint">La copia en Google Drive requiere credenciales OAuth propias del proyecto (no se usan las del inicio de sesión).</p>
+<ol class="st-guide-steps"><li>En Google Cloud Console crea un cliente OAuth «Aplicación web» y habilita la API de Google Drive.</li><li>Autoriza la URI de redirección <code id="st-drive-redirect"></code>.</li><li>Define en el servidor <code>GOOGLE_DRIVE_CLIENT_ID</code>, <code>GOOGLE_DRIVE_CLIENT_SECRET</code> y <code>GOOGLE_DRIVE_REDIRECT_URI</code>, y reinicia la aplicación.</li><li>Vuelve a esta pantalla y pulsa <strong>Conectar</strong>.</li></ol>
+<div class="st-dialog-actions"><button type="submit" class="st-button st-primary">Cerrar</button></div>
+</form></dialog>

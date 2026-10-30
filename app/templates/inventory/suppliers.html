@@ -1,0 +1,83 @@
+{% extends "inventory/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "suppliers" %}
+{% block title %}Proveedores — Inventario{% endblock %}
+
+{% block main_class %} iv-page iv-sup-page{% endblock %}
+
+{% block head %}
+{{ super() }}
+{% if reference_mode %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_supplier_layers.css') }}">{% endif %}
+{% if reference_mode %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_supplier_modals.css') }}">{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if reference_mode %}
+{% include "inventory/_supplier_layers.html" %}
+<script src="{{ url_for('static', filename='js/ix_supplier_layers.js') }}"></script>
+{% include "inventory/_supplier_modals.html" %}
+<script src="{{ url_for('static', filename='js/ix_supplier_modals.js') }}"></script>
+{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ iv.header("Proveedores", "Administra y consulta la información de tus proveedores",
+             fixture.search_placeholder if fixture else "", actions=fixture.actions if fixture else [],
+             reference_mode=reference_mode) }}
+
+{% if not fixture %}
+{{ iv.unavailable("Proveedores") }}
+{% else %}
+{{ iv.kpis(fixture.kpis) }}
+
+{{ px.filters(fixture.filters, extra_class="iv-sup-filters") }}
+
+<article class="ix-card iv-sup-table-card">
+    <div class="px-table-wrap iv-table-wrap">
+        <table class="px-table iv-table iv-sup-table">
+            <colgroup>
+                <col style="width: 218px"><col style="width: 152px"><col style="width: 132px"><col style="width: 132px">
+                <col style="width: 169px"><col style="width: 100px"><col style="width: 115px"><col style="width: 155px"><col>
+            </colgroup>
+            <thead>
+                <tr>{% for c in fixture.table.columns %}<th scope="col"{% if loop.index > 5 %} class="is-center"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for s in fixture.table.rows %}
+                <tr>
+                    <td>
+                        <div class="iv-sup-name">
+                            <span class="iv-avatar is-{{ s.tone }}" aria-hidden="true">{% if s.avatar.startswith("svg:") %}{{ iv.icon(s.avatar) }}{% else %}{{ s.avatar }}{% endif %}</span>
+                            <span class="px-product-text">
+                                <span class="px-product-name">{{ s.name }}</span>
+                                <span class="px-product-sku">{{ s.rif }}</span>
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="iv-contact">{{ s.contact }}</span>
+                        <span class="iv-contact-role">{{ s.role }}</span>
+                    </td>
+                    <td><span class="px-badge is-{{ s.category[1] }} iv-badge-icon">{{ iv.icon("svg:user") }}{{ s.category[0] }}</span></td>
+                    <td>{{ s.phone }}</td>
+                    <td class="px-cell-muted">{{ s.email }}</td>
+                    <td class="is-center"><span class="px-badge is-{{ s.status[1] }} iv-badge-dot">{{ s.status[0] }}</span></td>
+                    <td class="is-center">{{ s.last }}</td>
+                    <td class="is-center"><strong class="iv-amount">{{ s.total }}</strong></td>
+                    <td class="is-center">
+                        <div class="iv-row-actions iv-boxed-actions">
+                            <button type="button" class="iv-icon-btn" aria-label="Ver detalle"><i class="ti ti-eye" aria-hidden="true"></i></button>
+                            <button type="button" class="iv-icon-btn" aria-label="Más acciones"><i class="ti ti-dots-vertical" aria-hidden="true"></i></button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ px.pagination(fixture.table.pagination) }}
+</article>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+﻿<dialog id="pd-drawer" class="pd-drawer" aria-labelledby="pd-title" data-page="{{ active_page }}" data-reference="{{ '1' if reference_mode else '0' }}" data-detail-url="{{ url_for('predictions.product_detail', product_id=0) }}">
+    <header class="pd-titlebar"><h2 id="pd-title" tabindex="-1">Detalle del producto</h2><button type="button" class="pd-close" aria-label="Cerrar detalle del producto" data-pd-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button></header>
+    <div id="pd-product" class="pd-product"></div>
+    <div class="pd-tabs" role="tablist" aria-label="Detalle del producto">
+        {% for key, label in [('summary','Resumen'),('demand','Demanda'),('forecast','Pronóstico'),('inventory','Inventario'),('replenishment','Reabastecimiento')] %}
+        <button type="button" id="pd-tab-{{ key }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" aria-controls="pd-panel-{{ key }}" tabindex="{{ '0' if loop.first else '-1' }}" data-pd-tab="{{ key }}">{{ label }}</button>
+        {% endfor %}
+    </div>
+    <div id="pd-body" class="pd-body" aria-live="polite"></div>
+    <footer id="pd-footer" class="pd-footer"></footer>
+</dialog>

@@ -1,0 +1,84 @@
+{% extends "sales/_page.html" %}
+{# Pedidos (panel "6. Pedidos"): misma variante de índice que Cotizaciones con las columnas
+   de pedidos (productos = unidades, entrega estimada y estado). En modo normal la llena
+   ix_orders_live.js desde /api/orders; un pedido nunca descuenta ni reserva stock. #}
+{% set active_page = "sales_orders" %}
+
+{% block title %}Pedidos — Ventas{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_order_layers.css') }}">
+{% if not fixture %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_sale_product_layers.css') }}">{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% include 'sales/_order_layers.html' %}
+{% if reference_mode and fixture %}
+<script src="{{ url_for('static', filename='js/ix_order_layers.js') }}"></script>
+{% else %}
+{% with spl_target = "al pedido" %}{% include 'sales/_sale_product_layers.html' %}{% endwith %}
+<script src="{{ url_for('static', filename='js/ix_sales_shared.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_sales_docs_live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_orders_live.js') }}"></script>
+{% endif %}
+{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-list-page sa-index-page{% endblock %}
+
+{% block main %}
+{{ sa.header("Pedidos", "Gestiona los pedidos de clientes.",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{% if not fixture %}
+<div id="ov-live" class="sv-live" data-can-sell="{{ '1' if can_write_sales_documents else '0' }}" data-today="{{ commercial_today }}">
+{{ sa.toolbar("Buscar por número de pedido, cliente o producto...", ("Nuevo pedido", "ti-plus"), filter_icon="ti-chevron-right") }}
+{{ sa.filters([("ti-calendar", "Todas las fechas"), ("ti-tag", "Todos los estados"), ("ti-filter", "Más filtros")]) }}
+<p class="sv-feedback" id="ov-feedback" role="status" hidden></p>
+<section class="ix-card sa-table-card" aria-label="Pedidos registrados">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-index-table sv-table ov-table">
+            <colgroup><col style="width: 124px"><col style="width: 104px"><col><col style="width: 96px"><col style="width: 132px"><col style="width: 112px"><col style="width: 132px"><col style="width: 124px"><col style="width: 88px"></colgroup>
+            <thead>
+                <tr>{% for c in ["#", "Fecha", "Cliente", "Productos", "Entrega estimada", "Prioridad", "Estado de pago", "Estado"] %}<th scope="col">{{ c }}</th>{% endfor %}<th scope="col" class="ov-actions-head">Acciones</th></tr>
+            </thead>
+            <tbody id="ov-rows" aria-busy="true"></tbody>
+        </table>
+        <p class="sv-empty" id="ov-empty" hidden>No se encontraron pedidos con estos filtros.</p>
+    </div>
+    <footer class="sa-pagination">
+        <span class="sa-pagination-summary" id="ov-summary">Cargando pedidos…</span>
+        <nav class="px-pages sa-pages" id="ov-pages" aria-label="Paginación"></nav>
+    </footer>
+</section>
+</div>
+{% else %}
+{{ sa.toolbar(fixture.search, fixture.primary, filter_icon="ti-chevron-right") }}
+{{ sa.filters(fixture.filters) }}
+
+<section class="ix-card sa-table-card" aria-label="Pedidos registrados">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-index-table">
+            <colgroup><col style="width: 144px"><col style="width: 117px"><col style="width: 232px"><col style="width: 112px"><col style="width: 175px"><col></colgroup>
+            <thead>
+                <tr>{% for c in fixture.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for number, date, customer, products, delivery, status in fixture.rows %}
+                <tr>
+                    <td><span class="sa-ref">{{ number }}</span></td>
+                    <td class="sa-muted">{{ date }}</td>
+                    <td class="sa-muted">{{ customer }}</td>
+                    <td>{{ products }}</td>
+                    <td class="sa-muted">{{ delivery }}</td>
+                    <td>{{ sa.badge(status) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ sa.pagination(fixture.pagination) }}
+</section>
+{% endif %}
+{% endblock %}

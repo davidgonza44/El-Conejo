@@ -1,0 +1,19 @@
+{% import "settings/_macros.html" as source_ui %}
+<nav class="px-sources" aria-label="Fuente de datos del análisis">
+    <p class="px-sources-label">Fuente de análisis</p>
+    <div class="px-sources-options">
+        {% if has_permission('historical_imports:read') %}
+        <a class="px-source" href="{{ url_for('real_2026.page') }}"{% if current_source == 'real_2026' %} aria-current="page"{% endif %}>
+            {{ source_ui.icon('database') }}<span>Histórico real 2026</span>
+            <small>Demanda histórica independiente</small>
+        </a>
+        {% endif %}
+        {% if has_permission('predictions:read') %}
+        <a class="px-source" href="{{ url_for('pages.demand_forecast') }}"{% if current_source == 'operational' %} aria-current="page"{% endif %}>
+            {{ source_ui.icon('chart') }}<span>Datos operativos</span>
+            <small>Pronóstico del entorno actual</small>
+        </a>
+        {% endif %}
+    </div>
+    <p class="px-sources-note">Las fuentes se consultan por separado. Cambiar de vista no mezcla datos ni modifica existencias.</p>
+</nav>

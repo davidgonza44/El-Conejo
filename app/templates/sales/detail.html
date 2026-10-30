@@ -1,0 +1,84 @@
+{% extends "sales/_page.html" %}
+{# Detalle de venta (panel "4. Detalle de Venta"): información general, totales, pestañas y
+   productos. Referencia: fixture (VTA-000156). Vivo: la venta real (GET /api/sales/<n>)
+   adaptada por sale_controller.sale_detail_view. Pertenece al listado, por lo que el grupo
+   Ventas queda activo sin hijo (el submenú compartido no tiene entrada "Detalles"). #}
+{% set active_page = "sales" %}
+{% set fixture = fixture or live_view %}
+
+{% block title %}{{ fixture.title if fixture else "Venta" }} — Ventas{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-detail-page{% endblock %}
+
+{% block main %}
+{% call sa.header(fixture.title if fixture else "Venta", fixture.subtitle if fixture else "Información detallada de la venta.",
+                  fixture.search_placeholder if fixture else "", reference_mode=reference_mode,
+                  badge=fixture.status if fixture else None, search_chevron=True) %}
+    {% for label, ico in (fixture.actions if fixture else []) %}{{ sa.btn(label, ico, chevron=loop.last) }}{% endfor %}
+{% endcall %}
+
+{% if not fixture %}
+{{ sa.unavailable("Detalle de venta") }}
+{% else %}
+<section class="sa-detail-top" aria-label="Información general y totales">
+    <article class="ix-card sa-info-card">
+        <h2 class="sa-form-title">{{ fixture.info.title }}</h2>
+        <dl class="sa-info">
+            {% for label, value, style, sub in fixture.info.rows %}
+            <div class="sa-info-row">
+                <dt>{{ label }}</dt>
+                <dd>
+                    {% if style == "badge" %}{{ sa.badge(value) }}
+                    {% elif style == "link" %}<a href="#" class="sa-info-link" aria-disabled="true">{{ value }}</a>
+                    {% else %}{{ value }}{% endif %}
+                    {% if sub %}<span class="sa-info-sub">{{ sub }}</span>{% endif %}
+                </dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </article>
+
+    {% set t = fixture.totals %}
+    <article class="ix-card sa-totals-card">
+        <h2 class="sa-form-title">{{ t.title }}</h2>
+        <dl class="sa-totals sa-detail-totals">
+            {% for label, value in t.rows %}
+            <div class="sa-total-row"><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+            {% endfor %}
+        </dl>
+        <div class="sa-grand-total"><span>{{ t.total[0] }}</span><strong>{{ t.total[1] }}</strong></div>
+    </article>
+</section>
+
+<nav class="px-tabs sa-tabs" aria-label="Secciones de la venta">
+    {% for tab in fixture.tabs %}
+    <a href="#" {% if loop.first %}aria-current="page"{% else %}aria-disabled="true"{% endif %}>{{ tab }}</a>
+    {% endfor %}
+</nav>
+
+<section class="ix-card sa-detail-table-card" aria-label="Productos de la venta">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-detail-table">
+            <colgroup><col style="width: 46px"><col><col style="width: 124px"><col style="width: 115px"><col style="width: 104px"><col style="width: 133px"><col style="width: 112px"></colgroup>
+            <thead>
+                <tr>{% for c in fixture.columns %}<th scope="col"{% if loop.last %} class="is-end"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for prod, code, price, qty, disc, total in fixture.rows %}
+                <tr>
+                    <td class="sa-muted">{{ loop.index }}</td>
+                    <td>{{ sa.product(prod) }}</td>
+                    <td class="sa-muted">{{ code }}</td>
+                    <td>{{ price }}</td>
+                    <td>{{ qty }}</td>
+                    <td class="sa-muted">{{ disc }}</td>
+                    <td class="is-end"><strong>{{ total }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ sa.pagination(fixture.pagination) }}
+</section>
+{% endif %}
+{% endblock %}

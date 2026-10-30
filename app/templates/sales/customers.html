@@ -1,0 +1,95 @@
+{% extends "sales/_page.html" %}
+{# Clientes desde Ventas (panel "7. Clientes (desde Ventas)"): búsqueda, acción "Nuevo cliente"
+   y tabla de clientes. En modo referencia dibuja el fixture; en modo normal la misma geometría
+   se alimenta de /api/customers (ix_customers_live.js) con búsqueda y paginación reales. #}
+{% set active_page = "sales_customers" %}
+
+{% block title %}Clientes — Ventas{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-list-page sa-customers-page{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if not reference_mode %}<script src="{{ url_for('static', filename='js/ix_customers_live.js') }}"></script>{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ sa.header("Clientes", "Consulta tus clientes y su información.",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{% if not fixture %}
+{# ---------------- Modo normal: directorio real ---------------- #}
+<div class="sa-toolbar" data-can-write="{{ '1' if can_write_customers else '0' }}">
+    <label class="px-search sa-toolbar-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="search" id="cu-search" placeholder="Buscar por nombre, RIF, teléfono o correo..." aria-label="Buscar clientes">
+    </label>
+    <div class="px-actions sa-toolbar-actions">
+        <button type="button" class="px-btn sa-btn is-primary" id="cu-new"{% if not can_write_customers %} disabled title="Su rol no puede crear clientes."{% endif %}><i class="ti ti-plus" aria-hidden="true"></i>Nuevo cliente</button>
+    </div>
+</div>
+<p class="sv-feedback" id="cu-feedback" role="status" hidden></p>
+
+<section class="ix-card sa-table-card" aria-label="Clientes registrados">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-customers-table">
+            <colgroup><col style="width: 237px"><col style="width: 139px"><col style="width: 150px"><col style="width: 257px"><col></colgroup>
+            <thead>
+                <tr>{% for c in ["Nombre / Razón Social", "RIF", "Teléfono", "Correo", "Estado"] %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody id="cu-body" aria-busy="true"></tbody>
+        </table>
+        <p class="sv-empty" id="cu-empty" hidden>No se encontraron clientes.</p>
+    </div>
+    <footer class="sa-pagination">
+        <span class="sa-pagination-summary" id="cu-summary">Cargando clientes…</span>
+        <nav class="px-pages sa-pages" id="cu-pages" aria-label="Paginación"></nav>
+    </footer>
+</section>
+
+<dialog id="cu-drawer" class="sv-drawer" aria-labelledby="cu-drawer-title">
+    <form id="cu-form" method="dialog" novalidate>
+        <header class="sv-drawer-head">
+            <h2 id="cu-drawer-title">Nuevo cliente</h2>
+            <button type="button" class="sv-drawer-close" id="cu-close" aria-label="Cerrar Nuevo cliente"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </header>
+        <label class="sv-field">Nombre / Razón Social <span aria-hidden="true">*</span><input type="text" name="name" id="cu-name" maxlength="150" required></label>
+        <label class="sv-field">RIF<input type="text" name="tax_id" id="cu-tax-id" maxlength="20" placeholder="J-12345678-9"></label>
+        <label class="sv-field">Teléfono<input type="tel" name="phone" id="cu-phone" maxlength="30"></label>
+        <label class="sv-field">Correo<input type="email" name="email" id="cu-email" maxlength="120"></label>
+        <label class="sv-field">Estado<select name="is_active" id="cu-active"><option value="true">Activo</option><option value="false">Inactivo</option></select></label>
+        <p class="sv-feedback" id="cu-drawer-feedback" role="alert" hidden></p>
+        <footer class="sv-drawer-foot">
+            <button type="button" class="px-btn sa-btn" id="cu-cancel">Cancelar</button>
+            <button type="submit" class="px-btn sa-btn is-primary" id="cu-submit">Guardar cliente</button>
+        </footer>
+    </form>
+</dialog>
+{% else %}
+{# ---------------- Modo referencia: fixture determinista ---------------- #}
+{{ sa.toolbar(fixture.search, fixture.primary, filter_icon=None) }}
+
+<section class="ix-card sa-table-card" aria-label="Clientes registrados">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-customers-table">
+            <colgroup><col style="width: 237px"><col style="width: 139px"><col style="width: 150px"><col style="width: 257px"><col></colgroup>
+            <thead>
+                <tr>{% for c in fixture.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for name, rif, phone, email, status in fixture.rows %}
+                <tr>
+                    <td><span class="sa-ref">{{ name }}</span></td>
+                    <td class="sa-muted">{{ rif }}</td>
+                    <td class="sa-muted">{{ phone }}</td>
+                    <td class="sa-muted">{{ email }}</td>
+                    <td>{{ sa.badge(status) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ sa.pagination(fixture.pagination) }}
+</section>
+{% endif %}
+{% endblock %}

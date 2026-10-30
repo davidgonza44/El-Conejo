@@ -1,0 +1,22 @@
+# Override DEMO: imagen compatible con 0007, app en 5001 y volúmenes existentes.
+services:
+  app:
+    image: conejo-portable:demo-catalog-currency-0007-revalidated-20261009
+    ports: !override
+      - "127.0.0.1:5001:5000"
+  scheduler:
+    image: conejo-portable:demo-catalog-currency-0007-revalidated-20261009
+  init:
+    image: conejo-portable:demo-catalog-currency-0007-revalidated-20261009
+  verify:
+    image: conejo-portable:demo-catalog-currency-0007-revalidated-20261009
+volumes:
+  db_data:
+    external: true
+    name: conejo-demo-8b867d4b_db_data_seed2
+  app_instance:
+    external: true
+    name: conejo-demo-8b867d4b_app_instance_seed2
+  app_uploads:
+    external: true
+    name: conejo-demo-8b867d4b_app_uploads_seed2

@@ -1,0 +1,30 @@
+/* Identidad visual de El Conejo sobre el login Tabler. */
+body.auth-brand {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, #ecf5fe 0%, rgba(236, 245, 254, 0) 42%),
+        linear-gradient(180deg, #f4f8fd 0%, #fdfdfd 55%, #eef3f8 100%);
+}
+
+.auth-logo {
+    display: block;
+    width: 96px;
+    height: auto;
+    margin: 0 auto 12px;
+}
+
+body.auth-brand .btn-primary {
+    background-color: #1570ef;
+    border-color: #1570ef;
+}
+
+/* Ajustes mínimos sobre Tabler para las páginas de autenticación. */
+
+.page-center .container-tight {
+    max-width: 30rem;
+}
+
+/* El código de desarrollo del passwordless debe poder copiarse fácil. */
+#pwl-dev-token {
+    word-break: break-all;
+}

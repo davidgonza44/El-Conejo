@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedido {{ order.order_number }} — Versión para impresión</title>
+<style>
+    body { margin: 24px; font: 12px/1.45 Inter, 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #fff; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+    h1 { margin: 0 0 4px; font-size: 20px; }
+    .brand { margin: 0; font-weight: 700; color: #1a73e8; }
+    .meta { margin: 0; color: #4b5563; }
+    .actions button { padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
+    dl { display: grid; grid-template-columns: 150px 1fr 150px 1fr; gap: 4px 12px; margin: 0 0 16px; }
+    dt { color: #6b7280; } dd { margin: 0; overflow-wrap: anywhere; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+    th { background: #f3f6fb; font-weight: 600; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    tfoot td { font-weight: 600; border-bottom: 0; }
+    .notes { margin-top: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media print { body { margin: 0; } .actions { display: none; } thead { display: table-header-group; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header>
+    <div>
+        <p class="brand">Ferretería y Construcciones El Conejo C.A.</p>
+        <h1>Pedido {{ order.order_number }}</h1>
+        <p class="meta">Impreso: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+    </div>
+    <div class="actions"><button type="button" onclick="window.print()">Imprimir</button></div>
+</header>
+<main>
+<dl>
+    <dt>Fecha</dt><dd>{{ ordered_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+    <dt>Estado</dt><dd>{{ order.status_label }}</dd>
+    <dt>Cliente</dt><dd>{{ order.customer.name if order.customer else '—' }}</dd>
+    <dt>Estado de pago</dt><dd>{{ order.payment_status_label }}</dd>
+    <dt>Vendedor</dt><dd>{{ order.seller.name or '—' }}</dd>
+    <dt>Prioridad</dt><dd>{{ order.priority_label }}</dd>
+    <dt>Entrega estimada</dt><dd>{{ order.estimated_delivery_date[8:10] }}/{{ order.estimated_delivery_date[5:7] }}/{{ order.estimated_delivery_date[0:4] }}</dd>
+    <dt>Teléfono de contacto</dt><dd>{{ order.contact_phone or '—' }}</dd>
+    <dt>Dirección de entrega</dt><dd>{{ order.delivery_address or '—' }}</dd>
+</dl>
+<table>
+    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col" class="num">Cantidad</th><th scope="col" class="num">Precio unit.</th><th scope="col" class="num">Subtotal</th></tr></thead>
+    <tbody>
+    {% for line in order['items'] %}
+    <tr><td>{{ line.product_code }}</td><td>{{ line.product_name }}</td><td class="num">{{ line.quantity }}</td><td class="num">${{ line.unit_price }}</td><td class="num">${{ line.line_subtotal }}</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot>
+    <tr><td colspan="4" class="num">Subtotal</td><td class="num">${{ order.subtotal }}</td></tr>
+    <tr><td colspan="4" class="num">Total</td><td class="num">${{ order.total }}</td></tr>
+    </tfoot>
+</table>
+{% if order.notes %}<p class="notes"><strong>Notas:</strong> {{ order.notes }}</p>{% endif %}
+</main>
+</body>
+</html>

@@ -1,0 +1,143 @@
+{% extends "inventory/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{# Una sola geometría aprobada: `fixture` (debug, ?ref=1) o `live_view`, el agregado real de
+   /api/inventory/summary-dashboard ya adaptado por dashboard_controller. Solo lectura. #}
+{% set active_page = "inventory_summary" %}
+{% set view = fixture or live_view %}
+
+{% block title %}Resumen de Inventario — Inventario{% endblock %}
+{% block main_class %} iv-page iv-summary{% endblock %}
+
+{% block main %}
+{{ iv.header("Resumen de Inventario", "Control general de existencias, movimientos y alertas",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{{ iv.kpis(view.kpis) }}
+
+<section class="ix-grid iv-main" aria-label="Movimientos, categorías y alertas">
+    <article class="ix-card iv-chart-card">
+        <div class="ix-card-head iv-card-head">
+            <h2 class="ix-card-title" title="{{ view.chart.title }}">{{ view.chart.title }}</h2>
+            <button type="button" class="ix-diario" aria-haspopup="listbox" aria-expanded="false"{% if not fixture %} disabled title="Solo vista de 7 días"{% endif %}>
+                {{ view.chart.range }}<i class="ti ti-chevron-down" aria-hidden="true"></i>
+            </button>
+        </div>
+        <ul class="ix-chart-legend iv-chart-legend">
+            {% for s in view.chart.series %}
+            <li><span class="ix-swatch{{ ' is-dashed' if s.dashed }}"></span><span>{{ s.label }}</span></li>
+            {% endfor %}
+        </ul>
+        <div class="ix-chart iv-chart iv-card-scroll-body" data-line-chart='{{ view.chart | tojson }}'>
+            <canvas role="img" aria-label="{{ view.chart.title }}"></canvas>
+            <div class="ix-chart-tip iv-chart-tip"></div>
+        </div>
+    </article>
+
+    {% if view.donut["items"] %}
+    {{ iv.donut_card(view.donut, "summary-donut") }}
+    {% else %}
+    <article class="ix-card iv-donut-card">
+        <div class="ix-card-head iv-card-head"><h2 class="ix-card-title">{{ view.donut.title }}</h2></div>
+        <p class="iv-empty">{{ view.donut.empty }}</p>
+    </article>
+    {% endif %}
+
+    <article class="ix-card iv-alerts">
+        {{ iv.card_head(view.alerts.title, view.alerts.link, href=view.alerts.href) }}
+        <ul class="iv-alert-list iv-card-scroll-body">
+            {% for p, stock, badge in view.alerts.rows %}
+            <li>
+                <span class="iv-alert-icon is-{{ badge[1] }}" aria-hidden="true">{{ iv.icon("svg:alert-triangle" if badge[1] == "orange" else "svg:x-circle") }}</span>
+                <span class="ix-thumb iv-alert-thumb">{{ iv.thumb_img(p) }}</span>
+                <span class="ix-row-text">
+                    <span class="ix-row-title" title="{{ p.name }}">{{ p.name }}</span>
+                    <span class="ix-row-desc">{{ stock }}</span>
+                </span>
+                {{ px.badge(badge) }}
+            </li>
+            {% else %}
+            <li class="iv-empty">{{ view.alerts.empty }}</li>
+            {% endfor %}
+        </ul>
+    </article>
+</section>
+
+<section class="ix-grid iv-lower" aria-label="Movimientos recientes, menor stock y mayor rotación">
+    <article class="ix-card iv-activity">
+        {{ iv.card_head(view.activity.title, view.activity.link, href=view.activity.href) }}
+        <ul class="ix-list iv-activity-list iv-card-scroll-body">
+            {% for ico, tone, title, desc, time, amount, direction in view.activity.rows %}
+            <li class="ix-row">
+                <span class="ix-row-icon tone-{{ tone }}" aria-hidden="true">{{ iv.icon(ico) }}</span>
+                <span class="ix-row-text">
+                    <span class="ix-row-title" title="{{ title }}">{{ title }}</span>
+                    <span class="ix-row-desc" title="{{ desc }}">{{ desc }}</span>
+                </span>
+                <span class="ix-row-side">
+                    <span class="ix-row-time">{{ time }}</span>
+                    <span class="ix-row-amount is-{{ direction }}">{{ amount }}</span>
+                </span>
+            </li>
+            {% else %}
+            <li class="iv-empty">{{ view.activity.empty }}</li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    <article class="ix-card iv-lowstock">
+        {{ iv.card_head(view.low_stock.title, view.low_stock.link, href=view.low_stock.href) }}
+        <div class="px-table-wrap iv-table-wrap iv-card-scroll-body">
+            <table class="px-table iv-table iv-lowstock-table">
+                <colgroup><col style="width: 28%"><col style="width: 20%"><col style="width: 10%"><col style="width: 10%"><col style="width: 14%"><col></colgroup>
+                <thead>
+                    <tr>{% for c in view.low_stock.columns %}<th scope="col"{% if loop.index in (3, 4, 5) %} class="is-center"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for p, cat, stock, minimum, badge, when in view.low_stock.rows %}
+                    <tr>
+                        <td>{{ iv.product(p) }}</td>
+                        <td class="px-cell-muted iv-clip" title="{{ cat }}">{{ cat }}</td>
+                        <td class="is-center"><strong class="iv-num is-{{ badge[1] }}">{{ stock }}</strong></td>
+                        <td class="is-center">{{ minimum }}</td>
+                        <td class="is-center">{{ px.badge(badge) }}</td>
+                        <td class="px-cell-muted iv-clip" title="{{ when }}">{{ when }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="iv-empty">{{ view.low_stock.empty }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="ix-card iv-rotation">
+        {{ iv.card_head(view.rotation.title) }}
+        <div class="iv-card-scroll-body">
+        <table class="iv-rotation-table">
+            <thead>
+                <tr>{% for c in view.rotation.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for p, units, stock, tone, width in view.rotation.rows %}
+                <tr>
+                    <td>{{ iv.product(p) }}</td>
+                    <td>{{ units }}</td>
+                    <td><strong class="iv-num is-{{ tone }}">{{ stock }}</strong></td>
+                    <td><span class="px-bar iv-bar" aria-hidden="true"><span style="width: {{ width }}%"></span></span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="iv-empty">{{ view.rotation.empty }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="iv-rotation-total">
+            <span>{{ view.rotation.total_label }}</span>
+            <strong>{{ view.rotation.total }}</strong>
+        </div>
+    </article>
+</section>
+
+{% if fixture %}{{ iv.footer(fixture.footer) }}{% endif %}
+{% endblock %}

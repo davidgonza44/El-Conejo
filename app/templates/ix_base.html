@@ -1,0 +1,34 @@
+{# Shell "ix" compartido por Inicio y el módulo Análisis predictivo (inicio.css).
+   Tabler solo aporta controles de formulario y alertas; no agregar otro Bootstrap. #}
+<!doctype html>
+<html lang="es" data-reference-mode="{{ '1' if reference_mode else '0' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo_oficial_el_conejo.png') }}">
+    <title>{% block title %}Ferretería El Conejo{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1/dist/css/tabler.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/inicio.css') }}">
+    {% block head %}{% endblock %}
+    {# Sistema de diseño: después de las hojas de cada pantalla para unificar sin duplicar reglas. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ix_ui.css') }}">
+</head>
+<body class="ix-body">
+<div class="ix-shell" id="ix-shell">
+    {% include "_ix_sidebar.html" %}
+    <main class="ix-main{% block main_class %}{% endblock %}" id="ix-main">
+        {% block main %}{% endblock %}
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1/dist/js/tabler.min.js"></script>
+<script>window.bootstrap = window.bootstrap || (window.tabler && window.tabler.bootstrap);</script>
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/ix_shell.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

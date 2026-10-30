@@ -1,0 +1,23 @@
+{% extends "ix_base.html" %}
+{# Base de las pantallas del módulo Ventas con shell "ix": reutiliza los componentes de
+   predictive.css / ix_inventory.css (KPI, insignias, paginación, botones) y añade la
+   composición propia de ix_sales.css/js. `fixture` solo existe en modo referencia
+   (debug, ?ref=1); en modo normal es None y la vista muestra un estado veraz. #}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{% import "sales/_macros.html" as sa %}
+{% set sidebar_variant = "sales" %}
+{% set ref_qs = "?ref=1" if reference_mode else "" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_inventory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_sales.css') }}">
+{% endblock %}
+
+{% block main_class %} iv-page sa-page{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ix_inventory.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_sales.js') }}"></script>
+{% endblock %}

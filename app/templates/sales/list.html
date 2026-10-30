@@ -1,0 +1,110 @@
+{% extends "sales/_page.html" %}
+{# Lista de Ventas (panel "2. Lista de Ventas"): búsqueda, filtros tipo chip y tabla paginada.
+   Referencia: fixture. Vivo: ventas reales de GET /api/sales adaptadas por sale_controller
+   (filtros del servidor vía formulario GET; sin JS ni escrituras). #}
+{% set active_page = "sales_list" %}
+
+{% block title %}Ventas — Lista{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-list-page{% endblock %}
+
+{% block main %}
+{{ sa.header("Ventas", "Consulta y gestiona todas las ventas del sistema.",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{% if not fixture %}
+{% set f = live_view.filters %}
+<form class="sa-toolbar sa-list-form" method="get" action="{{ url_for('pages.sales_list') }}" role="search" aria-label="Filtrar ventas">
+    <label class="px-search sa-toolbar-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="search" name="search" value="{{ f.search }}" placeholder="Buscar por número de venta, cliente o producto..." aria-label="Buscar por número de venta, cliente o producto">
+    </label>
+    <div class="sa-filters sa-list-filters" role="group" aria-label="Filtros">
+        <label class="sa-chip sa-chip-field"><i class="ti ti-calendar" aria-hidden="true"></i><span class="visually-hidden">Desde</span><input type="date" name="date_from" value="{{ f.date_from }}" max="{{ commercial_today }}"></label>
+        <label class="sa-chip sa-chip-field"><i class="ti ti-arrow-right" aria-hidden="true"></i><span class="visually-hidden">Hasta</span><input type="date" name="date_to" value="{{ f.date_to }}" max="{{ commercial_today }}"></label>
+        <label class="sa-chip sa-chip-field"><i class="ti ti-credit-card" aria-hidden="true"></i><span class="visually-hidden">Método de pago</span>
+            <select name="payment_method">
+                <option value="">Todos los métodos de pago</option>
+                {% for value, label in f.methods %}<option value="{{ value }}"{% if value == f.payment_method %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="px-btn sa-btn is-primary">Aplicar</button>
+        {% if f.search or f.date_from or f.date_to or f.payment_method %}<a class="px-btn sa-btn" href="{{ url_for('pages.sales_list') }}">Limpiar</a>{% endif %}
+    </div>
+    <div class="px-actions sa-toolbar-actions">
+        {% if can_sell %}<a class="px-btn sa-btn is-primary" href="{{ url_for('pages.sales_new') }}"><i class="ti ti-plus" aria-hidden="true"></i>Nueva venta</a>{% endif %}
+    </div>
+</form>
+
+<section class="ix-card sa-table-card" aria-label="Ventas registradas">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table sa-list-live-table">
+            <colgroup><col style="width: 104px"><col style="width: 124px"><col><col style="width: 88px"><col style="width: 128px"><col style="width: 108px"><col style="width: 104px"><col style="width: 80px"></colgroup>
+            <thead>
+                <tr>{% for c in live_view.columns %}<th scope="col"{% if loop.index == 4 %} class="is-center"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for s in live_view.rows %}
+                <tr>
+                    <td><a href="{{ s.href }}" class="sa-ref">{{ s.number }}</a></td>
+                    <td class="sa-muted">{{ s.date }}</td>
+                    <td class="sa-muted sa-clip" title="{{ s.customer }}">{{ s.customer }}</td>
+                    <td class="is-center">{{ s.units }}</td>
+                    <td class="sa-muted sa-clip" title="{{ s.method }}">{{ s.method }}</td>
+                    <td><strong>{{ s.total }}</strong></td>
+                    <td>{{ sa.badge(s.status) }}</td>
+                    <td><a href="{{ s.href }}" class="iv-icon-btn" aria-label="Ver detalle de {{ s.number }}"><i class="ti ti-eye" aria-hidden="true"></i></a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="iv-empty">No se encontraron ventas con estos filtros.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% set pg = live_view.pagination %}
+    <footer class="sa-pagination">
+        <span class="sa-pagination-summary">{{ pg.summary }}</span>
+        {% if pg.pages > 1 %}
+        {% set base = url_for('pages.sales_list', search=f.search or None, date_from=f.date_from or None, date_to=f.date_to or None, payment_method=f.payment_method or None) %}
+        {% set sep = '&' if '?' in base else '?' %}
+        <nav class="px-pages sa-pages" aria-label="Paginación">
+            <a class="px-pg{{ ' is-disabled' if pg.page <= 1 }}" href="{{ base }}{{ sep }}page={{ pg.page - 1 }}" aria-label="Página anterior"{% if pg.page <= 1 %} aria-disabled="true" tabindex="-1"{% endif %}><i class="ti ti-chevron-left" aria-hidden="true"></i></a>
+            {% for item in pg["items"] %}
+            {% if item.gap %}<span class="px-pg is-gap" aria-hidden="true">...</span>
+            {% else %}<a class="px-pg{{ ' is-active' if item.active }}" href="{{ base }}{{ sep }}page={{ item.page }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.text }}</a>{% endif %}
+            {% endfor %}
+            <a class="px-pg{{ ' is-disabled' if pg.page >= pg.pages }}" href="{{ base }}{{ sep }}page={{ pg.page + 1 }}" aria-label="Página siguiente"{% if pg.page >= pg.pages %} aria-disabled="true" tabindex="-1"{% endif %}><i class="ti ti-chevron-right" aria-hidden="true"></i></a>
+        </nav>
+        {% endif %}
+    </footer>
+</section>
+{% else %}
+{{ sa.toolbar(fixture.search, fixture.primary, dropdown=True) }}
+{{ sa.filters(fixture.filters) }}
+
+<section class="ix-card sa-table-card" aria-label="Ventas registradas">
+    <div class="px-table-wrap sa-table-wrap">
+        <table class="px-table sa-table sa-list-table">
+            <colgroup><col style="width: 117px"><col style="width: 151px"><col style="width: 233px"><col style="width: 119px"><col style="width: 166px"><col></colgroup>
+            <thead>
+                <tr>{% for c in fixture.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for s in fixture.rows %}
+                <tr>
+                    {# Solo la venta con detalle en el fixture enlaza a su pantalla; el resto es texto. #}
+                    <td>{% if s.number == fixture.detail %}<a href="{{ url_for('pages.sale_detail', sale_number=s.number) }}{{ ref_qs }}" class="sa-ref">{{ s.number }}</a>{% else %}<span class="sa-ref">{{ s.number }}</span>{% endif %}</td>
+                    <td class="sa-muted">{{ s.date }}</td>
+                    <td class="sa-muted">{{ s.customer }}</td>
+                    <td><strong>{{ s.total }}</strong></td>
+                    <td class="sa-muted">{{ s.method }}</td>
+                    <td>{{ sa.badge(s.status) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ sa.pagination(fixture.pagination) }}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,89 @@
+{# Capas de Cotizaciones (drawer Nueva cotización, rango de fechas, estado, Más filtros).
+   Con `fixture` (solo ?ref=1): valores desechables, sin red. Sin fixture: la misma geometría la
+   conecta ix_quotes_live.js a /api/quotes; cliente/producto se buscan en la API, fecha y vendedor
+   los fija el servidor y "Estado de pago" se muestra deshabilitado porque no existe en esta versión. #}
+{% macro icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="m18 6-12 12M6 6l12 12"/>
+{% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{% elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2"/>
+{% elif name == 'file' %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h6"/>
+{% elif name == 'box' %}<path d="m12 3 9 5v8l-9 5-9-5V8ZM3 8l9 5 9-5M12 13v8M7.5 5.5l9 5"/>
+{% elif name == 'calculator' %}<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h1M15 10h1M8 14h1M15 14h1M8 18h1M15 18h1"/>
+{% elif name == 'save' %}<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2ZM7 3v6h10V3M7 21v-8h10v8"/>
+{% elif name == 'reset' %}<path d="M3 11a9 9 0 1 1 2.4 7M3 4v7h7"/>
+{% endif %}</svg>
+{%- endmacro %}
+{% macro select(id, label, placeholder, options, required=False) %}
+<label>{{ label }}{% if required %}<em>*</em>{% endif %}<select id="{{ id }}" {% if required %}required{% endif %}>{% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}{% for option in options %}{% if option is string %}<option>{{ option }}</option>{% else %}<option value="{{ option[0] }}">{{ option[1] }}</option>{% endif %}{% endfor %}</select></label>
+{% endmacro %}
+{% macro datefield(id, label, value='', required=False) %}
+<label>{{ label }}{% if required %}<em>*</em>{% endif %}<button type="button" id="{{ id }}" class="ql-date-field" data-ql-date="{{ value }}" aria-haspopup="dialog" aria-expanded="false">{{ icon('calendar') }}<span>{{ value.split('-')|reverse|join('/') if value else 'dd/mm/aaaa' }}</span></button></label>
+{% endmacro %}
+{# Búsqueda real (combobox + listbox) de cliente/producto; el id elegido viaja en el hidden. #}
+{% macro combo(id, label, placeholder, required=False) %}
+<label class="sv-combo">{{ label }}{% if required %}<em>*</em>{% endif %}<input id="{{ id }}" type="search" placeholder="{{ placeholder }}" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="{{ id }}-list" autocomplete="off"><ul class="sv-list" id="{{ id }}-list" role="listbox" hidden></ul><input type="hidden" id="{{ id }}-id" value=""></label>
+{% endmacro %}
+{% if fixture %}{% set clients = fixture.rows|map(attribute=2)|unique|list %}
+<script id="ql-fixture" type="application/json">{{ fixture.rows|tojson }}</script>{% endif %}
+<dialog id="ql-drawer" class="ql-layer ql-drawer" aria-labelledby="ql-new-title" aria-describedby="ql-new-desc">
+ <header class="ql-header"><h2 id="ql-new-title">Nueva cotización</h2><p id="ql-new-desc">Crea una nueva cotización para un cliente.</p><button type="button" class="ql-close" data-ql-close aria-label="Cerrar Nueva cotización">{{ icon('x') }}</button></header>
+ <form id="ql-quote-form" class="ql-quote-body"{% if not fixture %} novalidate{% endif %}>
+  <section class="ql-info"><h3>{{ icon('file') }}Información de la cotización</h3><div class="ql-grid">
+   {% if fixture %}{{ select('ql-customer','Cliente','Buscar y seleccionar un cliente...',clients,True) }}
+   {{ datefield('ql-quote-date','Fecha de cotización','2024-06-03',True) }}
+   <div class="ql-three ql-wide">
+    {{ select('ql-validity','Validez',None,['30 días','15 días','7 días'],True) }}
+    {{ select('ql-quote-status','Estado',None,['Pendiente','Enviada','Aceptada','Vencida','Rechazada'],True) }}
+    {{ select('ql-seller','Vendedor',None,['Administrador','María Pérez']) }}
+   </div>
+   {% else %}{{ combo('ql-customer','Cliente','Buscar y seleccionar un cliente...',True) }}
+   <label>Fecha de cotización<em>*</em><input id="ql-quote-date" value="{{ commercial_today.split('-')|reverse|join('/') }}" readonly aria-describedby="ql-new-desc" title="La fija el servidor (hora de Venezuela)."></label>
+   <div class="ql-three ql-wide">
+    {{ select('ql-validity','Validez',None,[('30','30 días'),('15','15 días'),('7','7 días')],True) }}
+    {{ select('ql-quote-status','Estado',None,[('pending','Pendiente'),('sent','Enviada'),('accepted','Aceptada'),('rejected','Rechazada')],True) }}
+    <label>Vendedor<input id="ql-seller" value="{{ current_user.name }}" readonly title="Vendedor autenticado; lo fija el servidor."></label>
+   </div>
+   {% endif %}
+   <label class="ql-wide">Notas<textarea id="ql-notes" rows="3" maxlength="500" placeholder="Agrega notas o términos adicionales para esta cotización..."></textarea><span id="ql-note-count" class="ql-note-count">0/500</span></label>
+  </div></section>
+  <section class="ql-products"><div class="ql-section-heading"><h3>{{ icon('box') }}Productos cotizados</h3><button type="button" class="ql-button ql-soft" id="ql-add">{{ icon('plus') }}Agregar producto</button></div>
+   {% if fixture %}<div id="ql-add-controls" hidden><label>Producto<select id="ql-catalog"><option value="0">Cemento Gris 42.5 kg</option><option value="1">Cable Eléctrico THHN 12 AWG</option></select></label><button type="button" class="ql-button" id="ql-add-confirm">Agregar</button></div>{% endif %}
+   <div class="ql-product-table"><table><thead><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th><th>Acciones</th></tr></thead><tbody id="ql-products"></tbody></table></div>
+  </section>
+  <section class="ql-summary"><h3>{{ icon('calculator') }}Resumen de la cotización</h3><dl><div><dt>Subtotal</dt><dd id="ql-subtotal"></dd></div><div><dt><label for="ql-discount">Descuento</label></dt><dd class="ql-discount"><span><input type="number" id="ql-discount" min="0" max="100" step="0.01" value="0" aria-label="Descuento porcentual"><span>%</span></span><output id="ql-discount-total"></output></dd></div><div class="ql-total"><dt>Total</dt><dd id="ql-total"></dd></div></dl></section>
+  <p id="ql-quote-error" role="status"></p>
+ </form>
+ <footer class="ql-footer"><button type="button" class="ql-button" data-ql-close>Cancelar</button><button type="submit" form="ql-quote-form" class="ql-button ql-primary" id="ql-save">{{ icon('save') }}Guardar cotización</button></footer>
+</dialog>
+<section id="ql-dates" class="ql-layer ql-dates" role="dialog" aria-label="Seleccionar rango de fechas" hidden>
+ <div class="ql-date-body"><nav class="ql-quick" aria-label="Accesos rápidos">{% for label in ['Hoy','Últimos 7 días','Últimos 30 días','Este mes','Mes pasado','Rango personalizado'] %}<button type="button" data-ql-quick="{{ loop.index0 }}">{{ label }}</button>{% endfor %}</nav><div id="ql-calendars" class="ql-calendars"></div></div>
+ <footer class="ql-footer"><span id="ql-range" aria-live="polite"></span><button type="button" class="ql-button" data-ql-close>Cancelar</button><button type="button" class="ql-button ql-primary" id="ql-date-apply">Aplicar</button></footer>
+</section>
+<section id="ql-status" class="ql-layer ql-status" role="listbox" aria-label="Estado de cotización" hidden></section>
+<dialog id="ql-more" class="ql-layer ql-more" aria-labelledby="ql-more-title" aria-describedby="ql-more-desc">
+ <header class="ql-header"><h2 id="ql-more-title">Más filtros</h2><p id="ql-more-desc">Refina la búsqueda de cotizaciones con múltiples criterios</p><button type="button" class="ql-close" data-ql-close aria-label="Cerrar Más filtros">{{ icon('x') }}</button></header>
+ <form id="ql-filter-form"{% if not fixture %} novalidate{% endif %}><div class="ql-grid">
+  {% if fixture %}{{ select('ql-filter-client','Cliente','Buscar o seleccionar cliente...',clients) }}
+  {{ select('ql-filter-product','Producto','Buscar o seleccionar producto...',['Cemento Gris 42.5 kg','Cable Eléctrico THHN 12 AWG']) }}
+  {{ select('ql-filter-seller','Vendedor','Todos los vendedores',['Administrador','María Pérez']) }}
+  {{ select('ql-filter-validity','Validez','Todas las vigencias',['7 días','15 días','30 días']) }}
+  {% else %}{{ combo('ql-filter-client','Cliente','Buscar o seleccionar cliente...') }}
+  {{ combo('ql-filter-product','Producto','Buscar o seleccionar producto...') }}
+  {{ select('ql-filter-seller','Vendedor','Todos los vendedores',[]) }}
+  {{ select('ql-filter-validity','Validez','Todas las vigencias',[('7','7 días'),('15','15 días'),('30','30 días')]) }}
+  {% endif %}
+  <label>Total mínimo<span class="ql-money-input"><span>$</span><input id="ql-filter-min" type="number" min="0" step="0.01" placeholder="0.00"></span></label>
+  <label>Total máximo<span class="ql-money-input"><span>$</span><input id="ql-filter-max" type="number" min="0" step="0.01" placeholder="0.00"></span></label>
+  {% if fixture %}{{ select('ql-filter-payment','Estado de pago','Todos los estados',['Pendiente','Parcial','Pagado']) }}
+  {{ datefield('ql-filter-from','Fecha desde') }}
+  {{ datefield('ql-filter-to','Fecha hasta') }}
+  {% else %}<label>Estado de pago<select id="ql-filter-payment" disabled title="Las cotizaciones no registran pagos en esta versión." aria-describedby="ql-payment-note"><option value="">No disponible en esta versión</option></select><span id="ql-payment-note" class="sltw:sr-only">Las cotizaciones no registran pagos en esta versión.</span></label>
+  <label>Fecha desde<input id="ql-filter-from" type="date"></label>
+  <label>Fecha hasta<input id="ql-filter-to" type="date"></label>
+  {% endif %}
+ </div><p id="ql-filter-error" role="status"></p>
+ <footer class="ql-footer"><button type="button" class="ql-button ql-reset" id="ql-reset">{{ icon('reset') }}Limpiar filtros</button><button type="button" class="ql-button" data-ql-close>Cancelar</button><button type="submit" class="ql-button ql-primary">Aplicar filtros</button></footer></form>
+</dialog>
+{% if fixture %}<section id="ql-single-calendar" class="ql-layer ql-single-calendar" role="dialog" aria-label="Seleccionar fecha" hidden></section>{% endif %}
+<p id="ql-notice" class="ql-notice" role="status" hidden></p>

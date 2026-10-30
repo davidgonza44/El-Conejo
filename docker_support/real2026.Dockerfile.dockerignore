@@ -1,0 +1,11 @@
+**
+!docker_support/
+!docker_support/*.py
+!app/
+!app/**/*.py
+!app/templates/
+!app/templates/**
+!app/static/
+!app/static/**
+!scripts/
+!scripts/migrate_real_2026_history.py

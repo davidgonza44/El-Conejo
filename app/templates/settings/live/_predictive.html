@@ -1,0 +1,28 @@
+{% set pred = live.predictive %}
+{# Solo lectura: valores tomados de forecast_service y prediction_readiness_service; no ejecuta cálculos. #}
+<div class="st-readonly-grid grid">
+<section class="st-card"><h2>Horizonte y método</h2><p class="st-section-description">Opciones que se eligen en cada consulta del módulo predictivo; no son ajustes globales guardados.</p>
+<div class="st-meta"><span>Horizontes disponibles</span><strong>{{ pred.horizons|join(', ') }} días</strong></div>
+<div class="st-meta"><span>Horizonte por defecto</span><strong>{{ pred.default_horizon }} días</strong></div>
+<div class="st-meta"><span>Método por defecto</span><strong>Automático</strong></div>
+<p class="st-readonly-note">«Automático» elige, por producto, el modelo con menor error (WAPE) en el backtest; si no hay backtest evaluable usa {{ pred.baseline }}.</p>
+<h3 class="st-readonly-subtitle">Modelos registrados</h3>
+<ul class="st-readonly-list">{% for label in pred.models %}<li>{{ label }}</li>{% endfor %}</ul>
+</section>
+<section class="st-card"><h2>Intervalo y suficiencia del historial</h2><p class="st-section-description">Reglas fijas del código que condicionan si se muestra un pronóstico.</p>
+<div class="st-meta"><span>Intervalo de predicción</span><strong>≈ 80 % (z = {{ '%.4f'|format(pred.z_80)|replace('.', ',') }})</strong></div>
+<p class="st-readonly-note">Se calcula con la desviación de los residuos del backtest. Sin residuos no se muestra intervalo.</p>
+<div class="st-security-table-scroll" tabindex="0" role="region" aria-label="Umbrales de suficiencia"><table class="st-security-table"><thead><tr><th scope="col">Clasificación</th><th scope="col">Períodos mínimos</th><th scope="col">Con demanda</th></tr></thead><tbody>
+{% for label, periods, positive in pred.thresholds %}<tr><td>{{ label }}</td><td>≥ {{ periods }}</td><td>≥ {{ positive }}</td></tr>{% endfor %}
+<tr><td>Insuficiente</td><td colspan="2">Por debajo de «Limitado»: no se presenta pronóstico.</td></tr>
+</tbody></table></div>
+</section>
+<section class="st-card"><h2>Fuera de esta pantalla</h2><p class="st-section-description">Lo que Configuración no modifica.</p>
+<ul class="st-readonly-list">
+<li>No hay editor de parámetros, nivel de confianza seleccionable ni reentrenamiento automático.</li>
+<li>Los modelos, el historial y los resultados experimentales no se alteran desde aquí.</li>
+<li>La sugerencia de reabastecimiento se consulta en el módulo predictivo; no genera órdenes por sí sola.</li>
+</ul>
+<div class="st-readonly-links">{% if nav_allowed('demand_forecast') %}<a class="st-card-link" href="{{ url_for('pages.demand_forecast') }}">Ir a Pronóstico de demanda {{ st.icon('chevron') }}</a>{% endif %}{% if nav_allowed('model_accuracy') %}<a class="st-card-link" href="{{ url_for('pages.model_accuracy') }}">Ver precisión de modelos {{ st.icon('chevron') }}</a>{% endif %}</div>
+</section>
+</div>

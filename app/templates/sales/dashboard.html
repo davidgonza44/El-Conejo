@@ -1,0 +1,195 @@
+{% extends "sales/_page.html" %}
+{# Dashboard de Ventas (referencia aprobada): KPI del período, ventas de los últimos 12 meses,
+   ventas por categoría, métodos de pago, últimas ventas, ventas recientes y clientes destacados.
+   Una sola geometría: `fixture` (debug, ?ref=1) o `live_view`, el agregado real de
+   /api/sales/dashboard adaptado por dashboard_controller (GET, sin escrituras). #}
+{% set active_page = "sales" %}
+{% set view = fixture or live_view %}
+
+{% block title %}Ventas{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-dash{% endblock %}
+
+{% macro empty(text, colspan) %}<tr><td colspan="{{ colspan }}" class="iv-empty">{{ text }}</td></tr>{% endmacro %}
+
+{% block main %}
+{{ sa.header("Ventas", "Gestiona tus ventas, cotizaciones y pedidos de manera eficiente.",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{% if fixture %}
+{{ sa.date_bar(view.date_range, view.compare) }}
+{% else %}
+<form class="sa-dates sa-dates-live" method="get" action="{{ url_for('pages.sales') }}" aria-label="Período de análisis">
+    <span class="sa-date">
+        <i class="ti ti-calendar" aria-hidden="true"></i>
+        <label class="sa-date-field"><span class="visually-hidden">Desde</span><input type="date" name="start" value="{{ view.period.start }}" max="{{ view.period.end }}" required></label>
+        <span aria-hidden="true">-</span>
+        <label class="sa-date-field"><span class="visually-hidden">Hasta</span><input type="date" name="end" value="{{ view.period.end }}" min="{{ view.period.start }}" required></label>
+    </span>
+    <button type="submit" class="px-btn sa-btn is-primary sa-date-apply">Aplicar</button>
+    <span class="sa-compare"><i class="ti ti-arrows-diff" aria-hidden="true"></i>{{ view.compare }}</span>
+</form>
+{% endif %}
+
+{{ iv.kpis(view.kpis) }}
+
+<section class="sa-charts" aria-label="Ventas por mes, por categoría y por método de pago">
+    <article class="ix-card sa-chart-card">
+        <div class="ix-card-head sa-card-head">
+            <h2 class="ix-card-title">{{ view.sales_chart.title }}</h2>
+            <button type="button" class="ix-diario sa-range" aria-haspopup="listbox" aria-expanded="false"{% if not fixture %} disabled title="Solo vista mensual"{% endif %}>{{ view.sales_chart.range }}<i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+        </div>
+        <ul class="ix-chart-legend sa-legend">
+            {% for label, dashed in view.sales_chart.legend %}
+            <li><span class="ix-swatch{{ ' is-dashed' if dashed }}"></span><span>{{ label }}</span></li>
+            {% endfor %}
+            {% if view.sales_chart.coverage %}<li class="sa-legend-note">{{ view.sales_chart.coverage }}</li>{% endif %}
+        </ul>
+        <div class="ix-chart sa-line" data-line-chart='{{ view.sales_chart | tojson }}'>
+            <canvas role="img" aria-label="{{ view.sales_chart.title }}"></canvas>
+            <div class="ix-chart-tip sa-chart-tip"></div>
+            {% if view.sales_chart.note %}<p class="iv-empty sa-chart-empty">{{ view.sales_chart.note }}</p>{% endif %}
+        </div>
+    </article>
+
+    {% set d = view.donut %}
+    <article class="ix-card sa-donut-card">
+        <div class="ix-card-head sa-card-head">
+            <h2 class="ix-card-title">{{ d.title }}</h2>
+            <button type="button" class="ix-diario sa-range" aria-haspopup="listbox" aria-expanded="false"{% if not fixture %} disabled title="{{ d.note }}"{% endif %}>{{ d.range }}<i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+        </div>
+        {% if d["items"] %}
+        <div class="sa-donut-body">
+            <div class="iv-donut sa-donut" data-donut='{{ d["items"] | map(attribute=3) | list | tojson }}' data-tones='{{ d["items"] | map(attribute=2) | list | tojson }}' data-cutout="62">
+                <canvas role="img" aria-label="{{ d.title }}"></canvas>
+                <div class="ix-donut-center">
+                    <span class="ix-donut-value">{{ d.center_value }}</span>
+                    <span class="ix-donut-label">{{ d.center_label }}</span>
+                </div>
+            </div>
+            <ul class="ix-legend sa-donut-legend">
+                {% for name, sub, tone, _ in d["items"] %}
+                <li><span class="ix-legend-dot iv-dot-{{ tone }}"></span><span class="ix-legend-text"><span class="ix-legend-name" title="{{ name }}">{{ name }}</span><span class="ix-legend-sub">{{ sub }}</span></span></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <p class="iv-empty">{{ d.empty }}</p>
+        {% endif %}
+    </article>
+
+    {% set pm = view.payments %}
+    <article class="ix-card sa-pay-card">
+        <div class="ix-card-head sa-card-head">
+            <h2 class="ix-card-title">{{ pm.title }}</h2>
+            <button type="button" class="ix-diario sa-range" aria-haspopup="listbox" aria-expanded="false"{% if not fixture %} disabled title="Sigue al período seleccionado"{% endif %}>{{ pm.range }}<i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+        </div>
+        {% if pm.bars["values"] %}
+        <div class="sa-pay-bars" data-mini-bars='{{ pm.bars | tojson }}'>
+            <canvas role="img" aria-label="{{ pm.title }}"></canvas>
+        </div>
+        {% else %}
+        <p class="iv-empty">{{ pm.empty }}</p>
+        {% endif %}
+    </article>
+</section>
+
+<section class="sa-bottom" aria-label="Últimas ventas, ventas recientes y clientes destacados">
+    <article class="ix-card sa-latest">
+        <div class="ix-card-head sa-card-head"><h2 class="ix-card-title">{{ view.latest.title }}</h2></div>
+        <div class="px-table-wrap sa-table-wrap">
+            <table class="px-table sa-table sa-latest-table">
+                <colgroup><col style="width: 30px"><col><col style="width: 68px"><col style="width: 62px"><col style="width: 64px"></colgroup>
+                <thead>
+                    <tr>{% for c in view.latest.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for ico, tone, number, customer, when, total, status in view.latest.rows %}
+                    <tr>
+                        <td><span class="sa-order-icon tone-{{ tone }}" aria-hidden="true">{{ iv.icon(ico) }}</span></td>
+                        <td>
+                            <span class="ix-row-text">
+                                <span class="ix-row-title" title="{{ number }}">{{ number }}</span>
+                                <span class="ix-row-desc" title="{{ customer }}">{{ customer }}</span>
+                            </span>
+                        </td>
+                        <td class="sa-muted">{{ when }}</td>
+                        <td><strong>{{ total }}</strong></td>
+                        <td>{{ sa.badge(status) }}</td>
+                    </tr>
+                    {% else %}{{ empty(view.latest.empty, 5) }}{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="ix-card sa-recent">
+        <div class="ix-card-head sa-card-head">
+            <h2 class="ix-card-title">{{ view.recent.title }}</h2>
+            {% if view.recent.link %}<a href="{{ view.recent.href or (url_for('pages.sales_list') ~ ref_qs) }}" class="sa-link">{{ view.recent.link }}</a>{% endif %}
+        </div>
+        <div class="px-table-wrap sa-table-wrap">
+            <table class="px-table sa-table sa-recent-table">
+                <colgroup><col style="width: 26px"><col style="width: 92px"><col><col style="width: 70px"><col style="width: 82px"><col style="width: 72px"><col style="width: 74px"></colgroup>
+                <thead>
+                    <tr>{% for c in view.recent.columns %}<th scope="col"{% if loop.last %} class="is-end"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for n, date, customer, products, method, status, total in view.recent.rows %}
+                    <tr>
+                        <td class="sa-muted">{{ n }}</td>
+                        <td class="sa-muted">{{ date }}</td>
+                        <td class="sa-clip" title="{{ customer }}">{{ customer }}</td>
+                        <td class="sa-muted">{{ products }}</td>
+                        <td class="sa-clip" title="{{ method }}">{{ method }}</td>
+                        <td>{{ sa.badge(status) }}</td>
+                        <td class="is-end"><strong>{{ total }}</strong></td>
+                    </tr>
+                    {% else %}{{ empty(view.recent.empty, 7) }}{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if fixture %}
+        {{ sa.pagination(view.recent.pagination) }}
+        {% else %}
+        {% set pg = view.recent.pagination %}
+        {% set page_url = url_for('pages.sales', start=view.period.start, end=view.period.end) ~ '&page=' %}
+        <footer class="sa-pagination">
+            <span class="sa-pagination-summary">{{ pg.summary }}</span>
+            {% if pg.pages > 1 %}
+            <nav class="px-pages sa-pages" aria-label="Paginación">
+                <a class="px-pg{{ ' is-disabled' if pg.page == 1 }}" href="{{ page_url ~ (pg.page - 1) }}" aria-label="Página anterior"{% if pg.page == 1 %} aria-disabled="true" tabindex="-1"{% endif %}><i class="ti ti-chevron-left" aria-hidden="true"></i></a>
+                {% for item in pg["items"] %}
+                {% if item.gap %}<span class="px-pg is-gap" aria-hidden="true">...</span>
+                {% else %}<a class="px-pg{{ ' is-active' if item.active }}" href="{{ page_url ~ item.page }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.text }}</a>{% endif %}
+                {% endfor %}
+                <a class="px-pg{{ ' is-disabled' if pg.page == pg.pages }}" href="{{ page_url ~ (pg.page + 1) }}" aria-label="Página siguiente"{% if pg.page == pg.pages %} aria-disabled="true" tabindex="-1"{% endif %}><i class="ti ti-chevron-right" aria-hidden="true"></i></a>
+            </nav>
+            {% endif %}
+        </footer>
+        {% endif %}
+    </article>
+
+    <article class="ix-card sa-customers">
+        <div class="ix-card-head sa-card-head"><h2 class="ix-card-title">{{ view.customers.title }}</h2></div>
+        <div class="px-table-wrap sa-table-wrap">
+            <table class="px-table sa-table sa-customers-table">
+                <colgroup><col style="width: 24px"><col><col style="width: 74px"><col style="width: 56px"></colgroup>
+                <thead>
+                    <tr>{% for c in view.customers.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for n, name, revenue, count in view.customers.rows %}
+                    <tr>
+                        <td class="sa-muted">{{ n }}</td>
+                        <td class="sa-clip" title="{{ name }}">{{ name }}</td>
+                        <td><strong>{{ revenue }}</strong></td>
+                        <td class="sa-muted">{{ count }}</td>
+                    </tr>
+                    {% else %}{{ empty(view.customers.empty, 4) }}{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}

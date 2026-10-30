@@ -1,0 +1,154 @@
+{# Only included by the reference Products page. Fixtures never reach a write endpoint. #}
+{% macro layer_icon(name) -%}
+<svg class="pl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="m18 6-12 12M6 6l12 12"/>
+{% elif name == 'eye' %}<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+{% elif name == 'pencil' %}<path d="m16 3 5 5M4 16 16 4a2 2 0 0 1 4 4L8 20l-5 1Z"/>
+{% elif name == 'download' %}<path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/>
+{% elif name == 'upload' %}<path d="M12 16V4m-5 5 5-5 5 5M20 16.6A5 5 0 0 0 18 7a6 6 0 0 0-11.7-1A4 4 0 0 0 6 18h2m8 0h2"/>
+{% elif name == 'info' %}<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>
+{% elif name == 'alert' %}<path d="m10.3 3.9-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.1l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/>
+{% elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>
+{% elif name == 'reset' %}<path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7"/>
+{% elif name == 'trash' %}<path d="M3 6h18M19 6l-1 14H6L5 6M9 6V3h6v3M10 10v6M14 10v6"/>
+{% elif name == 'image' %}<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>
+{% else %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>{% endif %}
+</svg>
+{%- endmacro %}
+<dialog id="pl-dialog" class="pl-dialog" aria-labelledby="pl-title">
+    <header class="pl-header"><div><h2 id="pl-title"></h2><p id="pl-subtitle" hidden></p></div><button type="button" class="pl-close" data-pl-close aria-label="Cerrar capa" autofocus>{{ layer_icon('x') }}</button></header>
+    <div class="pl-body">
+        <section id="pl-image-editor" class="pl-image-editor" aria-labelledby="pl-image-title">
+            <h3 id="pl-image-title">Imagen del producto</h3>
+            <div class="pl-image-layout">
+                <div class="pl-image-preview"><img id="pl-edit-image" alt="Vista previa de la imagen del producto" hidden><span id="pl-edit-placeholder">{{ layer_icon('image') }}<span>Sin imagen</span></span></div>
+                <div class="pl-image-controls">
+                    <div class="pl-image-actions">
+                        <button type="button" id="pl-image-change" aria-controls="pl-image-file">{{ layer_icon('upload') }}Cambiar imagen</button>
+                        <button type="button" id="pl-image-delete" disabled>{{ layer_icon('trash') }}Eliminar</button>
+                    </div>
+                    <label for="pl-image-file" class="pl-sr-only">Seleccionar imagen del producto</label>
+                    <input id="pl-image-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" aria-describedby="pl-image-help pl-image-message" hidden>
+                    <p id="pl-image-help">JPG, PNG o WebP · Máx. 2 MB<br>Recomendado: 800×800 px (formato cuadrado)</p>
+                </div>
+            </div>
+            <p id="pl-image-message" role="status" aria-live="polite" hidden></p>
+        </section>
+        <div id="pl-product" class="pl-product" hidden><img id="pl-image" alt=""><div><span id="pl-status" class="pl-badge"></span><h3 id="pl-name"></h3><p id="pl-brand"></p><p id="pl-code"></p></div></div>
+        {% if not reference_mode %}
+        <section id="pl-review" class="pl-section" hidden aria-labelledby="pl-review-title">
+            <h3 id="pl-review-title"></h3>
+            <p id="pl-review-note" role="status"></p>
+            <dl id="pl-review-metadata"></dl>
+            <div class="pl-table-wrap" id="pl-review-comparison"></div>
+            <div id="pl-review-actions" hidden>
+                <label for="pl-rejection-reason">Motivo de rechazo</label>
+                <textarea id="pl-rejection-reason" maxlength="1000" rows="2"></textarea>
+                <button type="button" id="pl-approve" class="pl-primary">Aprobar</button>
+                <button type="button" id="pl-reject">Rechazar</button>
+            </div>
+            <p id="pl-review-feedback" role="alert" hidden></p>
+        </section>
+        {% endif %}
+        <section id="pl-detail" hidden></section>
+        <form id="pl-edit" class="pl-edit" method="dialog" hidden>
+            {% if not reference_mode %}<p class="pl-wide">Los cambios se enviarán al Administrador. El producto vigente se conserva hasta la aprobación.</p>{% endif %}
+            {% for key, label, kind in [('name','Nombre del producto','text'),('code','Código / SKU','text'),('category','Categoría','select'),('supplier','Proveedor','select'),('brand','Marca','text'),('unit','Unidad de medida','select'),('price','Precio de venta','number'),('cost','Costo','number'),('stock','Stock actual','number'),('minimum','Stock mínimo','number'),('status','Estado','select'),('description','Descripción','textarea')] %}
+            {% if (reference_mode or key != 'supplier') and (key != 'cost' or reference_mode or can_view_cost) %}
+            <label class="pl-field{% if key in ['name','status','description','supplier'] %} pl-wide{% endif %}" for="pl-field-{{ key }}">{{ 'Costo de referencia' if (not reference_mode and key == 'cost') else 'Estado del catálogo' if (not reference_mode and key == 'status') else label }}{% if key not in ['brand','description'] %} <span aria-hidden="true">*</span>{% endif %}
+                {% if kind == 'select' %}<select id="pl-field-{{ key }}" name="{{ key }}" required></select>
+                {% elif kind == 'textarea' %}<textarea id="pl-field-{{ key }}" name="{{ key }}" maxlength="500" rows="3"></textarea>
+                {% else %}<input id="pl-field-{{ key }}" name="{{ key }}" type="{{ kind }}"{% if key != 'brand' %} required{% endif %}{% if key == 'brand' %} maxlength="100" placeholder="Ej. Bosch"{% endif %}{% if kind == 'number' %} min="0" step="{{ '0.01' if key in ['price','cost'] else '1' }}"{% endif %}>{% endif %}
+            </label>
+            {% if not reference_mode and key in ['price','cost'] %}
+            <label class="pl-field" for="pl-field-{{ key }}-currency">Moneda de {{ 'venta' if key == 'price' else 'referencia' }}
+                <select id="pl-field-{{ key }}-currency" name="{{ key }}_currency">
+                    <option value="">Selecciona una moneda</option>
+                    <option value="USD">USD ($)</option><option value="VES">VES (Bs.)</option>
+                </select>
+            </label>
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+        </form>
+        {% if not reference_mode %}
+        {% if reference_mode or has_permission('suppliers:read') %}
+        <section id="pl-suppliers" class="pl-suppliers" hidden aria-labelledby="pl-suppliers-title">
+            <h3 id="pl-suppliers-title">Proveedores del producto</h3>
+            <p class="ps-note">Entrega y cantidad mínima informativas.{% if can_view_cost %} Cada costo de proveedor conserva su moneda; es independiente del costo de referencia del producto.{% endif %}</p>
+            <div id="pl-supplier-list"></div>
+            <div id="pl-supplier-form" class="ps-add"></div>
+        </section>
+        {% endif %}
+        {% endif %}
+        <section id="pl-catalog" hidden aria-label="Catálogo completo">
+            <label class="pl-search"><span class="pl-sr-only">Buscar en el catálogo completo</span><input id="pl-search" type="search" placeholder="Buscar producto, código o categoría..."></label>
+            <div class="pl-filters">{% for key, label in [('category','Categoría'),('status','Estado'),('supplier','Proveedor')] if key != 'supplier' or reference_mode or has_permission('suppliers:read') %}<label>{{ label }}<select id="pl-filter-{{ key }}"{% if key == 'supplier' and not reference_mode %} disabled{% endif %}><option value="">Todos</option></select></label>{% endfor %}</div>
+            <div class="pl-table-wrap"><table class="pl-table"><thead><tr>{% for label in ['Imagen','Código','Producto','Categoría','Precio','Stock','Estado','Acciones'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody id="pl-rows"></tbody></table></div>
+            <div class="pl-pagination"><span id="pl-summary" role="status"></span><nav id="pl-pages" aria-label="Páginas del catálogo"></nav><label><span class="pl-sr-only">Filas por página</span><select id="pl-per-page"><option value="5" selected>5 por página</option><option value="10">10 por página</option><option value="20">20 por página</option></select></label></div>
+        </section>
+        <form id="pl-export" method="dialog" hidden>
+            {% if not reference_mode %}<p id="pl-export-error" class="pl-csv-feedback is-error" role="alert" hidden></p>{% endif %}
+            <fieldset><legend>Formato de archivo</legend><div class="pl-formats">
+                {% for value, title, description in [('xlsx','Excel (XLSX)','Recomendado · Mantiene formato y fórmulas'),('csv','CSV','Compatible con todos los sistemas'),('pdf','PDF','Informe listo para imprimir')] %}
+                <label class="pl-format"><input type="radio" name="format" value="{{ value }}"{% if loop.first %} checked{% endif %}><span class="pl-file pl-file-{{ value }}">{{ layer_icon('file') }}</span><strong>{{ title }}</strong><span>{{ description if reference_mode or value != 'xlsx' else 'Recomendado · Datos y formato de tabla' }}</span></label>
+                {% endfor %}
+            </div></fieldset>
+            <fieldset class="pl-options"><legend>Opciones de exportación</legend>{% for label in ['Incluir imágenes de productos','Incluir descripción completa','Incluir stock y precios','Incluir información de proveedores'] %}<label><input type="checkbox"{% if not reference_mode %} name="{{ ['include_images','include_description','include_stock_prices','include_suppliers'][loop.index0] }}"{% endif %}{% if not reference_mode and loop.last %} disabled title="No disponible: los productos aún no tienen proveedores asociados."{% elif not loop.first %} checked{% endif %}>{{ label }}</label>{% endfor %}</fieldset>
+        </form>
+        <form id="pl-import" method="dialog" hidden>
+            <label class="pl-drop-zone" id="pl-drop-zone" for="pl-csv-file">
+                <input id="pl-csv-file" type="file" accept=".csv,text/csv" aria-describedby="pl-csv-support pl-csv-feedback">
+                {{ layer_icon('upload') }}
+                <strong>Haz clic para seleccionar un archivo</strong>
+                <span>o arrastra y suelta el archivo aquí</span>
+                <span id="pl-csv-support">Formatos soportados: CSV (máx. 10 MB)</span>
+            </label>
+            <p id="pl-csv-feedback" class="pl-csv-feedback" role="status" hidden></p>
+            <section class="pl-import-info">
+                {{ layer_icon('info') }}
+                <div><h3>Formato de archivo requerido</h3><p>El archivo CSV debe contener las siguientes columnas:</p>
+                    <div class="pl-column-chips">{% for column in ['nombre','codigo','categoria','precio','stock_inicial','stock_minimo','unidad_medida','proveedor','estado'] %}<span>{{ column }}</span>{% endfor %}</div>
+                </div>
+            </section>
+            <section class="pl-template">
+                {{ layer_icon('file') }}<div><h3>Descargar plantilla CSV</h3><p>Usa esta plantilla como referencia para tu archivo.</p></div>
+                <button type="button" id="pl-template-download">{{ layer_icon('download') }}Descargar</button>
+            </section>
+            <p id="pl-template-feedback" class="pl-csv-feedback" role="status" hidden>Simulación: no se generó ni descargó ningún archivo.</p>
+            <section class="pl-import-warning">
+                {{ layer_icon('alert') }}<div><h3>Importante</h3><ul>
+                    <li>Verifica que los datos sean correctos.</li>
+                    <li>Los productos duplicados se identificarán por código.</li>
+                    <li>El proceso puede tardar unos minutos.</li>
+                    <li>En modo referencia (?ref=1) la importación es solo una simulación.</li>
+                </ul></div>
+            </section>
+        </form>
+        <form id="pl-advanced" class="pl-advanced" method="dialog" hidden>
+            {% for key, label, initial in [('category','Categoría','Todas las categorías'),('status','Estado','Todos los estados'),('supplier','Proveedor','Todos los proveedores')] if key != 'supplier' or reference_mode or has_permission('suppliers:read') %}
+            <label class="pl-field{% if key == 'supplier' %} pl-wide{% endif %}" for="pl-advanced-{{ key }}">{{ label }}<select id="pl-advanced-{{ key }}" name="{{ key }}"{% if key == 'supplier' and not reference_mode %} disabled{% endif %}><option value="">{{ initial }}</option></select></label>
+            {% endfor %}
+            {% if not reference_mode %}
+            <label class="pl-field pl-wide" for="pl-advanced-currency">Moneda del precio de venta
+                <select id="pl-advanced-currency" name="sale_price_currency"><option value="">Todas; rangos solo con moneda comparable</option>
+                    <option value="USD">USD ($)</option><option value="VES">VES (Bs.)</option></select>
+            </label>
+            {% endif %}
+            {% for key, label, kind, names in [('price','Rango de precio','number',['Mínimo','Máximo']),('stock','Rango de stock','number',['Mínimo','Máximo']),('date','Última actualización','date',['Desde','Hasta'])] %}
+            <fieldset class="pl-range pl-wide"><legend>{{ label }}</legend><div class="pl-range-fields">
+                {% for edge in ['min','max'] %}<label class="pl-range-input{% if kind == 'date' %} pl-date-input{% endif %}"><span class="pl-sr-only">{{ label }}: {{ names[loop.index0] }}</span>
+                    {% if key == 'price' %}<span class="pl-input-prefix" aria-hidden="true">$</span>{% elif kind == 'date' %}<span class="pl-input-prefix" aria-hidden="true">{{ layer_icon('calendar') }}</span>{% endif %}
+                    <input id="pl-advanced-{{ key }}-{{ edge }}" name="{{ key }}_{{ edge }}" type="{{ kind }}"{% if kind == 'number' %} min="0" step="{{ '0.01' if key == 'price' else '1' }}"{% endif %} placeholder="{{ names[loop.index0] }}">
+                    {% if kind == 'date' %}<span class="pl-date-placeholder" aria-hidden="true">{{ names[loop.index0] }}</span>{% endif %}
+                </label>{% endfor %}
+            </div></fieldset>
+            {% endfor %}
+            <label class="pl-field pl-sort" for="pl-advanced-sort">Ordenar por<select id="pl-advanced-sort" name="sort"><option value="name-asc">Nombre (A - Z)</option><option value="name-desc">Nombre (Z - A)</option><option value="price-asc">Precio: menor a mayor</option><option value="price-desc">Precio: mayor a menor</option><option value="stock-asc">Stock: menor a mayor</option></select></label>
+            <label class="pl-field pl-sort" for="pl-advanced-size">Resultados por página<select id="pl-advanced-size" name="size"><option value="8">8 por página</option><option value="16">16 por página</option><option value="24">24 por página</option></select></label>
+        </form>
+    </div>
+    <footer class="pl-footer"><button type="button" id="pl-reset-filters" hidden>{{ layer_icon('reset') }}Limpiar filtros</button><button type="button" data-pl-close id="pl-cancel">Cerrar</button><button type="button" id="pl-action" class="pl-primary"{% if not reference_mode %} hidden{% endif %}></button></footer>
+</dialog>
+<div id="pl-feedback" class="pl-feedback" role="status" hidden></div>
+<template id="pl-eye-icon">{{ layer_icon('eye') }}</template><template id="pl-pencil-icon">{{ layer_icon('pencil') }}</template><template id="pl-download-icon">{{ layer_icon('download') }}</template>

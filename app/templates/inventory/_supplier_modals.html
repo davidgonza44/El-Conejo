@@ -1,0 +1,50 @@
+{# Reference-only overlays. Lucide SVG paths; no HTTP form submission. #}
+{% macro sm_icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="M18 6 6 18M6 6l12 12"/>
+{% elif name == 'filter' %}<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+{% elif name == 'download' %}<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+{% elif name == 'search' %}<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+{% elif name == 'calendar' %}<path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/>
+{% elif name == 'reset' %}<path d="M3 11a9 9 0 1 1 2.7 6.4M3 4v7h7"/>
+{% elif name == 'chevron' %}<path d="m6 9 6 6 6-6"/>
+{% else %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% macro sm_select(id, label, initial, options) %}
+<label class="sm-field" for="sm-{{ id }}">{{ label }}<span class="sm-select"><select id="sm-{{ id }}"><option value="">{{ initial }}</option>{% for option in options %}<option>{{ option }}</option>{% endfor %}</select>{{ sm_icon('chevron') }}</span></label>
+{% endmacro %}
+{% macro sm_header(id, title, subtitle, icon) %}
+<header class="sm-header"><span class="sm-heading-icon">{{ sm_icon(icon) }}</span><div><h2 id="{{ id }}-title" tabindex="-1">{{ title }}</h2><p id="{{ id }}-subtitle">{{ subtitle }}</p></div><button type="button" class="sm-close" data-sm-close aria-label="Cerrar {{ title | lower }}">{{ sm_icon('x') }}</button></header>
+{% endmacro %}
+<dialog id="sm-filters" class="sm-dialog sm-filters" aria-labelledby="sm-filters-title" aria-describedby="sm-filters-subtitle">
+{{ sm_header('sm-filters', 'Filtros avanzados', 'Refina la búsqueda de proveedores con múltiples criterios', 'filter') }}
+<form id="sm-filter-form" method="dialog">
+    <div class="sm-filter-grid">
+        <label class="sm-field sm-wide" for="sm-search">Buscar proveedor o contacto<span class="sm-search">{{ sm_icon('search') }}<input id="sm-search" type="search" placeholder="Ingresa el nombre del proveedor, RIF o contacto..."></span></label>
+        {{ sm_select('status', 'Estado', 'Todos', ['Activo', 'Inactivo']) }}
+        {{ sm_select('category', 'Categoría', 'Todas', fixture.table.rows | map(attribute='category') | map('first') | unique) }}
+        {{ sm_select('city', 'Ciudad', 'Todas', []) }}
+        {{ sm_select('preferred', 'Proveedor preferido', 'Todos', ['Sí', 'No']) }}
+        <fieldset><legend>Fecha de última compra</legend><div class="sm-pair">{% for id, label in [('from','Desde'),('to','Hasta')] %}<label class="sm-date"><input id="sm-{{ id }}" type="text" placeholder="{{ label }}" aria-label="{{ label }}" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">{{ sm_icon('calendar') }}</label>{% endfor %}</div></fieldset>
+        <fieldset><legend>Monto total de compras</legend><div class="sm-pair">{% for id, label in [('min','Mínimo'),('max','Máximo')] %}<label class="sm-money"><span>$</span><input id="sm-{{ id }}" type="number" min="0" step="0.01" placeholder="{{ label }}" aria-label="Monto {{ label | lower }}"></label>{% endfor %}</div></fieldset>
+        {{ sm_select('sort', 'Ordenar por', 'Nombre A-Z', ['Nombre Z-A', 'Mayor monto de compras', 'Compra más reciente']) }}
+    </div>
+    <footer class="sm-footer sm-filter-footer"><button type="reset" class="sm-clear">{{ sm_icon('reset') }}Limpiar filtros</button><button type="button" class="sm-button" data-sm-close>Cancelar</button><button type="submit" class="sm-button sm-primary">{{ sm_icon('filter') }}Aplicar filtros</button></footer>
+</form>
+</dialog>
+<dialog id="sm-export" class="sm-dialog sm-export" aria-labelledby="sm-export-title" aria-describedby="sm-export-subtitle">
+{{ sm_header('sm-export', 'Exportar proveedores', 'Selecciona el formato y las opciones de exportación', 'download') }}
+<form id="sm-export-form" method="dialog">
+    <fieldset class="sm-formats"><legend>Formato de archivo</legend><div class="sm-format-grid">
+    {% for value, title, description in [('xlsx','Excel (XLSX)','Ideal para análisis y edición de datos'),('csv','CSV','Formato ligero y compatible'),('pdf','PDF','Lista lista para imprimir o compartir')] %}
+        <label class="sm-format sm-{{ value }}"><input type="radio" name="sm-format" value="{{ value }}" aria-label="{{ title }}"{% if value == 'csv' %} checked{% endif %}><span class="sm-file-icon">{{ sm_icon('file') }}</span><strong>{{ title }}</strong><small>{{ description }}</small></label>
+    {% endfor %}</div></fieldset>
+    <fieldset class="sm-options"><legend>Opciones de exportación</legend>
+    {% for id, title, description in [('contact','Incluir datos de contacto','Nombres, teléfonos, correos y cargos'),('state','Incluir estado','Activo, inactivo'),('category','Incluir categoría','Categoría principal del proveedor'),('total','Incluir monto total de compras','Total acumulado de compras'),('last','Incluir última compra','Fecha de la última orden de compra')] %}
+    <label class="sm-option"><input id="sm-export-{{ id }}" type="checkbox" checked><span>{{ title }}<small>{{ description }}</small></span></label>
+    {% endfor %}</fieldset>
+    <footer class="sm-footer"><button type="button" class="sm-button" data-sm-close>Cancelar</button><button type="submit" class="sm-button sm-primary">{{ sm_icon('download') }}Exportar</button></footer>
+</form>
+</dialog>
+<p id="sm-feedback" class="sm-feedback" role="status" hidden></p>

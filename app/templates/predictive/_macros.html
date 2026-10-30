@@ -1,0 +1,300 @@
+{# Macros compartidas del módulo Análisis predictivo (predictive.css).
+   Los datos llegan desde app/utils/predictive_reference.py (modo referencia) o desde
+   predictive_controller (LIVE); las macros solo dibujan y no contienen reglas de negocio.
+   En LIVE los filtros son un formulario GET real, la paginación enlaza páginas reales y las
+   acciones de cabecera apuntan a la exportación/actualización del propio análisis. #}
+
+{# Glifos rellenos que la webfont de Tabler no ofrece con el mismo trazo que la referencia. #}
+{% set SVG = {
+    "shield-alert": '<path d="M12 2.2 4 5.4v5.8c0 4.6 3.4 8.6 8 10.6 4.6-2 8-6 8-10.6V5.4z"/><path d="M12 8v5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1.15" fill="#fff"/>',
+    "flame": '<path d="M12 2.5c.6 3.2 2.4 4.9 4.2 6.9 1.6 1.8 2.6 3.6 2.6 5.8A6.8 6.8 0 0 1 12 22a6.8 6.8 0 0 1-6.8-6.8c0-2.6 1.3-4.5 2.9-6.1.3 1.6 1 2.7 2.1 3.4-.2-2.6.3-6.6 1.8-10z"/><path d="M12 22a3.2 3.2 0 0 1-3.2-3.2c0-1.6 1.1-2.6 2-3.6.4 1 1 1.6 1.7 2 .4-.9.6-2 .5-3.1 1.4 1.3 2.2 2.8 2.2 4.7A3.2 3.2 0 0 1 12 22z" fill="#fff" opacity=".85"/>',
+    "cart": '<circle cx="9" cy="20" r="1.8"/><circle cx="17.5" cy="20" r="1.8"/><path d="M2 3h2.6l2.9 11.4a1.6 1.6 0 0 0 1.6 1.2h9.2a1.6 1.6 0 0 0 1.5-1.1L22 7H6.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M6.4 7.3h15l-1.8 7H8.2z"/>',
+    "target": '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="6.4" fill="#fff"/><circle cx="12" cy="12" r="3.3"/><path d="M12 12 18.6 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M17.2 2.8 18.6 5.4l2.6 1.4-3.6.6z"/>',
+    "chart-bar": '<rect x="3" y="12.5" width="4.8" height="8.5" rx="1.2"/><rect x="9.6" y="7.5" width="4.8" height="13.5" rx="1.2"/><rect x="16.2" y="3" width="4.8" height="18" rx="1.2"/>',
+    "info": '<circle cx="12" cy="12" r="10"/><path d="M12 11v6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="7.5" r="1.3" fill="#fff"/>',
+} %}
+
+{# Trazos de línea (Lucide) para los KPI del Pronóstico: mismo estilo que Compras y el sidebar. #}
+{% set OUTLINE = {
+    "ti-trending-up": '<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>',
+    "svg:shield-alert": '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+    "svg:cart": '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+    "svg:target": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+} %}
+
+{% macro icon(name) -%}
+{%- if name.startswith("svg:") -%}
+<svg viewBox="0 0 24 24" fill="currentColor" class="ix-svg" aria-hidden="true">{{ SVG[name[4:]] | safe }}</svg>
+{%- else -%}
+<i class="ti {{ name }}" aria-hidden="true"></i>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro arrow(direction) -%}
+{%- if direction == "up" %}<i class="ti ti-arrow-up px-arrow" aria-hidden="true"></i>{% elif direction == "down" %}<i class="ti ti-arrow-down px-arrow" aria-hidden="true"></i>{% endif -%}
+{%- endmacro %}
+
+{% macro segments(list) -%}
+{%- for s in list -%}
+<span class="px-seg{{ ' tone-' ~ s.tone if s.tone }}{{ ' is-bold' if s.bold }}{{ ' is-' ~ s.size if s.size }}">{{ arrow(s.arrow) }}{{ s.text }}</span>
+{%- endfor -%}
+{%- endmacro %}
+
+{# ---- Cabecera: título, ruta, subtítulo, búsqueda/campana y acciones ---- #}
+{% macro header(title, subtitle, breadcrumb, placeholder, primary, primary_icon="ti-refresh", reference_mode=True, live=None, primary_attrs=None) %}
+<header class="ix-header px-header">
+    <div class="px-heading">
+        <h1 class="ix-title">{{ title }}</h1>
+        {% if breadcrumb %}
+        <nav class="px-breadcrumb" aria-label="Ruta de navegación">
+            <span>Análisis predictivo</span>
+            <i class="ti ti-chevron-right" aria-hidden="true"></i>
+            <span aria-current="page">{{ breadcrumb }}</span>
+        </nav>
+        {% endif %}
+        <p class="ix-subtitle">{{ subtitle }}</p>
+    </div>
+    <div class="px-header-side">
+        <div class="ix-header-actions">
+            <button type="button" class="ix-menu-toggle" id="ix-menu-toggle"
+                    aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">
+                <i class="ti ti-menu-2" aria-hidden="true"></i>
+            </button>
+            {# Importación dentro de la macro: inventory/_macros.html ya importa este archivo. #}
+            {% import "inventory/_macros.html" as iv %}
+            {{ iv.shell_chrome(reference_mode, placeholder) }}
+        </div>
+        {% if reference_mode %}
+        <div class="px-actions">
+            <button type="button" class="px-btn"><i class="ti ti-filter" aria-hidden="true"></i>Filtros</button>
+            <button type="button" class="px-btn"><i class="ti ti-download" aria-hidden="true"></i>Exportar CSV</button>
+            {% if primary %}<button type="button" class="px-btn is-primary"><i class="ti {{ primary_icon }}" aria-hidden="true"></i>{{ primary }}</button>{% endif %}
+        </div>
+        {% elif live %}
+        <div class="px-actions">
+            <a href="#px-filters" class="px-btn"><i class="ti ti-filter" aria-hidden="true"></i>Filtros</a>
+            {% if live.rows and live.computation_status == 'ready' %}<a href="{{ live.export_url }}" class="px-btn"><i class="ti ti-download" aria-hidden="true"></i>Exportar CSV</a>
+            {% else %}<span class="px-btn is-disabled" aria-disabled="true" title="Sin resultados para exportar"><i class="ti ti-download" aria-hidden="true"></i>Exportar CSV</span>{% endif %}
+            {% if primary and primary_attrs %}
+            <button type="button" class="px-btn is-primary" {{ primary_attrs | safe }}><i class="ti {{ primary_icon }}" aria-hidden="true"></i>{{ primary }}</button>
+            {% elif primary %}
+            <a href="{{ live.refresh_url }}" class="px-btn is-primary"><i class="ti {{ primary_icon }}" aria-hidden="true"></i>{{ primary }}</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</header>
+{% if live and live.computation_message %}
+<section class="px-info" role="status" aria-live="polite" data-predictive-status="{{ live.computation_status }}"
+    {% if live.computation_status_url %}data-predictive-status-url="{{ live.computation_status_url }}"
+    data-predictive-state="{{ live.computation_status }}"{% endif %}>
+    <div><h2 class="px-card-title">{{ 'Pronóstico no disponible' if live.computation_status in ('error', 'unavailable', 'expired') else 'Calculando pronóstico' if live.computation_status == 'running' else 'Pronóstico pendiente' }}</h2>
+    <p>{{ live.computation_message }}</p></div>
+</section>
+{% endif %}
+{% endmacro %}
+
+{# ---- Tarjetas KPI ---- #}
+{% macro kpis(items, outline=False, notes={}) %}
+<section class="ix-grid ix-kpis px-kpis" aria-label="Indicadores">
+    {% for k in items %}
+    <article class="ix-card px-kpi">
+        <span class="px-kpi-icon tone-{{ k.tone }}{{ ' is-dark' if k.icon_tone == 'dark' }}">{% if outline and k.icon in OUTLINE %}<svg viewBox="0 0 24 24" class="ds-kpi-icon-outline" aria-hidden="true">{{ OUTLINE[k.icon] | safe }}</svg>{% else %}{{ icon(k.icon) }}{% endif %}</span>
+        <div class="px-kpi-body">
+            <p class="px-kpi-label">{{ k.label }}</p>
+            <p class="px-kpi-value{{ ' tone-' ~ k.value_tone if k.value_tone }}{{ ' is-' ~ k.value_size if k.value_size }}">{{ k.value }}</p>
+            {% for line in k.lines %}
+            {# Con href (solo Pronóstico) la línea es el enlace real que su texto anuncia. #}
+            {% if k.href %}<a class="px-kpi-line ds-kpi-link" href="{{ k.href }}">{% else %}<p class="px-kpi-line">{% endif %}
+                <span class="px-kpi-left">{{ segments(line.left or []) }}</span>
+                {% if line.right %}<span class="px-kpi-right">{{ segments(line.right) }}</span>{% endif %}
+            {% if k.href %}</a>{% else %}</p>{% endif %}
+            {% endfor %}
+            {% if not k.lines and notes.get(k.label) %}<p class="ds-kpi-note">{{ notes[k.label] }}</p>{% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endmacro %}
+
+{# ---- Barra de filtros (fill=True reparte los selectores en todo el ancho) ---- #}
+{% macro filters(f, fill=False, extra_class="", live=None, hidden={}) %}
+{# Referencia: selectores estáticos (label, valor). LIVE: formulario GET real; cada select es
+   {label, name, options:[(value, texto)], value} y se envía al cambiar (predictive.js). #}
+<form class="ix-card px-filters{{ ' is-fill' if fill }}{{ ' ' ~ extra_class if extra_class }}" role="search" aria-label="Filtros"
+      {% if live %}id="px-filters" method="get" action="{{ live.form_action }}" data-autosubmit{% else %}onsubmit="return false;"{% endif %}>
+    {% for name, value in hidden.items() %}{% if value not in (None, "") %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}{% endfor %}
+    <label class="px-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="search" placeholder="{{ f.search }}" aria-label="{{ f.search }}"{% if live %} name="search" value="{{ f.search_value or '' }}"{% endif %}>
+    </label>
+    {% for s in f.selects %}
+    {% if s is mapping %}
+    {% set current = (s.options | selectattr(0, "equalto", s.value) | map(attribute=1) | first) or s.options[0][1] %}
+    <label class="px-select">
+        <span class="px-select-label">{{ s.label }}</span>
+        <span class="px-select-box">
+            <span>{{ current }}</span><i class="ti ti-chevron-down" aria-hidden="true"></i>
+            <select name="{{ s.name }}" aria-label="{{ s.label }}">
+                {% for value, text in s.options %}<option value="{{ value }}"{% if value == s.value %} selected{% endif %}>{{ text }}</option>{% endfor %}
+            </select>
+        </span>
+    </label>
+    {% else %}
+    <label class="px-select">
+        <span class="px-select-label">{{ s[0] }}</span>
+        <span class="px-select-box"><span>{{ s[1] }}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></span>
+    </label>
+    {% endif %}
+    {% endfor %}
+    {% if f.date %}
+    <label class="px-select is-date">
+        <span class="px-select-label">{{ f.date[0] }}</span>
+        <span class="px-select-box"><span>{{ f.date[1] }}</span><i class="ti ti-calendar" aria-hidden="true"></i></span>
+    </label>
+    {% endif %}
+    {% if f["clear"] %}
+    {% if live %}<a href="{{ live.form_action }}" class="px-clear"><i class="ti ti-refresh" aria-hidden="true"></i>Limpiar filtros</a>
+    {% else %}<button type="reset" class="px-clear"><i class="ti ti-refresh" aria-hidden="true"></i>Limpiar filtros</button>{% endif %}
+    {% endif %}
+    {% if live %}<button type="submit" class="px-visually-hidden">Aplicar filtros</button>{% endif %}
+</form>
+{% endmacro %}
+
+{# ---- Pestañas internas del módulo (destinos reales) ---- #}
+{% macro module_tabs(active, ref_qs) %}
+<nav class="px-tabs" aria-label="Secciones de Análisis predictivo">
+    {% for key, label, endpoint in [
+        ("demand_forecast", "Pronóstico de demanda", "pages.demand_forecast"),
+        ("replenishment", "Reabastecimiento", "pages.replenishment"),
+        ("critical_products", "Productos críticos", "pages.critical_products"),
+        ("trends", "Tendencias", "pages.trends"),
+        ("model_accuracy", "Precisión del modelo", "pages.model_accuracy"),
+    ] %}
+    <a href="{{ url_for(endpoint) }}{{ ref_qs }}"{% if key == active %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+</nav>
+{% endmacro %}
+
+{# ---- Celdas de tabla ---- #}
+{% macro product_cell(p, wrap=False) %}
+{% import "inventory/_macros.html" as iv %}
+<div class="px-product">
+    <span class="ix-thumb px-thumb"><i class="ti ti-package" aria-hidden="true"></i>{{ iv.thumb_img(p) }}</span>
+    <span class="px-product-text">
+        <span class="px-product-name{{ ' px-text-clamp' if wrap }}"{% if wrap %} title="{{ p.name }}"{% endif %}>{{ p.name }}</span>
+        <span class="px-product-sku">SKU: {{ p.sku }}</span>
+    </span>
+</div>
+{% endmacro %}
+
+{% macro badge(pair) -%}
+<span class="px-badge is-{{ pair[1] }}">{{ pair[0] }}</span>
+{%- endmacro %}
+
+{# LIVE: "Ver detalle" despliega la fila de explicación (reasons/observations) del producto. #}
+{% macro actions_cell(r=None) %}
+<div class="px-row-actions">
+    {% if r and r.id %}
+    <button type="button" class="ix-link-btn" data-product-detail="{{ r.id }}" data-product-sku="{{ r.p.sku }}" aria-haspopup="dialog" aria-controls="pd-drawer">Ver detalle</button>
+    <a class="px-kebab" href="{{ url_for('pages.products', search=r.p.sku) }}" aria-label="Abrir {{ r.p.name }} en Inventario" title="Abrir en Inventario"><i class="ti ti-dots-vertical" aria-hidden="true"></i></a>
+    {% else %}
+    <button type="button" class="ix-link-btn" data-product-detail="0" data-product-sku="{{ r.p.sku if r else '' }}" aria-haspopup="dialog" aria-controls="pd-drawer">Ver detalle</button>
+    <button type="button" class="px-kebab" aria-label="Más acciones"><i class="ti ti-dots-vertical" aria-hidden="true"></i></button>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro _page_link(item) -%}
+{%- if item.href and not item.active %}<a class="px-pg" href="{{ item.href }}">{{ item.text }}</a>
+{%- else %}<button type="button" class="px-pg{{ ' is-active' if item.active }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.text }}</button>{% endif -%}
+{%- endmacro %}
+
+{% macro pagination(pg) %}
+<footer class="px-pagination">
+    <span class="px-pagination-summary">{{ pg.summary }}</span>
+    {% if pg.pages %}
+    <nav class="px-pages" aria-label="Paginación">
+        {% if pg.prev %}<a class="px-pg" href="{{ pg.prev }}" aria-label="Página anterior"><i class="ti ti-chevron-left" aria-hidden="true"></i></a>
+        {% else %}<button type="button" class="px-pg" aria-label="Página anterior"{% if pg.prev is defined %} disabled{% endif %}><i class="ti ti-chevron-left" aria-hidden="true"></i></button>{% endif %}
+        {% for item in pg.pages %}
+        {% if item.gap %}<span class="px-pg is-gap" aria-hidden="true">...</span>{% else %}{{ _page_link(item) }}{% endif %}
+        {% endfor %}
+        {% if pg.next %}<a class="px-pg" href="{{ pg.next }}" aria-label="Página siguiente"><i class="ti ti-chevron-right" aria-hidden="true"></i></a>
+        {% else %}<button type="button" class="px-pg" aria-label="Página siguiente"{% if pg.next is defined %} disabled{% endif %}><i class="ti ti-chevron-right" aria-hidden="true"></i></button>{% endif %}
+    </nav>
+    {% endif %}
+    {% if pg.per_page %}
+    <label class="px-select px-per-page">
+        <span class="px-select-box">
+            <span>{{ pg.per_page }}</span><i class="ti ti-chevron-down" aria-hidden="true"></i>
+            {% if pg.per_page_options %}
+            <select aria-label="Filas por página" data-navigate>
+                {% for n, text, href in pg.per_page_options %}<option value="{{ href }}"{% if text == pg.per_page %} selected{% endif %}>{{ text }}</option>{% endfor %}
+            </select>
+            {% endif %}
+        </span>
+    </label>
+    {% endif %}
+</footer>
+{% endmacro %}
+
+{# ---- Columna derecha ---- #}
+{% macro donut_card(d, id, extra_class="") %}
+<article class="ix-card px-aside-card px-donut-card{{ ' ' ~ extra_class if extra_class }}">
+    <h2 class="px-card-title">{{ d.title }}</h2>
+    <div class="px-donut-body">
+        <div class="px-donut" data-donut='{{ d["items"] | map(attribute=3) | list | tojson }}' data-tones='{{ d["items"] | map(attribute=2) | list | tojson }}'>
+            <canvas id="{{ id }}" role="img" aria-label="{{ d.title }}"></canvas>
+            <div class="px-donut-center">
+                <span class="px-donut-value">{{ d.center_value }}</span>
+                <span class="px-donut-label">{{ d.center_label }}</span>
+            </div>
+        </div>
+        <ul class="px-donut-legend">
+            {% for name, sub, tone, _ in d["items"] %}
+            <li><span class="px-dot tone-{{ tone }}"></span><span class="px-legend-text"><span>{{ name }}</span>{% if sub %}<small>{{ sub }}</small>{% endif %}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+</article>
+{% endmacro %}
+
+{% macro info_card(title, text) %}
+<article class="px-info">
+    {{ icon("svg:info") }}
+    <div>
+        <h2 class="px-card-title">{{ title }}</h2>
+        <p>{{ text }}</p>
+    </div>
+</article>
+{% endmacro %}
+
+{% macro model_info_card(m, with_icon=True, tinted=False) %}
+<article class="ix-card px-aside-card px-model-info{{ ' is-tinted' if tinted }}">
+    <h2 class="px-card-title">{% if with_icon %}{{ icon("svg:info") }}{% endif %}{{ m.title }}</h2>
+    <dl>
+        {% for label, value in m.rows %}
+        <div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+        {% endfor %}
+    </dl>
+    {% if m.link %}{{ link(m.link, m.link_href) }}{% endif %}
+</article>
+{% endmacro %}
+
+{# Enlace secundario: real cuando hay href (LIVE); decorativo en la referencia. #}
+{% macro link(text, href=None) -%}
+{%- if href %}<a href="{{ href }}" class="px-link">{{ text }}</a>{% else %}<a href="#" class="px-link" aria-disabled="true">{{ text }}</a>{% endif -%}
+{%- endmacro %}
+
+{# Fila de tabla vacía con el estado honesto (mantiene la geometría de la tarjeta). #}
+{% macro empty_rows(state, cols) %}
+<tr class="px-empty-row"><td colspan="{{ cols }}">
+    <div class="px-empty">
+        <i class="ti ti-database-search" aria-hidden="true"></i>
+        <strong>{{ state.title }}</strong>
+        <p>{{ state.message }}</p>
+        {% if state.hints %}<ul class="px-hints">{% for hint in state.hints %}<li>{{ hint }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+</td></tr>
+{% endmacro %}

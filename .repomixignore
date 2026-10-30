@@ -1,0 +1,31 @@
+# Credenciales y configuracion local
+.env
+.env.*
+
+# Dependencias, caches y metadatos
+.git/
+.codegraph/
+.zvec-grep/
+node_modules/
+venv/
+env/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+
+# Datos privados y archivos generados
+uploads/**
+instance/**
+private_imports/**
+reports/generated/**
+docs/architecture/*.html
+tests/tmp/**
+tests/.tmp/**
+references/90_archivo_no_usar/**
+repomix-output.*
+
+# Private derived empirical data (never package or index)
+artifacts/empirical_2026/**
+
+# Texto plano de tesis ajenas (cédulas y obra completa). El agente lo lee del disco.
+REFERENCIAS-TESIS/_texto/**

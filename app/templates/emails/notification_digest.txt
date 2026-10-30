@@ -1,0 +1,7 @@
+{{ app_name }}
+Resumen {{ 'semanal' if frequency == 'weekly' else 'diario' }} de notificaciones · {{ items|length }} evento(s)
+
+{% for item in items %}- [{{ item.created_at.strftime('%d/%m/%Y %H:%M') }}] {{ item.title }}
+  {{ item.message }}
+{% endfor %}
+Puede ajustar la frecuencia y los eventos en Configuración > Notificaciones.

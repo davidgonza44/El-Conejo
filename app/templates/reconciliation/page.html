@@ -1,0 +1,98 @@
+{% extends "ix_base.html" %}
+{% import "purchases/_icons.html" as st %}
+{% set active_page = 'reconciliation' %}
+{% set sidebar_variant = 'inventory' %}
+{% block title %}Cortes y conciliaciones · El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_purchases.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/ix_reconciliation.css') }}">{% endblock %}
+{% block main_class %} po-page rc-page ds-page ds-reconciliation{% endblock %}
+{% block main %}
+<header class="po-header">
+  <div><p class="ds-eyebrow">Inventario</p><h1 class="ix-title">Cortes y conciliaciones</h1><p class="ix-subtitle">Fotografías de existencias, comparación de CSV y revisión de diferencias.</p></div>
+  {% if can_simulate %}<button class="po-btn is-primary" type="button" id="rc-simulate">{{ st.icon("reset") }}Simular corte</button>{% endif %}
+  <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">{{ st.icon('menu') }}</button>
+</header>
+{% if not available %}<p class="po-notice" role="status">Conciliación pendiente de migración. No hay datos disponibles.</p>{% endif %}
+<p id="rc-message" role="status" aria-live="polite"></p>
+<section class="po-card rounded-xl p-5 mb-5" aria-labelledby="rc-schedule-title">
+  <div class="flex flex-wrap justify-between items-center gap-3"><h2 id="rc-schedule-title">Programación de cortes</h2><span class="rc-badge {{ 'rc-success' if automatic_enabled else 'rc-warning' }}">Automática {{ 'activada' if automatic_enabled else 'desactivada' }}</span></div>
+  <p id="rc-schedule" class="text-slate-600">Zona horaria: <strong>{{ cut_timezone }}</strong>. {{ 'El planificador tiene fecha de activación configurada.' if automatic_enabled else 'El planificador no tiene activación configurada.' }}</p>
+  <div class="ds-slot-grid">{% for slot in cut_times %}<div class="ds-slot"><strong class="ds-slot-time">{{ slot }}</strong><span class="ds-slot-label">Horario operativo</span></div>{% endfor %}</div>
+  <p class="rc-help">Cada corte conserva su fotografía original. Las simulaciones usan la hora real de ejecución y un horario de referencia; no activan la programación.</p>
+  {% if manual_cut_csv %}<p class="rc-help"><strong>CSV manual.</strong> Abra un corte pendiente y cargue el archivo de su fecha y horario. La recepción automática de archivos está desactivada. Los CSV de simulación son datos de demostración, no mediciones externas.</p>{% endif %}
+</section>
+<section class="po-card rounded-xl p-5 mb-5" aria-labelledby="rc-cuts-title">
+  <div class="ds-section-head"><div><h2 id="rc-cuts-title">Historial de cortes</h2><p class="ds-section-sub">Fotografías de existencias por horario, en hora de Caracas. Seleccione un corte para ver su detalle.</p></div><label class="ds-inline-field">Tipo de ejecución <select id="rc-cut-type"><option value="all">Todos los cortes</option><option value="real">Reales</option><option value="simulation">Simulaciones</option></select></label></div>
+  <div class="po-table-scroll" tabindex="0" role="region" aria-label="Historial de cortes, tabla desplazable"><table class="po-table ds-table ds-cuts-table"><colgroup>{% for col in ['id','capture','slot','type','status','products','processed','action'] %}<col class="c-{{ col }}">{% endfor %}</colgroup><thead><tr>{% for title in ['ID','Captura real · Caracas','Horario de referencia','Tipo','Estado','Productos / discrepancias','Procesamiento · Caracas','Acción'] %}<th scope="col"{% if title == 'Productos / discrepancias' %} class="ds-num"{% elif title == 'Acción' %} class="ds-cell-action"{% endif %}>{% if title == 'Acción' %}<span class="ds-sr-only">{{ title }}</span>{% else %}{{ title }}{% endif %}</th>{% endfor %}</tr></thead><tbody id="rc-cuts"><tr><td colspan="8" class="ds-table-state" role="status">Cargando cortes…</td></tr></tbody></table></div>
+  <nav class="ds-pager" aria-label="Paginación de cortes"><span id="rc-cut-range" role="status" aria-live="polite" aria-atomic="true"></span><div class="ds-pager-controls"><button class="po-btn" id="rc-cut-prev" aria-controls="rc-cuts" disabled>Anterior</button><span id="rc-cut-pagination" class="ds-pager-page"></span><button class="po-btn" id="rc-cut-next" aria-controls="rc-cuts" disabled>Siguiente</button></div></nav>
+</section>
+<section class="po-card rounded-xl p-5 mb-5" aria-labelledby="rc-history-title">
+  <h2 id="rc-history-title">Historial de conciliaciones</h2>
+  <div class="flex flex-wrap gap-3 mb-4">
+    <label>Tipo <select id="rc-source" class="rounded-md border border-slate-200 p-2"><option value="all">Todas</option><option value="manual">Manuales</option><option value="automatic">Automáticas</option><option value="simulation">Simulaciones</option><option value="unknown">Origen no determinado</option></select></label>
+    <label>Resultado <select id="rc-result" class="rounded-md border border-slate-200 p-2"><option value="all">Todos</option><option value="differences">Con discrepancias</option><option value="clean">Sin observaciones</option><option value="observations">Con observaciones</option></select></label>
+  </div>
+  <div class="po-table-scroll" tabindex="0" role="region" aria-label="Historial, tabla desplazable"><table class="po-table ds-table"><thead><tr>{% for title in ['Número','Tipo','Corte (Caracas)','Estado','Productos revisados','Discrepancias','No identificados','Acción'] %}<th scope="col">{{ title }}</th>{% endfor %}</tr></thead><tbody id="rc-history"><tr><td colspan="8" class="ds-table-state" role="status">Cargando conciliaciones…</td></tr></tbody></table></div>
+  <nav class="ds-pager" aria-label="Paginación de conciliaciones"><button class="po-btn" id="rc-prev" disabled>Anterior</button><span id="rc-pagination"></span><button class="po-btn" id="rc-next" disabled>Siguiente</button></nav>
+</section>
+<section id="rc-detail" class="po-card rounded-xl p-5" aria-labelledby="rc-detail-title" hidden>
+  <h2 id="rc-detail-title" tabindex="-1"></h2><div id="rc-summary"></div>
+  <div id="rc-actions" class="flex flex-wrap gap-3 mb-4"></div>
+  <div id="rc-line-filters" class="flex flex-wrap gap-3 mb-4">
+    <label>Resultado de línea <select id="rc-line-result"><option value="all">Todos</option><option value="discrepancy">Discrepancias</option><option value="match">Coincidencias</option><option value="unmatched">Sin identificar</option><option value="invalid">Inválidas</option></select></label>
+    <label>Revisión <select id="rc-line-review"><option value="all">Todas</option><option value="pending">Pendientes</option><option value="reviewed">Revisadas</option><option value="resolved">Resueltas</option></select></label>
+    <label>Filas por página <select id="rc-line-size"><option selected>5</option><option>25</option><option>50</option><option>100</option></select></label>
+  </div>
+  <div class="po-table-scroll" tabindex="0" role="region" aria-label="Discrepancias, tabla desplazable"><table class="po-table ds-table"><thead><tr>{% for title in ['Fila / SKU','Nombre informado','Cantidad CSV','Stock del corte / sistema','Diferencia','Tipo de resultado','Revisión / responsable / observaciones','Acciones'] %}<th scope="col">{{ title }}</th>{% endfor %}</tr></thead><tbody id="rc-lines"></tbody></table></div>
+  <nav id="rc-line-nav" class="rc-snapshot-pagination flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginación de líneas">
+    <span id="rc-line-range" role="status" aria-live="polite" aria-atomic="true"></span>
+    <div class="rc-snapshot-controls flex items-center gap-3">
+      <button type="button" class="po-btn" id="rc-line-prev" aria-controls="rc-lines" disabled>Anterior</button>
+      <span id="rc-line-pagination" aria-live="polite" aria-atomic="true"></span>
+      <button type="button" class="po-btn" id="rc-line-next" aria-controls="rc-lines" disabled>Siguiente</button>
+    </div>
+  </nav>
+</section>
+<section id="rc-snapshot" class="po-card rounded-xl p-5 mt-5" aria-labelledby="rc-snapshot-title" hidden>
+  <h2 id="rc-snapshot-title" tabindex="-1">Fotografía original del corte</h2><p id="rc-snapshot-summary"></p>
+  <div class="po-table-scroll" tabindex="0" role="region" aria-label="Stock histórico del corte"><table class="po-table ds-table"><thead><tr><th scope="col">Producto ID</th><th scope="col">SKU / código capturado</th><th scope="col">Stock capturado</th></tr></thead><tbody id="rc-snapshot-lines"></tbody></table></div>
+  <nav class="rc-snapshot-pagination flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginación de fotografía">
+    <span id="rc-snapshot-range" role="status" aria-live="polite" aria-atomic="true"></span>
+    <div class="rc-snapshot-controls flex items-center gap-3">
+      <button type="button" class="po-btn" id="rc-snapshot-prev" aria-controls="rc-snapshot-lines" disabled>Anterior</button>
+      <span id="rc-snapshot-pagination" aria-live="polite" aria-atomic="true"></span>
+      <button type="button" class="po-btn" id="rc-snapshot-next" aria-controls="rc-snapshot-lines" disabled>Siguiente</button>
+    </div>
+  </nav>
+</section>
+{% if can_simulate %}
+<dialog id="rc-sim-dialog" class="po-dialog po-small-dialog" aria-labelledby="rc-sim-title">
+<header><h2 id="rc-sim-title">Simular corte en DEMO</h2><button type="button" class="po-icon-btn" data-sim-close aria-label="Cerrar simulación">{{ st.icon('x') }}</button></header>
+<form id="rc-sim-form"><div class="p-5 grid gap-4"><p>Se capturan las existencias actuales con la fecha y hora reales. El horario elegido es una referencia de prueba.</p><label>Horario de referencia<select name="slot" required>{% for slot in cut_times %}<option value="{{ slot|replace(':','') }}">{{ slot }} · America/Caracas</option>{% endfor %}</select></label><p class="rc-help">La ejecución queda identificada como SIMULACIÓN. El inventario permanece intacto.</p><p id="rc-sim-error" role="alert" class="po-form-error"></p></div><footer><button type="button" class="po-btn" data-sim-close>Cancelar</button><button class="po-btn is-primary" type="submit">Crear simulación</button></footer></form>
+</dialog>
+{% endif %}
+<dialog id="rc-dialog" class="po-dialog po-small-dialog" aria-labelledby="rc-dialog-title">
+  <header><h2 id="rc-dialog-title">Revisar discrepancia</h2><button type="button" class="po-icon-btn" data-close aria-label="Cerrar">{{ st.icon('x') }}</button></header>
+  <form id="rc-resolution"><div class="p-5 grid gap-4">
+    <p id="rc-line-label"></p>
+    <label id="rc-action-label">Acción<select name="action"><option value="acknowledge">Resolver sin modificar existencias</option>{% if has_permission('inventory:move') %}<option value="adjustment">Ajustar existencias</option>{% endif %}</select></label>
+    <label id="rc-stock-label" hidden>Nuevo stock explícito<input name="new_stock" type="number" min="0" max="2147483647" step="1"></label>
+    <label>Justificación<textarea name="note" required maxlength="1000"></textarea></label>
+    <p class="po-form-error" role="alert" id="rc-error"></p>
+  </div><footer><button type="button" class="po-btn" data-close>Cancelar</button><button class="po-btn is-primary" type="submit">Guardar</button></footer></form>
+</dialog>
+<details class="po-card rounded-xl p-5 mt-5"><summary class="font-semibold">Conciliación manual independiente</summary><div class="mt-4">{% if has_permission('reconciliation:create') %}
+<section class="po-card rounded-xl p-5 mb-5" aria-labelledby="rc-new-title" id="rc-new">
+  <h2 id="rc-new-title">Nueva conciliación manual</h2>
+  <p>CSV UTF-8 separado por punto y coma. Columnas: <code>product_code;quantity;product_name</code> (nombre opcional). Máximo {{ csv_max_bytes // 1048576 }} MiB y {{ csv_max_rows }} filas.</p>
+  <p>El corte identifica tu archivo. La comparación usa las existencias actuales al confirmar, no reconstruye el stock histórico. Cargar y confirmar no cambian existencias.</p>
+  <form id="rc-upload" class="flex flex-wrap items-end gap-4">
+    <label class="flex flex-col gap-2">Archivo CSV<input class="rounded-md border border-slate-200 p-2" name="file" type="file" accept=".csv,text/csv" required></label>
+    <label class="flex flex-col gap-2">Fecha y hora del corte (Caracas)<input class="rounded-md border border-slate-200 p-2" name="cutoff_at" type="datetime-local" required></label>
+    <button class="po-btn is-primary"{% if not available %} disabled{% endif %}>{{ st.icon('upload') }}Previsualizar</button>
+  </form>
+</section>
+{% endif %}
+</div></details>
+<script type="application/json" id="rc-context">{{ {'canCreate': has_permission('reconciliation:create'), 'canResolve': has_permission('reconciliation:resolve'), 'available': available, 'maxBytes': csv_max_bytes, 'canSimulate': can_simulate, 'csrfToken': csrf_token()}|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/ix_reconciliation.js') }}"></script>{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "inventory/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "inventory" %}
+{% set movements_live = not reference_mode %}
+{% if reference_mode %}{% set view = fixture %}{% else %}
+{% set view = {
+ 'search_placeholder':'Buscar productos, clientes, reportes...',
+ 'search':'Buscar por producto, código o motivo...',
+ 'actions': [('Filtros','ti-filter',false),('Exportar','ti-download',false),('Nuevo movimiento','ti-plus',true)],
+ 'filters': {'inline':[('Tipo','Todos')], 'stacked':[('Responsable','Todos')], 'date':('Rango de fechas','Todas las fechas'), 'clear':'Limpiar filtros'},
+ 'kpis': [
+ {'icon':'svg:download','tone':'blue','solid':true,'label':'Entradas del día','value':'—','sub':'Movimientos · Hoy'},
+ {'icon':'svg:upload','tone':'orange','solid':true,'label':'Salidas del día','value':'—','sub':'Movimientos · Hoy'},
+ {'icon':'svg:adjust','tone':'purple','solid':true,'label':'Ajustes realizados','value':'—','sub':'Movimientos · Hoy'},
+ {'icon':'svg:adjust','tone':'teal','solid':true,'label':'Movimientos registrados','value':'—','sub':'Historial total'}],
+ 'history': {'title':'Historial de movimientos','columns':['Fecha','Tipo','Referencia','Producto','Cantidad','Stock anterior','Stock actual','Responsable','Estado','Acciones'],'rows':[], 'pagination':{'summary':'Cargando movimientos…','pages':[{'text':'1','active':true}],'per_page':'8 por página'}},
+ 'donut':{'title':'Movimientos por tipo','center_value':'—','center_label':'Total','items':[('Entradas',('—',''),'blue',0),('Salidas',('—',''),'orange',0),('Ajustes',('—',''),'purple',0)]},
+ 'activity':{'title':'Actividad reciente','rows':[],'link':'Ver toda la actividad'},
+ 'layers':{'types':['Entrada','Salida','Ajuste'],'users':[],'statuses':[],'categories':[],'date':'Asignada al guardar','extra_activities':[]}
+} %}
+{% endif %}
+
+{% block title %}Movimientos de Inventario — Inventario{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_movement_layers.css') }}">
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+{% if reference_mode %}<script src="{{ url_for('static', filename='js/ix_movement_layers.js') }}"></script>{% else %}<script src="{{ url_for('static', filename='js/ix_movements_live.js') }}"></script>{% endif %}
+<script src="{{ url_for('static', filename='js/ix_movement_filters.js') }}"></script>
+{% if not reference_mode %}<script src="{{ url_for('static', filename='js/ix_movements_live_layers.js') }}"></script>{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ iv.header("Movimientos de Inventario", "Registro de entradas, salidas y ajustes de inventario",
+             view.search_placeholder, reference_mode=reference_mode, chrome=true) }}
+
+<div class="iv-toolbar"{% if movements_live %} data-movements-live data-can-move="{{ 1 if can_move else 0 }}" data-can-request-adjustment="{{ 1 if can_request_adjustment else 0 }}" data-can-review-adjustment="{{ 1 if can_review_adjustment else 0 }}" data-current-user="{{ current_user.name }}"{% endif %}>
+    <label class="px-search iv-toolbar-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="search" placeholder="{{ view.search }}" aria-label="{{ view.search }}">
+    </label>
+    <div class="px-actions iv-toolbar-actions">{{ iv.buttons(view.actions) }}{% if not reference_mode and (can_request_adjustment or can_review_adjustment) %}<button type="button" class="mv-button" id="mv-adjustment-requests">Solicitudes de ajuste</button>{% endif %}</div>
+</div>
+
+<form class="ix-card iv-mov-filters" role="search" aria-label="Filtros" onsubmit="return false;">
+    {% for label, value in view.filters.inline %}
+    <label class="iv-inline-select">
+        <span class="iv-inline-label">{{ label }}</span>
+        <span class="px-select-box"><span>{{ value }}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></span>
+    </label>
+    {% endfor %}
+    {% for label, value in view.filters.stacked %}
+    <label class="px-select iv-stacked-select">
+        <span class="px-select-label">{{ label }}</span>
+        <span class="px-select-box"><span>{{ value }}</span><i class="ti ti-chevron-down" aria-hidden="true"></i></span>
+    </label>
+    {% endfor %}
+    <label class="px-select iv-stacked-select is-date">
+        <span class="px-select-label">{{ view.filters.date[0] }}</span>
+        <span class="px-select-box"><i class="ti ti-calendar" aria-hidden="true"></i><span>{{ view.filters.date[1] }}</span></span>
+    </label>
+    <button type="reset" class="px-clear"><i class="ti ti-refresh" aria-hidden="true"></i>{{ view.filters["clear"] }}</button>
+</form>
+
+{{ iv.kpis(view.kpis) }}
+
+<section class="iv-mov-body" aria-label="Historial y resumen de movimientos">
+    <article class="ix-card iv-history">
+        {{ iv.card_head(view.history.title) }}
+        <div class="px-table-wrap iv-table-wrap">
+            <table class="px-table iv-table iv-history-table">
+                <colgroup>
+                    <col style="width: 76px"><col style="width: 70px"><col style="width: 62px"><col>
+                    <col style="width: 54px"><col style="width: 62px"><col style="width: 66px">
+                    <col style="width: 90px"><col style="width: 66px"><col style="width: 72px">
+                </colgroup>
+                <thead>
+                    <tr>{% for c in view.history.columns %}<th scope="col"{% if loop.index in (5, 6, 7, 9, 10) %} class="is-center"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for m in view.history.rows %}
+                    <tr data-movement-ref="{{ m.ref }}">
+                        <td><span class="iv-date">{{ m.date }}</span><span class="iv-time">{{ m.time }}</span></td>
+                        <td title="{{ m.kind[0] }}">{{ px.badge(m.kind) }}</td>
+                        <td class="iv-ref" title="{{ m.ref }}">{{ m.ref }}</td>
+                        <td title="{{ m.product.name }} ({{ m.product.sku }})">{{ iv.product(m.product, sku=True) }}</td>
+                        <td class="is-center"><strong class="iv-num is-{{ m.qty_tone }}">{{ m.qty }}</strong></td>
+                        <td class="is-center">{{ m.before }}</td>
+                        <td class="is-center"><strong class="iv-num is-{{ m.after_tone }}">{{ m.after }}</strong></td>
+                        <td class="px-cell-muted" title="{{ m.user }}">{{ m.user }}</td>
+                        <td class="is-center" title="{{ m.status[0] }}">{{ px.badge(m.status) }}</td>
+                        <td class="is-center"><div class="iv-row-actions">
+                            <button type="button" class="iv-icon-btn" aria-label="Ver detalle" title="Ver detalle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {{ px.pagination(view.history.pagination) }}
+    </article>
+
+    <div class="iv-mov-aside">
+        <article class="ix-card iv-type-card">
+            {{ iv.card_head(view.donut.title) }}
+            <div class="iv-type-body">
+                <div class="iv-donut iv-donut-sm" data-donut='{{ view.donut["items"] | map(attribute=3) | list | tojson }}' data-tones='{{ view.donut["items"] | map(attribute=2) | list | tojson }}' data-cutout="58">
+                    <canvas role="img" aria-label="{{ view.donut.title }}"></canvas>
+                    <div class="ix-donut-center">
+                        <span class="ix-donut-value">{{ view.donut.center_value }}</span>
+                        <span class="ix-donut-label">{{ view.donut.center_label }}</span>
+                    </div>
+                </div>
+                <ul class="iv-type-legend">
+                    {% for name, (count, pct), tone, _ in view.donut["items"] %}
+                    <li><span class="ix-legend-dot iv-dot-{{ tone }}"></span><span class="iv-type-name">{{ name }}</span><span class="iv-type-value"><strong>{{ count }}</strong> {{ pct }}</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </article>
+
+        <article class="ix-card iv-activity iv-mov-activity">
+            {{ iv.card_head(view.activity.title) }}
+            <ul class="ix-list iv-activity-list">
+                {% for ico, tone, title, desc, time, amount, direction in view.activity.rows %}
+                <li class="ix-row">
+                    <span class="ix-row-icon tone-{{ tone }}" aria-hidden="true">{{ iv.icon(ico) }}</span>
+                    <span class="ix-row-text">
+                        <span class="ix-row-title">{{ title }}</span>
+                        <span class="ix-row-desc">{{ desc }}</span>
+                    </span>
+                    <span class="ix-row-side">
+                        <span class="ix-row-time">{{ time }}</span>
+                        <span class="ix-row-amount is-{{ direction }}">{{ amount }}</span>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            <button type="button" class="iv-activity-more mv-activity-trigger" data-mv-open="activities">{{ view.activity.link }}</button>
+        </article>
+    </div>
+</section>
+{% with fixture=view %}{% include 'inventory/_movement_layers.html' %}{% endwith %}
+{% endblock %}

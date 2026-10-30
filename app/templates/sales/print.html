@@ -1,0 +1,107 @@
+{# Impresión / PDF de venta (panel "9. Impresión / PDF de Venta"): vista previa de referencia
+   que reproduce el visor de PDF del navegador (barra oscura + página) con el fixture de la
+   venta VTA-000156. Es un documento independiente del shell: no genera PDF ni reutiliza el
+   generador real de notas de entrega (app/services). En modo normal muestra un aviso veraz. #}
+<!doctype html>
+<html lang="es" data-reference-mode="{{ '1' if reference_mode else '0' }}">
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo_oficial_el_conejo.png') }}">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ fixture.file if fixture else "Impresión de venta" }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sa_print.css') }}">
+</head>
+<body class="sp-body">
+{% if not fixture %}
+<main class="sp-unavailable">
+    <h1>Impresión de venta no disponible</h1>
+    <p>El módulo de ventas todavía no genera comprobantes propios. Las salidas de mercancía
+       reales se imprimen desde <a href="{{ url_for('pages.delivery_notes') }}">Notas de entrega</a>.</p>
+    <p><a href="{{ url_for('pages.sales') }}">Volver a Ventas</a></p>
+</main>
+{% else %}
+<header class="sp-toolbar" aria-label="Visor de PDF">
+    <button type="button" class="sp-tool" aria-label="Menú"><i class="ti ti-menu-2" aria-hidden="true"></i></button>
+    <span class="sp-file">{{ fixture.file }}</span>
+    <div class="sp-center">
+        <span class="sp-page-box"><span class="sp-page-current">{{ fixture.page.split(' / ')[0] }}</span> / {{ fixture.page.split(' / ')[1] }}</span>
+        <span class="sp-sep" aria-hidden="true"></span>
+        <button type="button" class="sp-tool" aria-label="Reducir"><i class="ti ti-minus" aria-hidden="true"></i></button>
+        <span class="sp-zoom-box">{{ fixture.zoom }}</span>
+        <button type="button" class="sp-tool" aria-label="Ampliar"><i class="ti ti-plus" aria-hidden="true"></i></button>
+        <span class="sp-sep" aria-hidden="true"></span>
+        <button type="button" class="sp-tool" aria-label="Ajustar a la página"><i class="ti ti-arrows-diagonal-minimize-2" aria-hidden="true"></i></button>
+        <button type="button" class="sp-tool" aria-label="Girar"><i class="ti ti-rotate-clockwise" aria-hidden="true"></i></button>
+    </div>
+    <div class="sp-right">
+        <button type="button" class="sp-tool" aria-label="Descargar"><i class="ti ti-download" aria-hidden="true"></i></button>
+        <button type="button" class="sp-tool" aria-label="Imprimir"><i class="ti ti-printer" aria-hidden="true"></i></button>
+        <button type="button" class="sp-tool" aria-label="Más opciones"><i class="ti ti-dots-vertical" aria-hidden="true"></i></button>
+    </div>
+</header>
+
+<main class="sp-viewer">
+    <article class="sp-sheet" aria-label="{{ fixture.doc_title }} {{ fixture.number }}">
+        <header class="sp-head">
+            <div class="sp-brand">
+                {% set company_logo = get_company_logo_url() if not reference_mode else none %}<span class="sp-logo" aria-hidden="true">{% if company_logo %}<img src="{{ company_logo }}" alt="" width="40" height="40" style="object-fit:contain">{% else %}<i class="ti ti-tool"></i>{% endif %}</span>
+                <div>
+                    <p class="sp-brand-name">{{ fixture.brand[0] }}</p>
+                    <p class="sp-brand-sub">{{ fixture.brand[1] }}</p>
+                </div>
+            </div>
+            <div class="sp-doc">
+                <h1 class="sp-doc-title">{{ fixture.doc_title }}</h1>
+                <p class="sp-doc-number">{{ fixture.number }}</p>
+            </div>
+        </header>
+
+        <section class="sp-info">
+            <div class="sp-col">
+                <address class="sp-block sp-company">
+                    {% for line in fixture.company %}<p{% if loop.first %} class="is-strong"{% endif %}>{{ line }}</p>{% endfor %}
+                </address>
+                <address class="sp-block sp-customer">
+                    {% for line in fixture.customer %}<p{% if loop.index <= 2 %} class="is-strong"{% endif %}>{{ line }}</p>{% endfor %}
+                </address>
+            </div>
+            <dl class="sp-meta">
+                {% for label, value, tone in fixture.meta %}
+                <div><dt>{{ label }}</dt><dd{% if tone %} class="is-{{ tone }}"{% endif %}>{{ value }}</dd></div>
+                {% endfor %}
+            </dl>
+        </section>
+
+        <table class="sp-table">
+            <colgroup><col class="sp-c-idx"><col><col class="sp-c-code"><col class="sp-c-qty"><col class="sp-c-price"><col class="sp-c-sub"></colgroup>
+            <thead>
+                <tr>{% for c in fixture.columns %}<th scope="col"{% if loop.index >= 4 %} class="is-end"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for name, code, qty, price, subtotal in fixture.rows %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ name }}</td>
+                    <td>{{ code }}</td>
+                    <td class="is-end">{{ qty }}</td>
+                    <td class="is-end">{{ price }}</td>
+                    <td class="is-end">{{ subtotal }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <dl class="sp-totals">
+            {% for label, value in fixture.totals %}
+            <div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+            {% endfor %}
+            <div class="sp-grand"><dt>{{ fixture.total[0] }}</dt><dd>{{ fixture.total[1] }}</dd></div>
+        </dl>
+    </article>
+</main>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,24 @@
+{% extends "ix_base.html" %}
+{# Base de las pantallas de Análisis predictivo: shell "ix" + predictive.css/js.
+   `fixture` solo existe en modo referencia (debug, ?ref=1); en modo normal es None. #}
+{% import "predictive/_macros.html" as px %}
+{% set sidebar_variant = "predictive" %}
+{% set ref_qs = "?ref=1" if reference_mode else "" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_replenishment_layers.css') }}">
+{% endblock %}
+
+{% block main_class %} px-page{% endblock %}
+
+{% block scripts %}
+{% include "predictive/_product_detail.html" %}
+{% if not reference_mode and has_permission("replenishment:create") and active_page != "replenishment" %}
+{% with live_view={"order_url": url_for("predictions.replenishment_order"), "today": "", "suppliers": []} %}{% include "predictive/_replenishment_order.html" %}{% endwith %}
+{% endif %}
+<script src="{{ url_for('static', filename='js/predictive.js') }}"></script>
+<script src="{{ url_for('static', filename='js/predictive_detail.js') }}"></script>
+{% if not reference_mode and has_permission("replenishment:create") and active_page != "replenishment" %}<script src="{{ url_for('static', filename='js/predictive_order.js') }}"></script>{% endif %}
+{% endblock %}

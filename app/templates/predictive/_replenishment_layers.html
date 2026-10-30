@@ -1,0 +1,106 @@
+﻿{# Exclusively included in reference mode. Lucide paths, no server submission. #}
+{% macro rl_icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="M18 6 6 18M6 6l12 12"/>
+{% elif name == 'calendar' %}<path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/>
+{% elif name == 'download' %}<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+{% elif name == 'reset' %}<path d="M3 11a9 9 0 1 1 2.7 6.4M3 4v7h7"/>
+{% elif name == 'sheet' %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8M12 13v4"/>
+{% else %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h5M8 17h8"/>
+{% endif %}
+</svg>
+{%- endmacro %}
+{% macro rl_header(id, title, subtitle) %}
+<header class="rl-header"><h2 id="rl-{{ id }}-title" tabindex="-1">{{ title }}</h2><p>{{ subtitle }}</p><button type="button" class="rl-close" data-rl-close aria-label="Cerrar {{ title | lower }}">{{ rl_icon('x') }}</button></header>
+{% endmacro %}
+{% macro rl_select(id, label, options, required=False, wide=False) %}
+<label class="rl-field{{ ' rl-wide' if wide else '' }}">{{ label }}{% if required %}<span class="rl-required"> *</span>{% endif %}
+<select id="rl-{{ id }}" name="{{ id }}"{% if required %} required{% endif %}>{% for value, text in options %}<option value="{{ value }}">{{ text }}</option>{% endfor %}</select></label>
+{% endmacro %}
+{% macro rl_date(id, label, value='', required=False) %}
+<label class="rl-field">{{ label }}{% if required %}<span class="rl-required"> *</span>{% endif %}
+<span class="rl-date"><input id="rl-{{ id }}" name="{{ id }}" type="text" readonly placeholder="dd/mm/aaaa" value="{{ value }}" data-rl-date aria-haspopup="true" aria-expanded="false" aria-controls="rl-calendar"{% if required %} required{% endif %}>{{ rl_icon('calendar') }}</span></label>
+{% endmacro %}
+{% macro rl_cancel() %}<button type="button" class="rl-button" data-rl-close>Cancelar</button>{% endmacro %}
+{% set suppliers = [('Distribuidora Andina','Distribuidora Andina'),('Suministros del Centro','Suministros del Centro')] %}
+
+<dialog id="rl-order" class="rl-dialog rl-order" aria-labelledby="rl-order-title">
+{{ rl_header('order','Generar solicitud de reposición','Crea una solicitud sin precios a partir de las recomendaciones seleccionadas') }}
+<form id="rl-order-form" method="dialog">
+<div class="rl-order-body">
+<section class="rl-card">
+<h3>Información de la orden</h3>
+<div class="rl-grid">
+{{ rl_select('order-supplier','Proveedor',suppliers,True) }}
+{{ rl_date('delivery','Fecha de entrega esperada','15/06/2024',True) }}
+{{ rl_select('payment','Condición de pago',[('30','Crédito 30 días'),('15','Crédito 15 días'),('cash','Contado')],True,True) }}
+<label class="rl-field rl-wide">Notas<textarea id="rl-notes" maxlength="500" placeholder="Agrega notas o instrucciones para el proveedor..."></textarea><span id="rl-note-count" class="rl-counter">0/500</span></label>
+</div>
+</section>
+<section class="rl-card rl-products">
+<h3>Productos incluidos (4)</h3>
+<table><thead><tr><th scope="col">Producto</th><th scope="col">Cantidad<br>sugerida</th><th scope="col">Costo unitario</th><th scope="col">Subtotal</th></tr></thead><tbody>
+{% for row in fixture.rows[:4] %}
+<tr><td><div class="rl-product"><img src="{{ url_for('static',filename=row.p.thumb) }}" alt=""><span><strong>{{ row.p.name }}</strong><small>SKU: {{ row.p.sku }}</small></span></div></td><td>{{ row.qty }}</td><td data-rl-unit></td><td data-rl-subtotal>{{ row.cost }}</td></tr>
+{% endfor %}
+</tbody></table>
+</section>
+<section class="rl-card rl-summary"><h3>Resumen de la orden</h3><dl><div><dt>Subtotal</dt><dd id="rl-subtotal"></dd></div><div><dt>IVA (16%)</dt><dd id="rl-tax"></dd></div><div class="rl-total"><dt>Total estimado</dt><dd id="rl-total"></dd></div></dl></section>
+</div>
+<footer class="rl-footer">{{ rl_cancel() }}<button type="submit" class="rl-button rl-primary">{{ rl_icon('file') }}Generar orden</button></footer>
+</form>
+</dialog>
+
+<dialog id="rl-export" class="rl-dialog rl-export" aria-labelledby="rl-export-title">
+{{ rl_header('export','Exportar CSV','Selecciona el formato y las opciones de exportación') }}
+<form id="rl-export-form" method="dialog">
+<div class="rl-export-body">
+<fieldset><legend>Formato de archivo</legend><div class="rl-formats">
+{% for value, title, text, icon in [('xlsx','Excel (XLSX)','Ideal para análisis y edición en Excel.','sheet'),('csv','CSV','Formato universal compatible con la mayoría de sistemas.','file'),('pdf','PDF','Formato listo para impresión o compartir.','file')] %}
+<label class="rl-format rl-format-{{ value }}"><input type="radio" name="format" value="{{ value }}" aria-label="{{ title }}"{% if value == 'csv' %} checked{% endif %}>{{ rl_icon(icon) }}<strong>{{ title }}</strong><span>{{ text }}</span></label>
+{% endfor %}
+</div></fieldset>
+<fieldset class="rl-export-options"><legend>Opciones de exportación</legend><div class="rl-grid">
+{% for text in ['Incluir recomendaciones visibles','Incluir proveedor','Incluir costo estimado','Incluir prioridad','Incluir fecha recomendada'] %}
+<label class="rl-check"><input type="checkbox" name="columns" value="{{ loop.index }}" checked>{{ text }}</label>
+{% endfor %}
+</div></fieldset>
+<fieldset class="rl-scope"><legend>Alcance de la exportación</legend><div class="rl-grid">
+<label class="rl-check"><input type="radio" name="scope" value="page"><span><strong>Solo página actual</strong><small>Exporta solo los productos que se muestran en la página actual.</small></span></label>
+<label class="rl-check"><input type="radio" name="scope" value="filtered" checked><span><strong>Todos los resultados filtrados</strong><small>Exporta todos los productos que coinciden con los filtros aplicados.</small></span></label>
+</div></fieldset>
+</div>
+<footer class="rl-footer">{{ rl_cancel() }}<button type="submit" class="rl-button rl-primary">{{ rl_icon('download') }}Exportar</button></footer>
+</form>
+</dialog>
+
+<dialog id="rl-filters" class="rl-dialog rl-filters" aria-labelledby="rl-filters-title">
+{{ rl_header('filters','Filtros avanzados','Refina las recomendaciones de reabastecimiento con múltiples criterios') }}
+<form id="rl-filter-form" method="dialog">
+<div class="rl-filter-body rl-grid">
+<label class="rl-field">Categoría<select id="rl-category" name="category"><option value="">Todas</option>{% for row in fixture.rows | unique(attribute='cat') %}<option>{{ row.cat }}</option>{% endfor %}</select></label>
+{{ rl_select('supplier','Proveedor',[('','Todos')]+suppliers) }}
+{{ rl_select('horizon','Horizonte',[('30','30 días'),('7','7 días'),('15','15 días'),('60','60 días')]) }}
+{{ rl_select('priority','Prioridad',[('','Todas'),('Alta','Alta'),('Media','Media'),('Baja','Baja')]) }}
+{% for key, title in [('stock','Stock actual'),('demand','Demanda estimada (30 días)'),('cost','Costo estimado')] %}
+<fieldset><legend>{{ title }}</legend><div class="rl-pair">
+{% for bound, label in [('min','Mínimo'),('max','Máximo')] %}
+<label class="rl-field rl-secondary">{{ label }}<span class="{{ 'rl-money' if key == 'cost' else '' }}">{% if key == 'cost' %}<span>$</span>{% endif %}<input type="number" name="{{ key }}-{{ bound }}" id="rl-{{ key }}-{{ bound }}" min="0" step="{{ '0.01' if key == 'cost' else '1' }}" placeholder="{{ '0.00' if key == 'cost' else '0' }}" aria-label="{{ title }} {{ label | lower }}"></span></label>
+{% endfor %}
+</div></fieldset>
+{% endfor %}
+<fieldset><legend>Fecha recomendada</legend><div class="rl-pair">{{ rl_date('from','Desde') }}{{ rl_date('to','Hasta') }}</div></fieldset>
+<label class="rl-check rl-filter-check"><input type="checkbox" id="rl-high" name="high"><span><strong>Solo prioridad alta</strong><small>Mostrar únicamente productos con prioridad alta</small></span></label>
+<label class="rl-check rl-filter-check"><input type="checkbox" id="rl-critical" name="critical"><span><strong>Solo productos críticos</strong><small>Mostrar únicamente productos marcados como críticos</small></span></label>
+<p id="rl-filter-error" class="rl-error rl-wide" role="alert" hidden></p>
+</div>
+<footer class="rl-footer"><button type="reset" class="rl-clear">{{ rl_icon('reset') }}Limpiar filtros</button>{{ rl_cancel() }}<button type="submit" class="rl-button rl-primary">Aplicar filtros</button></footer>
+</form>
+</dialog>
+<div id="rl-calendar" class="rl-calendar" role="group" aria-label="Calendario" hidden>
+<div class="rl-calendar-nav"><button type="button" data-rl-month="-1" aria-label="Mes anterior">‹</button><strong id="rl-month" aria-live="polite"></strong><button type="button" data-rl-month="1" aria-label="Mes siguiente">›</button></div>
+<div class="rl-week" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div id="rl-days" class="rl-days"></div>
+<button type="button" id="rl-date-clear" class="rl-clear">Borrar fecha</button>
+</div>
+<p id="rl-feedback" class="rl-feedback" role="status" hidden></p>
+<script id="rl-fixtures" type="application/json">{{ fixture.rows | tojson }}</script>

@@ -1,0 +1,190 @@
+﻿/* Vista previa "ImpresiÃ³n / PDF de venta" (modo referencia): imita el visor de PDF del
+   navegador â€”barra oscura de 64px y hoja centrada de 1037pxâ€” con la geometrÃ­a del panel
+   aprobado (ventana de referencia de ~1454px). Documento independiente del shell "ix". */
+
+.sp-body {
+    margin: 0;
+    min-height: 100vh;
+    background: #525659;
+    color: #374151;
+    font-family: Inter, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 19px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.sp-body p, .sp-body dl, .sp-body dd, .sp-body h1 { margin: 0; }
+
+/* ---- Aviso en modo normal ---- */
+.sp-unavailable {
+    max-width: 560px;
+    margin: 80px auto;
+    padding: 28px 32px;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.sp-unavailable h1 { font-size: 18px; font-weight: 700; color: #1f2937; }
+.sp-unavailable p { margin-top: 12px; }
+.sp-unavailable a { color: #1a73e8; font-weight: 600; }
+
+/* ---- Barra del visor ---- */
+.sp-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    height: 64px;
+    padding: 0 22px 0 20px;
+    background: #323639;
+    color: #f1f3f4;
+    font-size: 13px;
+}
+
+.sp-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #f1f3f4;
+    font-size: 18px;
+    cursor: default;
+}
+
+.sp-file {
+    margin-left: 27px;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sp-center {
+    position: absolute;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.sp-page-box, .sp-zoom-box {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    font-size: 13px;
+}
+
+.sp-page-current, .sp-zoom-box {
+    padding: 0 10px;
+    border-radius: 4px;
+    background: #202124;
+}
+
+.sp-page-current { margin-right: 6px; }
+.sp-sep { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.18); }
+.sp-right { display: flex; gap: 17px; margin-left: auto; }
+
+/* ---- Hoja ---- */
+.sp-viewer { padding: 6px 0 40px; }
+
+.sp-sheet {
+    box-sizing: border-box;
+    width: 1037px;
+    min-height: 1342px;
+    margin: 0 auto;
+    padding: 34px 42px 60px 41px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.sp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sp-brand { display: flex; align-items: center; gap: 20px; }
+
+.sp-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 69px;
+    height: 69px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, #0a8dfb 0%, #0b5ff5 100%);
+    color: #fff;
+    font-size: 34px;
+}
+
+.sp-brand-name { font-size: 29px; line-height: 32px; font-weight: 700; color: #1f2937; }
+.sp-brand-sub { font-size: 17px; line-height: 22px; color: #6b7280; }
+.sp-doc { text-align: right; }
+.sp-doc-title, .sp-doc-number { font-size: 22px; line-height: 26px; font-weight: 700; color: #1f2937; }
+.sp-doc-number { margin-top: 5px; }
+
+.sp-info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 335px;
+    gap: 40px;
+    margin-top: 37px;
+}
+
+.sp-block { font-style: normal; }
+.sp-block .is-strong { font-weight: 700; color: #1f2937; }
+.sp-customer { margin-top: 21px; line-height: 18px; }
+
+.sp-meta { padding-top: 6px; line-height: 21px; }
+.sp-meta div { display: flex; gap: 6px; }
+.sp-meta dt { font-weight: 700; color: #1f2937; white-space: nowrap; }
+.sp-meta .is-green { padding: 0 6px; border-radius: 4px; background: #e6f6ec; color: #2f9e57; font-weight: 600; }
+
+/* ---- Tabla de productos ---- */
+.sp-table {
+    width: 100%;
+    margin-top: 12px;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 18px;
+}
+
+.sp-table th, .sp-table td { padding: 0 8px; text-align: left; white-space: nowrap; }
+.sp-table th { height: 32px; background: #f3f4f6; font-weight: 700; color: #374151; }
+.sp-table td { height: 30px; border-bottom: 1px solid #f1f2f4; }
+.sp-table th:first-child, .sp-table td:first-child { padding-left: 16px; }
+.sp-table th:last-child, .sp-table td:last-child { padding-right: 4px; }
+.sp-table .is-end { text-align: right; }
+.sp-c-idx { width: 77px; }
+.sp-c-code { width: 118px; }
+.sp-c-qty { width: 102px; }
+.sp-c-price { width: 134px; }
+.sp-c-sub { width: 204px; }
+
+/* ---- Totales ---- */
+.sp-sheet .sp-totals {
+    width: 296px;
+    margin: 11px 0 0 auto;
+    line-height: 28px;
+}
+
+.sp-totals div { display: flex; justify-content: space-between; padding-right: 4px; }
+.sp-totals dt { color: #6b7280; }
+.sp-totals dd { color: #1f2937; }
+
+.sp-grand {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.sp-grand dt, .sp-grand dd { color: #1f2937; }

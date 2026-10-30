@@ -1,0 +1,7 @@
+{% macro money(value, currency) -%}
+{% if value is not none and value is defined %}{{ {'USD':'$', 'VES':'Bs.'}.get(currency, currency or 'Moneda no registrada ·') }} {{ '{:,.2f}'.format(value|float) }}{% else %}—{% endif %}
+{%- endmacro %}
+{% macro totals(rows) -%}
+{% for row in rows %}{{ money(row.amount, row.currency) }}{{ ' / ' if not loop.last }}{% else %}Sin importes{% endfor %}
+{%- endmacro %}
+{% macro count(value, singular, plural) -%}{{ value }} {{ singular if value == 1 else plural }}{%- endmacro %}

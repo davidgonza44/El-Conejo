@@ -1,0 +1,92 @@
+{# Reference-only controls. Native dialog form cannot navigate or submit HTTP. #}
+{% macro icon(name) -%}
+<svg class="np-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="m18 6-12 12M6 6l12 12"/>
+{% elif name == 'cloud-upload' %}<path d="M12 13v8m-4-4 4-4 4 4M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 3 16.25"/>
+{% elif name == 'image' %}<circle cx="8" cy="7" r="3" fill="currentColor" stroke="none"/><path d="M2 19v-2l6-7 4 4 5-7 5 7v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z" fill="currentColor" stroke="none"/>
+{% elif name == 'save' %}<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7H7v7M7 3v5h8"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% macro field(id, label, placeholder='', type='text', value=none, required=true, money=false, maxlength=none) %}
+<div class="np-field">
+    <label for="np-{{ id }}">{{ label }}{% if required %} <span class="np-required">*</span>{% endif %}</label>
+    <div class="np-control{% if money %} np-money{% endif %}">
+        {% if money and reference_mode %}<span aria-hidden="true">$</span>{% endif %}
+        <input id="np-{{ id }}" type="{{ type }}" placeholder="{{ placeholder }}"{% if value is not none %} value="{{ value }}"{% endif %}{% if required %} required{% endif %}{% if maxlength %} maxlength="{{ maxlength }}"{% endif %}{% if type == 'number' %} min="0" step="{{ '0.01' if money else '1' }}"{% endif %} aria-describedby="np-{{ id }}-error">
+    </div>
+    <small id="np-{{ id }}-error" class="np-error" hidden></small>
+    {% if money and not reference_mode %}
+    <label for="np-{{ id }}-currency">Moneda de {{ label | lower }} <span class="np-required">*</span></label>
+    <select id="np-{{ id }}-currency" required>
+        <option value="" selected disabled>Selecciona una moneda</option>
+        <option value="USD">USD ($)</option><option value="VES">VES (Bs.)</option>
+    </select>
+    {% endif %}
+</div>
+{% endmacro %}
+{% macro select(id, label, placeholder, options) %}
+<div class="np-field">
+    <label for="np-{{ id }}">{{ label }} <span class="np-required">*</span></label>
+    <select id="np-{{ id }}" required aria-describedby="np-{{ id }}-error">
+        <option value="" selected disabled>{{ placeholder }}</option>
+        {% for option in options %}<option>{{ option }}</option>{% endfor %}
+    </select>
+    <small id="np-{{ id }}-error" class="np-error" hidden></small>
+</div>
+{% endmacro %}
+<dialog id="np-drawer" class="np-drawer" aria-labelledby="np-title" aria-describedby="np-subtitle">
+    <header class="np-header">
+        <div><h2 id="np-title">Nuevo producto</h2><p id="np-subtitle">Registra un nuevo producto en el catálogo</p></div>
+        <button class="np-close" type="button" data-np-close aria-label="Cerrar nuevo producto" autofocus>{{ icon('x') }}</button>
+    </header>
+    <form id="np-form" class="np-form" method="dialog" novalidate>
+        <div class="np-body">
+            {{ field('name', 'Nombre del producto', 'Ej. Taladro Percutor 1/2" 750W') }}
+            <div class="np-row grid grid-cols-2 gap-4">
+                {{ field('sku', 'Código / SKU', 'Ej. TAL-750W') }}
+                {{ select('category', 'Categoría', 'Selecciona una categoría', fixture.categories.rows | map(attribute=0) | list if reference_mode else []) }}
+            </div>
+            {% if reference_mode %}{{ select('supplier', 'Proveedor', 'Selecciona un proveedor', ['Ferremax, C.A.', 'Aceros del Centro, C.A.']) }}{% endif %}
+            <div class="np-row grid grid-cols-2 gap-4">
+                {{ field('brand', 'Marca', 'Ej. Bosch', required=false, maxlength=100) }}
+                {{ select('unit', 'Unidad de medida', 'Selecciona una unidad', ['Unidad', 'Caja', 'Metro', 'Kilogramo']) }}
+            </div>
+            <div class="np-row grid grid-cols-2 gap-4">
+                {{ field('price', 'Precio de venta', type='number', value='0.00', money=true) }}
+                {% if reference_mode or can_view_cost %}{{ field('cost', 'Costo de referencia' if not reference_mode else 'Costo', type='number', value='0.00', money=true) }}{% endif %}
+            </div>
+            <div class="np-row grid grid-cols-2 gap-4">
+                {{ field('stock', 'Stock inicial', type='number', value='0') }}
+                {{ field('minimum', 'Stock mínimo', type='number', value='0') }}
+            </div>
+            <div class="np-field">
+                <label for="np-status">Estado <span class="np-required">*</span></label>
+                <div class="np-status" data-status="Disponible"><span class="np-dot" aria-hidden="true"></span><select id="np-status" required aria-describedby="np-status-error"><option>Disponible</option><option>Bajo stock</option><option>Agotado</option></select></div>
+                <small id="np-status-error" class="np-error" hidden></small>
+            </div>
+            <div class="np-field np-description">
+                <label for="np-description">Descripción</label>
+                <textarea id="np-description" placeholder="Describe las características del producto..." maxlength="500" aria-describedby="np-counter"></textarea>
+                <span id="np-counter" class="np-counter">0/500</span>
+            </div>
+            <div class="np-field np-image-field">
+                <label for="np-image">Imagen del producto</label>
+                <div class="np-image-row">
+                    <label class="np-upload" for="np-image">{{ icon('cloud-upload') }}<span>Haz clic para subir una imagen</span><small>PNG, JPG o WEBP (máx. 5 MB)</small><input id="np-image" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="np-image-error"></label>
+                    <div class="np-preview"><div class="np-preview-box"><span id="np-image-placeholder">{{ icon('image') }}</span><img id="np-preview-image" alt="Vista previa del producto" hidden></div><span>Vista previa</span></div>
+                </div>
+                <small id="np-image-error" class="np-error" role="status" hidden></small>
+            </div>
+            {% if not reference_mode %}
+            <section id="np-suppliers" class="np-field np-suppliers" aria-labelledby="np-suppliers-title">
+                <h3 id="np-suppliers-title">Proveedores del producto</h3>
+                <p class="ps-note">{% if can_view_cost %}Opcional. El costo de referencia no se copia al costo del proveedor.{% else %}Opcional. La cantidad mínima es informativa.{% endif %}</p>
+                <div id="np-supplier-list"></div>
+                <div id="np-supplier-form" class="ps-add"></div>
+            </section>
+            {% endif %}
+        </div>
+        <footer class="np-footer"><button type="button" data-np-close>Cancelar</button><button type="button" id="np-save" class="np-save">{{ icon('save') }}Guardar producto</button></footer>
+    </form>
+</dialog>
+<div id="np-feedback" class="np-feedback" role="status" hidden></div>

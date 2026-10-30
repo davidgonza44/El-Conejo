@@ -1,0 +1,49 @@
+{% extends "ix_base.html" %}
+{% import "suppliers/_icons.html" as st %}
+{% import "purchases/_money.html" as pm %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "suppliers" %}{% set sidebar_variant = "purchases" %}
+{% set f = view.filters %}{% set p = view.pagination %}{% set k = view.kpis %}
+{% set suffix = '?ref=1' if reference_mode else '' %}
+{% macro supplier_totals(rows) -%}
+<span class="sp-currency-totals">{% for currency in ['USD', 'VES'] %}{% set amounts = rows|selectattr('currency', 'equalto', currency)|list %}<span data-currency="{{ currency }}">{{ currency }} · {% if amounts %}{{ pm.money(amounts[0].amount, currency) }}{% else %}Sin compras{% endif %}</span>{% endfor %}</span>
+{%- endmacro %}
+{% macro select_filter(name, label, options, empty='Todas') %}<label>{{ label }}<select name="{{ name }}"><option value="">{{ empty }}</option>{% for value, text in options %}<option value="{{ value }}"{{ ' selected' if f[name] == value }}>{{ text }}</option>{% endfor %}</select></label>{% endmacro %}
+{% macro basic_filters() %}
+{{ select_filter('status', 'Estado', [('active','Activos'),('inactive','Inactivos')], 'Todos') }}
+{% if not reference_mode %}{{ select_filter('approval_status', 'Estado de aprobación', [('pending','Pendiente'),('approved','Aprobado'),('rejected','Rechazado')], 'Todos') }}{% endif %}
+<label>Categoría<select name="category"><option value="">Todas</option>{% for value in view.categories %}<option{{ ' selected' if f.category == value }}>{{ value }}</option>{% endfor %}</select></label>
+<label>Ciudad<select name="city"><option value="">Todas</option>{% for value in view.cities %}<option{{ ' selected' if f.city == value }}>{{ value }}</option>{% endfor %}</select></label>
+{% endmacro %}
+{% block title %}Proveedores · El Conejo{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_suppliers.css') }}">
+{% if not reference_mode %}<style>
+#sp-filters{grid-template-columns:minmax(200px,2fr) repeat(4,minmax(100px,1fr)) auto}
+.sp-review{flex:none;padding:14px 19px;border-top:1px solid #e1e5eb;max-height:50dvh;overflow:auto}
+.sp-kpi{height:auto;min-height:90px}.sp-kpi>div{min-width:0}.sp-kpi strong{white-space:normal;font-size:clamp(14px,1.3vw,21px);overflow-wrap:anywhere}
+.sp-history-note{color:#92651c;font-size:11px;margin:0 0 12px}.sp-table .sp-history-note{font-size:9px;margin:3px 0 0}
+.sp-currency-totals{display:flex;flex-direction:column;gap:5px;font-size:clamp(12px,1.1vw,16px);line-height:1.35;overflow-wrap:anywhere}.sp-table .sp-currency-totals{font-size:10px;gap:3px}
+@media(max-width:900px){ #sp-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>{% endif %}
+{% endblock %}
+{% block main_class %} sp-page{% endblock %}
+{% block main %}
+<header class="sp-header"><div><h1 class="ix-title">Proveedores</h1><p class="ix-subtitle">Administra y consulta la información de tus proveedores</p></div><div class="sp-header-side"><div class="ix-header-actions"><button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">{{ st.icon('menu') }}</button>{{ iv.shell_chrome(reference_mode, 'Buscar productos, clientes, reportes...') }}</div><div class="sp-actions"><button class="sp-btn" data-open="sp-filters-dialog">{{ st.icon('filter') }}Filtros</button><button class="sp-btn" data-open="sp-export-dialog">{{ st.icon('upload') }}Exportar CSV</button>{% if can_write %}<button class="sp-btn is-primary" id="sp-new"{{ ' disabled' if not view.available }}>{{ st.icon('plus') }}Nuevo proveedor</button>{% endif %}</div></div></header>
+{% if not view.available %}<p class="sp-notice" role="status">Proveedores pendiente de migración. No se muestran datos de ejemplo.</p>{% endif %}
+<section class="sp-kpis" aria-label="Indicadores de proveedores">
+{% for label, value, sub, icon, tone in [('Total Proveedores', k.suppliers, 'Activos: ' ~ k.active ~ ' · Inactivos: ' ~ k.inactive, 'users','blue'), ('Compras del mes', supplier_totals(k.totals_by_currency|default([])), k.comparison or 'Sin comparación disponible', 'cart','green'), ('Órdenes de compra', k.orders, 'Pendientes: ' ~ k.pending ~ ' · Completadas: ' ~ k.completed, 'box','purple'), ('Proveedores preferidos', k.preferred, 'Con mejor desempeño' if reference_mode else 'Marcados como preferidos', 'star','orange')] if label != 'Compras del mes' or can_view_cost %}<article class="sp-card sp-kpi"><span class="sp-kpi-icon is-{{ tone }}">{{ st.icon(icon) }}</span><div><h2>{{ label }}</h2><strong>{{ value }}</strong><p>{{ sub }}</p></div></article>{% endfor %}
+</section>
+{% if k.unknown_currency_orders|default(0) %}<p class="sp-history-note" role="status">{{ pm.count(k.unknown_currency_orders, 'orden histórica sin moneda', 'órdenes históricas sin moneda') }}. Excluidas de los importes; disponibles individualmente en el detalle de cada proveedor.</p>{% endif %}
+<form class="sp-card sp-filters" id="sp-filters" method="get" action="/suppliers" aria-label="Filtros de proveedores">
+{% if reference_mode %}<input type="hidden" name="ref" value="1">{% endif %}<input type="hidden" name="per_page" value="{{ p.per_page }}">
+{% for key in ['preferred','last_from','last_to','currency','min_total','max_total','sort'] %}{% if f[key] and (key != 'sort' or request.args.get('sort')) %}<input type="hidden" name="{{ key }}" value="{{ f[key] }}">{% endif %}{% endfor %}
+<label class="sp-search"><span class="sp-sr-only">Buscar proveedor</span>{{ st.icon('search') }}<input name="search" type="search" value="{{ f.search }}" placeholder="Buscar proveedor por nombre, RIF o contacto..."></label>{{ basic_filters() }}<a class="sp-clear" href="/suppliers{{ suffix }}">{{ st.icon('refresh') }}Limpiar filtros</a><button class="sp-sr-only" type="submit">Aplicar filtros</button></form>
+<article class="sp-card sp-table-card"><div class="sp-table-scroll"><table class="sp-table"><colgroup>{% for width in [18,11,10,10,16,8,10,11,6] %}<col style="width:{{ width }}%">{% endfor %}</colgroup><thead><tr>{% for label in ['Proveedor','Contacto','Categoría','Teléfono','Correo','Estado','Última compra','Monto total compras','Acciones'] if label != 'Monto total compras' or can_view_cost %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for row in view['items'] %}<tr data-supplier-id="{{ row.id }}"><td><div class="sp-supplier"><span class="sp-avatar tone-{{ row.tone|default((row.id - 1) % 8) }}" aria-hidden="true">{{ row.avatar|default(row.name[:2]|upper) }}</span><span><strong>{{ row.name }}</strong><small>{{ row.tax_id }}</small></span></div></td><td>{{ row.contact_name or '—' }}<small>{{ row.contact_title }}</small></td><td><span class="sp-badge category-{{ {'Materiales':'green','Construcción':'purple'}.get(row.category,'blue') }}">{{ st.icon('user') }}{{ row.category or 'Sin categoría' }}</span></td><td>{{ row.phone or '—' }}</td><td>{{ row.email or '—' }}</td><td><span class="sp-badge {{ 'is-active' if row.is_active else 'is-inactive' }}">● {{ 'Activo' if row.is_active else 'Inactivo' }}</span>{% if not reference_mode %}<small>{{ {'pending':'Pendiente','approved':'Aprobado','rejected':'Rechazado'}.get(row.approval_status, '—') }}</small>{% endif %}</td><td>{{ row.last[8:10] ~ '/' ~ row.last[5:7] ~ '/' ~ row.last[:4] if row.last else 'Sin compras' }}</td>{% if can_view_cost %}<td><b>{{ supplier_totals(row.totals_by_currency|default([])) }}</b>{% if row.unknown_currency_orders|default(0) %}<small class="sp-history-note">{{ pm.count(row.unknown_currency_orders, "orden sin moneda", "órdenes sin moneda") }} · Ver detalle</small>{% endif %}</td>{% endif %}<td><div class="sp-row-actions"><button class="sp-icon-btn" data-action="detail" data-id="{{ row.id }}" aria-label="Ver detalle {{ row.name }}">{{ st.icon('eye') }}</button><button class="sp-icon-btn" data-action="menu" data-id="{{ row.id }}" aria-label="Más acciones {{ row.name }}" aria-haspopup="menu" aria-expanded="false">{{ st.icon('more') }}</button></div></td></tr>{% else %}<tr><td colspan="{{ 9 if can_view_cost else 8 }}" class="sp-empty">No hay proveedores que coincidan con los filtros.</td></tr>{% endfor %}
+</tbody></table></div><footer class="sp-pagination"><span>Mostrando {{ p.from }} a {{ p.to }} de {{ p.total }} proveedores</span><nav aria-label="Paginación de proveedores">{% if p.page > 1 %}<a href="/suppliers?{{ view.query }}&amp;page={{ p.page - 1 }}" aria-label="Página anterior">‹</a>{% else %}<span aria-disabled="true">‹</span>{% endif %}{% for number in p.numbers %}{% if not loop.first and number - p.numbers[loop.index0 - 1] > 1 %}<span>…</span>{% endif %}<a href="/suppliers?{{ view.query }}&amp;page={{ number }}"{{ ' aria-current=page' if number == p.page }}>{{ number }}</a>{% endfor %}{% if p.page < p.pages %}<a href="/suppliers?{{ view.query }}&amp;page={{ p.page + 1 }}" aria-label="Página siguiente">›</a>{% else %}<span aria-disabled="true">›</span>{% endif %}</nav><label><span class="sp-sr-only">Proveedores por página</span><select id="sp-per-page">{% for number in [8,16,24] %}<option value="{{ number }}"{{ ' selected' if number == p.per_page }}>{{ number }} por página</option>{% endfor %}</select></label></footer></article>
+<div id="sp-message" role="status" class="sp-toast" hidden></div><div id="sp-menu" class="sp-menu" role="menu" hidden></div>
+{% include 'suppliers/_dialogs.html' %}
+<script type="application/json" id="sp-context">{{ {'reference':reference_mode,'canWrite':can_write,'canOrder':has_permission('purchases:write'),'canApprove':can_approve,'currentUserId':current_user.id,'canViewCost':can_view_cost,'purchaseStatusLabels':purchase_status_labels,'items':view['items']}|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/purchase_money.js') }}"></script><script src="{{ url_for('static', filename='js/ix_suppliers.js') }}"></script>{% endblock %}

@@ -1,0 +1,26 @@
+{
+  "name": "conejo-tooling",
+  "private": true,
+  "scripts": {
+    "codegraph:doctor": "codegraph doctor",
+    "codegraph:orient": "codegraph orient --root . --budget small",
+    "codegraph:review": "codegraph review",
+    "openspec:doctor": "openspec doctor",
+    "openspec:validate": "openspec validate --all --strict --no-interactive",
+    "openspec:version": "openspec --version",
+    "repomix:pack": "repomix --compress --style xml --output repomix-output.xml",
+    "zg:preflight": "node scripts/zg_preflight.mjs",
+    "zg:index": "npm run zg:preflight && zg index . --mode direct --embedding local/potion-code-16m-v2 --ignore-file .repomixignore --iglob \"!**/*.png\" --iglob \"!**/*.jpg\" --iglob \"!**/*.jpeg\" --iglob \"!**/*.gif\" --iglob \"!**/*.webp\" --iglob \"!**/*.tif\" --iglob \"!**/*.tiff\" --iglob \"!**/*.vips\"",
+    "zg:status": "npm run zg:preflight && zg status . --mode direct --check-ready",
+    "zg:version": "zg --version"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "1.10.0",
+    "@lzehrung/codegraph": "^2.3.10",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "@zvec/zvec-grep": "0.2.1",
+    "repomix": "^1.18.0",
+    "tailwindcss": "^4.3.3"
+  }
+}

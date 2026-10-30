@@ -1,0 +1,1187 @@
+/* Módulo Ventas: composición sobre el shell "ix" (inicio.css) reutilizando los componentes
+   de predictive.css e ix_inventory.css. Los paneles del collage aprobado son capturas del
+   mismo shell a un viewport de ~1183x845 (sidebar 244px): las medidas de abajo son las del
+   panel normalizado a esa escala (ancho de panel 1600 -> 1183, factor 0,739). El contenido
+   es fluido y a 1600x900 conserva la misma geometría vertical con tarjetas más anchas.
+   Dashboard: contenido x=275..1171; título y=10; barra de fechas y=83..110; KPI y=138..225;
+   gráficos y=255..547; listas inferiores y=562..835. */
+
+.sa-page {
+    --px-row: 30px;
+    --px-line: #eef0f4;
+    padding: 0 12px 10px 31px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabecera                                                            */
+/* ------------------------------------------------------------------ */
+.sa-header {
+    height: 83px;
+    padding-top: 10px;
+}
+
+.sa-header .ix-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 28px;
+    line-height: 34px;
+}
+
+.sa-heading .ix-subtitle {
+    margin-top: 5px;
+    font-size: 11.5px;
+    line-height: 15px;
+}
+
+.sa-header-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.sa-header-side .ix-header-actions {
+    height: 31px;
+    margin: 3px 14px 0 0;
+    gap: 14px;
+    justify-content: flex-end;
+}
+
+.sa-header .ix-search {
+    width: 307px;
+    height: 31px;
+    border-radius: 8px;
+}
+
+.sa-header .ix-search .ti { font-size: 15px; }
+.sa-header .ix-search input { font-size: 10px; }
+.sa-header .ix-bell { font-size: 20px; }
+.sa-header .ix-bell-badge { top: -4px; right: 4px; min-width: 14px; height: 14px; font-size: 9px; line-height: 14px; }
+
+/* ------------------------------------------------------------------ */
+/* Barra de fechas                                                     */
+/* ------------------------------------------------------------------ */
+.sa-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 27px;
+}
+
+.sa-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 213px;
+    height: 27px;
+    padding: 0 10px 0 11px;
+    border: 1px solid var(--ix-border);
+    border-radius: 7px;
+    background: #fff;
+    color: #1f2937;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sa-date .ti { font-size: 13px; color: #4b5563; }
+.sa-date-chevron { margin-left: auto; font-size: 12px !important; color: #6b7280 !important; }
+
+.sa-compare {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: 231px;
+    height: 27px;
+    padding: 0 10px;
+    border-radius: 7px;
+    background: #f3f4f6;
+    font-size: 9.5px;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-compare .ti { font-size: 12px; color: var(--ix-blue); }
+
+/* ------------------------------------------------------------------ */
+/* KPI                                                                 */
+/* ------------------------------------------------------------------ */
+.sa-page .iv-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+    margin-top: 28px;
+}
+
+.sa-page .iv-kpis .ix-kpi {
+    height: 87px;
+    padding: 0 10px 0 12px;
+    gap: 18px;
+}
+
+.sa-page .iv-kpis .ix-kpi-icon { width: 41px; height: 41px; margin-top: -6px; font-size: 19px; }
+.sa-page .iv-kpis .ix-kpi-icon .ix-svg { width: 20px; height: 20px; }
+.sa-page .iv-kpis .ix-kpi-icon.is-solid :is(.ti, .ix-svg) { width: 29px; height: 29px; font-size: 15px; }
+.sa-page .iv-kpis .ix-kpi-icon.is-solid .ix-svg { padding: 6px; }
+.sa-page .iv-kpis .ix-kpi-label { font-size: 10px; line-height: 14px; }
+.sa-page .iv-kpis .ix-kpi-line { gap: 8px; margin-top: 3px; }
+.sa-page .iv-kpis .ix-kpi-value { font-size: 15.5px; line-height: 20px; overflow: visible; }
+.sa-page .iv-kpis .ix-kpi-value .ix-trend { font-size: 9.5px; margin-left: 4px; }
+.sa-page .iv-kpis .ix-trend { font-size: 9.5px; }
+.sa-page .iv-kpis .ix-trend .ti { font-size: 11px; }
+.sa-page .iv-kpis .ix-kpi-sub { margin-top: 3px; font-size: 9.5px; line-height: 13px; }
+
+/* ------------------------------------------------------------------ */
+/* Tarjetas y tablas compartidas                                       */
+/* ------------------------------------------------------------------ */
+.sa-card-head {
+    height: 34px;
+    padding: 10px 14px 0 15px;
+}
+
+.sa-card-head .ix-card-title { font-size: 11.5px; line-height: 16px; }
+
+.sa-range {
+    height: 22px;
+    gap: 8px;
+    margin-top: 0;
+    padding: 0 8px 0 10px;
+    border-radius: 6px;
+    font-size: 9px;
+}
+
+.sa-range .ti { font-size: 11px; }
+
+.sa-link {
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--ix-blue);
+    white-space: nowrap;
+}
+
+.sa-badge {
+    height: 17px;
+    min-width: 0;
+    padding: 0 8px;
+    border-radius: 5px;
+    font-size: 8px;
+}
+
+.sa-table-wrap { padding: 0 14px 0 15px; }
+
+.sa-table {
+    font-size: 9px;
+    color: #1f2937;
+}
+
+.sa-table th {
+    height: 28px;
+    padding: 0 6px;
+    background: #f8f9fb;
+    font-size: 8.5px;
+    line-height: 12px;
+    color: #4b5563;
+    white-space: nowrap;
+}
+
+.sa-table th:first-child,
+.sa-table td:first-child { padding-left: 8px; }
+.sa-table td { padding: 0 6px; }
+.sa-table .is-end { text-align: right; }
+.sa-table .sa-muted { color: #6b7280; }
+.sa-table strong { font-weight: 600; color: #1f2937; }
+
+.sa-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding: 0 14px 0 15px;
+    height: 44px;
+}
+
+.sa-pagination-summary {
+    font-size: 9px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.sa-pages { gap: 6px; margin: 0; }
+
+.sa-pages .px-pg {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    border-radius: 5px;
+    font-size: 9px;
+}
+
+.sa-pages .px-pg .ti { font-size: 11px; }
+
+/* ------------------------------------------------------------------ */
+/* Dashboard: gráficos                                                 */
+/* ------------------------------------------------------------------ */
+.sa-charts {
+    display: grid;
+    grid-template-columns: minmax(0, 349fr) minmax(0, 269fr) minmax(0, 205fr);
+    gap: 12px;
+    margin-top: 30px;
+    grid-auto-rows: 292px;
+}
+
+/* Período real (modo vivo): dos fechas comerciales + Aplicar; misma altura que la referencia. */
+.sa-dates-live { flex-wrap: wrap; }
+.sa-dates-live .sa-date { width: auto; gap: 6px; cursor: default; }
+.sa-date-field input {
+    width: 108px;
+    height: 21px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    color: inherit;
+}
+.sa-date-field input:focus-visible { outline: 2px solid var(--ix-blue); outline-offset: 1px; }
+.sa-date-apply { height: 27px; padding: 0 12px; font-size: 10px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.sa-legend-note { margin-left: auto; color: #6b7280; font-weight: 400; }
+.sa-chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; }
+.sa-table .sa-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-table { table-layout: fixed; }
+.sa-pages .px-pg.is-disabled { opacity: 0.4; pointer-events: none; }
+.sa-pages a.px-pg { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+
+.sa-page .sa-legend {
+    height: 12px;
+    margin: 7px 0 6px;
+    padding-left: 72px;
+    gap: 14px;
+    font-size: 8.5px;
+}
+
+.sa-legend li { gap: 7px; }
+.sa-legend .ix-swatch { width: 22px; border-top-width: 2px; }
+
+.sa-line {
+    height: 224px;
+    margin: 0 20px 0 6px;
+}
+
+.sa-chart-tip {
+    gap: 2px;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 8.5px;
+}
+
+.sa-chart-tip strong { font-size: 9.5px; }
+
+.sa-donut-body {
+    display: flex;
+    align-items: flex-start;
+    flex: 1;
+    min-height: 0;
+    padding: 0 10px 0 2px;
+}
+
+.sa-donut {
+    width: 182px;
+    height: 182px;
+    margin-top: 33px;
+    flex-shrink: 0;
+}
+
+.sa-donut .ix-donut-value { font-size: 15px; line-height: 19px; }
+.sa-donut .ix-donut-label { width: 80px; font-size: 8.5px; line-height: 11px; }
+
+.sa-donut-legend {
+    flex: 1;
+    min-width: 0;
+    margin: 36px 0 0 14px;
+    gap: 14px;
+}
+
+.sa-donut-legend li { grid-template-columns: 8px minmax(0, 1fr); column-gap: 8px; line-height: 11px; }
+.sa-donut-legend .ix-legend-sub { overflow: hidden; text-overflow: ellipsis; }
+.sa-donut-legend .ix-legend-dot { width: 8px; height: 8px; margin-top: 1px; }
+.sa-donut-legend .ix-legend-name { font-size: 8.5px; font-weight: 600; }
+.sa-donut-legend .ix-legend-sub { font-size: 8px; line-height: 11px; }
+
+/* Métodos de pago: barras con importe encima y método + porcentaje debajo. */
+.sa-pay-bars {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    margin: 6px 12px 10px 6px;
+}
+
+.sa-pay-bars canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dashboard: últimas ventas, ventas recientes y clientes destacados     */
+/* ------------------------------------------------------------------ */
+.sa-bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 312fr) minmax(0, 308fr) minmax(0, 204fr);
+    gap: 12px;
+    margin-top: 15px;
+    grid-auto-rows: 273px;
+}
+
+.sa-latest-table td, .sa-customers-table td { height: 38px; border-bottom-color: #f3f4f6; }
+.sa-latest-table .ix-row-title { font-size: 9.5px; line-height: 12px; }
+.sa-latest-table .ix-row-desc { font-size: 8.5px; line-height: 11px; }
+
+.sa-order-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.sa-order-icon .ix-svg { width: 12px; height: 12px; }
+
+.sa-recent-table td { border-bottom-color: #f3f4f6; }
+
+/* ------------------------------------------------------------------ */
+/* Listas (Ventas, Cotizaciones, Pedidos, Clientes): barra de           */
+/* herramientas y=99..143, chips y=163..190, tarjeta desde y=213        */
+/* ------------------------------------------------------------------ */
+.sa-list-page .sa-header { height: 99px; }
+.sa-list-page .sa-header .ix-search { width: 271px; }
+
+.sa-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    height: 44px;
+}
+
+.sa-toolbar-search {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    margin: 0;
+    padding: 0 12px 0 14px;
+    border-radius: 8px;
+}
+
+.sa-toolbar-search .ti { font-size: 15px; }
+.sa-toolbar-search input { font-size: 10.5px; }
+
+.sa-toolbar-actions { gap: 8px; flex-shrink: 0; }
+
+.sa-btn {
+    height: 38px;
+    padding: 0 16px;
+    gap: 8px;
+    border-radius: 7px;
+    font-size: 10.5px;
+}
+
+.sa-btn .ti { font-size: 13px; }
+.sa-btn.is-primary { font-weight: 600; }
+
+.sa-icon-btn {
+    width: 41px;
+    padding: 0;
+    justify-content: center;
+}
+
+.sa-toolbar-actions .sa-icon-btn:first-child { margin-right: 1px; }
+.sa-toolbar-actions .sa-icon-btn.is-primary { width: 47px; }
+
+.sa-filters {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin-top: 20px;
+}
+
+.sa-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 27px;
+    padding: 0 9px 0 10px;
+    border: 1px solid var(--ix-border);
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font: inherit;
+    font-size: 9.5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.sa-chip .ti { font-size: 12px; color: #6b7280; }
+.sa-chip-chevron { margin-left: 4px; font-size: 11px !important; }
+
+.sa-table-card {
+    min-height: 579px;
+    margin-top: 23px;
+}
+
+.sa-table-card .sa-table-wrap { padding: 0; }
+
+.sa-list-table {
+    --px-row: 44px;
+    font-size: 10.5px;
+}
+
+.sa-list-table th {
+    height: 46px;
+    padding: 0 8px;
+    font-size: 10px;
+    color: #374151;
+}
+
+.sa-list-table td { padding: 0 8px; }
+.sa-list-table th:first-child,
+.sa-list-table td:first-child { padding-left: 12px; }
+.sa-ref { font-weight: 600; color: #1f2937; }
+.sa-list-table .sa-badge { height: 22px; min-width: 78px; font-size: 9.5px; }
+
+/* Lista de ventas en vivo: formulario GET con la misma geometría (barra + chips + tabla). */
+.sa-list-form { flex-wrap: wrap; height: auto; min-height: 44px; row-gap: 20px; }
+.sa-list-form .sa-toolbar-search { height: 44px; }
+.sa-list-form .sa-list-filters { order: 3; flex-basis: 100%; margin-top: 0; flex-wrap: wrap; }
+.sa-list-form .sa-toolbar-actions a.px-btn { text-decoration: none; }
+.sa-list-form .sa-toolbar-actions:empty { display: none; }
+.sa-chip-field { cursor: default; }
+.sa-chip-field input,
+.sa-chip-field select { border: 0; outline: 0; background: transparent; font: inherit; font-size: 10.5px; color: inherit; min-width: 0; }
+.sa-chip-field:focus-within { border-color: var(--ix-blue); }
+.sa-list-filters .sa-btn { height: 27px; padding: 0 12px; font-size: 10px; text-decoration: none; }
+.sa-list-live-table .iv-icon-btn { display: inline-flex; text-decoration: none; }
+.sa-list-live-table td.is-center, .sa-list-live-table th.is-center { text-align: center; }
+
+.sa-table-card .sa-pagination { height: 98px; padding: 0 16px 0 12px; }
+.sa-table-card .sa-pagination-summary { font-size: 10px; }
+.sa-table-card .sa-pages { gap: 8px; }
+.sa-table-card .sa-pages .px-pg { min-width: 28px; height: 28px; font-size: 10px; }
+
+/* ------------------------------------------------------------------ */
+/* Variante índice (Cotizaciones, Pedidos; panel 1169x803): barra        */
+/* y=117..157, chips y=175..207, tarjeta y=231..784                      */
+/* ------------------------------------------------------------------ */
+.sa-index-page .sa-header { height: 117px; }
+.sa-index-page .sa-header .ix-search { width: 373px; }
+.sa-index-page .sa-toolbar,
+.sa-index-page .sa-toolbar-search { height: 40px; }
+.sa-index-page .sa-toolbar { gap: 13px; }
+.sa-index-page .sa-btn { height: 40px; }
+.sa-index-page .sa-toolbar-actions { gap: 17px; }
+.sa-index-page .sa-toolbar-actions .sa-icon-btn { width: 36px; margin-right: 0; }
+.sa-index-page .sa-toolbar-actions .sa-icon-btn .ti { font-size: 14px; }
+.sa-index-page .sa-toolbar-actions .sa-btn.is-primary { min-width: 185px; justify-content: center; }
+.sa-index-page .sa-filters { gap: 17px; margin-top: 18px; }
+.sa-index-page .sa-chip { height: 32px; padding: 0 16px 0 14px; gap: 10px; font-size: 10.5px; }
+.sa-index-page .sa-chip .ti { font-size: 13px; }
+.sa-index-page .sa-chip .sa-chip-chevron { margin-left: 16px; }
+.sa-index-page .sa-table-card { min-height: 553px; margin-top: 24px; }
+.sa-index-page .sa-list-table th { height: 45px; }
+.sa-index-page .sa-table-card .sa-pagination { height: 65px; padding: 0 31px 0 19px; }
+.sa-index-page .sa-table-card .sa-pages { gap: 17px; }
+.sa-th-icon { font-size: 12px; color: #9ca3af; vertical-align: middle; }
+.sa-index-table th:last-child,
+.sa-index-table td:last-child { padding: 0 4px 0 6px; }
+
+/* ------------------------------------------------------------------ */
+/* Clientes desde Ventas (panel 1159x443, recorte superior): botón       */
+/* y=81..116, búsqueda y=96..130, tarjeta y=145..430                     */
+/* ------------------------------------------------------------------ */
+.sa-customers-page .sa-header { height: 81px; }
+.sa-customers-page .sa-header .ix-search { width: 259px; }
+.sa-customers-page .sa-toolbar { height: 49px; align-items: stretch; }
+.sa-customers-page .sa-toolbar-search { flex: 0 0 364px; height: 34px; align-self: flex-end; padding-left: 12px; }
+.sa-customers-page .sa-toolbar-search .ti { font-size: 13px; }
+.sa-customers-page .sa-toolbar-actions { align-self: flex-start; }
+.sa-customers-page .sa-btn.is-primary { height: 35px; min-width: 157px; justify-content: center; }
+.sa-customers-page .sa-table-card { min-height: 285px; margin-top: 15px; }
+.sa-customers-table { --px-row: 36px; font-size: 10px; }
+.sa-customers-table th { height: 42px; font-size: 9.5px; }
+.sa-customers-table .sa-badge { height: 18px; min-width: 0; padding: 0 8px; font-size: 8.5px; }
+.sa-customers-page .sa-table-card .sa-pagination { height: 62px; padding: 0 20px 0 12px; }
+.sa-customers-page .sa-table-card .sa-pages { gap: 10px; }
+.sa-customers-page .sa-table-card .sa-pages .px-pg { min-width: 26px; height: 26px; }
+
+/* ------------------------------------------------------------------ */
+/* Nueva venta (panel a ~1005x845): acciones y=68..100, tarjetas         */
+/* superiores y=122..322, tarjeta de productos y=344..835                */
+/* ------------------------------------------------------------------ */
+.sa-new-page .sa-header { height: 68px; }
+.sa-new-page .sa-header .ix-search { width: 222px; height: 30px; }
+
+.sa-actionbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+}
+
+.sa-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 16px 0 14px;
+    border-radius: 7px;
+    background: #e9f1fe;
+    color: var(--ix-blue);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.sa-back .ti { font-size: 13px; }
+
+.sa-actionbar-actions { gap: 11px; }
+.sa-actionbar-actions .sa-btn { height: 32px; font-size: 10px; }
+.sa-actionbar-actions .sa-btn.is-ghost { border-color: transparent; background: transparent; color: #4b5563; margin-right: 4px; }
+.sa-actionbar-actions .sa-btn.is-ghost:hover { background: #f6f8fb; }
+.sa-actionbar-actions .sa-icon-btn { width: 44px; }
+
+.sa-new-top {
+    display: grid;
+    grid-template-columns: minmax(0, 374fr) minmax(0, 337fr);
+    gap: 12px;
+    margin-top: 22px;
+    grid-auto-rows: 200px;
+}
+
+.sa-form-card { padding: 16px 14px 14px; }
+
+.sa-form-title {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 20px;
+    color: #1f2937;
+}
+
+.sa-field-search {
+    width: auto;
+    height: 37px;
+    margin: 19px 0 0;
+    border-radius: 7px;
+}
+
+.sa-field-search .ti { font-size: 14px; }
+.sa-field-search input { font-size: 9.5px; }
+
+.sa-customer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 67px;
+    margin-top: 26px;
+    padding: 0 12px 0 11px;
+    border-radius: 8px;
+    background: #edf3fe;
+}
+
+.sa-customer-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    background: #d9e7fd;
+    color: var(--ix-blue);
+    flex-shrink: 0;
+}
+
+.sa-customer-icon .ix-svg { width: 16px; height: 16px; }
+.sa-customer .ix-row-title { font-size: 10.5px; line-height: 14px; }
+.sa-customer .ix-row-desc { font-size: 8.5px; line-height: 11px; color: #6b7280; }
+
+.sa-customer-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ix-blue);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.sa-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 148fr) minmax(0, 162fr);
+    column-gap: 19px;
+    row-gap: 12px;
+    margin-top: 16px;
+}
+
+.sa-field { display: flex; flex-direction: column; gap: 6px; }
+
+.sa-field-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    line-height: 12px;
+    color: #374151;
+}
+
+.sa-field-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 33px;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--ix-border);
+    border-radius: 7px;
+    background: #fff;
+    font-size: 10px;
+    color: #1f2937;
+    white-space: nowrap;
+}
+
+.sa-field-box .ti { font-size: 12px; color: #6b7280; }
+
+.sa-products-card {
+    min-height: 491px;
+    margin-top: 22px;
+    padding: 20px 14px 22px;
+}
+
+.sa-products-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 34px;
+    margin-top: 10px;
+}
+
+.sa-product-search {
+    width: 417px;
+    max-width: 100%;
+    height: 34px;
+    margin: 0;
+    border-radius: 7px;
+}
+
+.sa-product-search .ti { font-size: 13px; }
+.sa-product-search input { font-size: 9.5px; }
+.sa-search-chevron { margin-left: auto; font-size: 12px !important; }
+
+.sa-products-actions { gap: 16px; }
+.sa-products-actions .sa-btn { height: 34px; padding: 0 14px; font-size: 10px; }
+.sa-products-actions .sa-btn:not(.is-primary) { color: var(--ix-blue); border-color: #cfe0fb; }
+.sa-products-actions .sa-btn:not(.is-primary) .ti { color: var(--ix-blue); }
+
+.sa-lines {
+    margin-top: 14px;
+    border: 1px solid var(--ix-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.sa-lines-table {
+    --px-row: 70px;
+    font-size: 10px;
+}
+
+.sa-lines-table th {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 9.5px;
+    background: #f8f9fb;
+}
+
+.sa-lines-table td { padding: 0 8px; }
+.sa-lines-table th:first-child,
+.sa-lines-table td:first-child { padding-left: 12px; }
+.sa-lines-table .is-end { text-align: right; }
+.sa-lines-table tr:last-child td { border-bottom-color: transparent; }
+
+.sa-lines-table .sa-thumb { width: 30px; height: 30px; background: transparent; }
+.sa-lines-table .px-product { gap: 10px; }
+.sa-lines-table .px-product-name { font-size: 10px; line-height: 13px; }
+.sa-lines-table .px-product-sku { font-size: 8.5px; line-height: 11px; }
+
+.sa-qty,
+.sa-disc {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    height: 25px;
+    padding: 0 6px 0 10px;
+    border: 1px solid var(--ix-border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 10px;
+    color: #1f2937;
+}
+
+.sa-qty { width: 59px; }
+.sa-disc { border-color: transparent; padding-left: 0; }
+.sa-qty .ti, .sa-disc .ti { font-size: 11px; color: #6b7280; }
+
+.sa-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ix-red);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.sa-totals-bar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-top: 28px;
+}
+
+.sa-count {
+    font-size: 10px;
+    line-height: 14px;
+    color: #6b7280;
+}
+
+.sa-totals {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+    min-width: 214px;
+}
+
+.sa-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    line-height: 14px;
+    color: #4b5563;
+}
+
+.sa-total-row dt { font-weight: 500; }
+.sa-total-row dd { margin: 0; font-weight: 600; color: #1f2937; font-variant-numeric: tabular-nums; }
+.sa-total-row.is-total { font-size: 11.5px; line-height: 16px; font-weight: 700; color: #1f2937; }
+.sa-total-row.is-total dt { font-weight: 700; }
+
+/* ------------------------------------------------------------------ */
+/* Detalle de venta (panel 1183x759): acciones y=69..98, tarjetas        */
+/* y=110..381, pestañas y=415..445, tabla y=456..751                     */
+/* ------------------------------------------------------------------ */
+.sa-detail-page .sa-header { height: 110px; }
+.sa-detail-page .sa-header .ix-search { width: 358px; }
+.sa-detail-page .sa-header-side { gap: 25px; }
+.sa-detail-page .sa-header-actions { gap: 10px; margin-right: 12px; }
+.sa-detail-page .sa-header-actions .sa-btn { height: 29px; padding: 0 16px; font-size: 10px; }
+.sa-detail-page .sa-header-actions .sa-btn .ti { font-size: 12px; }
+.sa-detail-page .sa-header-actions .sa-btn .sa-btn-chevron { margin-left: 4px; font-size: 11px; color: #6b7280; }
+
+.sa-title-badge {
+    height: 17px;
+    min-width: 0;
+    padding: 0 9px;
+    border-radius: 5px;
+    font-size: 8.5px;
+    letter-spacing: 0;
+}
+
+.sa-detail-top {
+    display: grid;
+    grid-template-columns: minmax(0, 449fr) minmax(0, 431fr);
+    gap: 20px;
+    grid-auto-rows: 271px;
+}
+
+.sa-info-card { padding: 16px 18px 0; }
+
+.sa-info {
+    display: flex;
+    flex-direction: column;
+    margin: 20px 0 0;
+}
+
+.sa-info-row {
+    display: grid;
+    grid-template-columns: 202px minmax(0, 1fr);
+    align-items: start;
+    min-height: 34.5px;
+    font-size: 10px;
+    line-height: 14px;
+}
+
+.sa-info-row dt { color: #6b7280; font-weight: 500; }
+.sa-info-row dd { margin: 0; color: #1f2937; font-weight: 500; }
+.ix-body .sa-info-link { color: var(--ix-blue); font-weight: 600; }
+.sa-info-sub { display: block; font-size: 9px; line-height: 12px; color: #6b7280; }
+.sa-info-row .sa-badge { height: 18px; font-size: 8.5px; }
+
+.sa-totals-card { padding: 26px 18px 0 17px; }
+
+.sa-detail-totals {
+    min-width: 0;
+    gap: 17px;
+    margin-top: 22px;
+}
+
+.sa-grand-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 41px;
+    margin-top: 18px;
+    padding: 0 12px 0 10px;
+    border-radius: 7px;
+    background: #ecf3fe;
+    color: var(--ix-blue);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.sa-grand-total strong { font-size: 13px; font-weight: 700; }
+
+.sa-page .sa-tabs {
+    height: 30px;
+    margin: 34px 0 0;
+    border-bottom-color: #e5e7eb;
+}
+
+.sa-tabs a { padding: 0 28px; font-size: 12px; }
+.sa-tabs a:first-child { padding-left: 8px; }
+
+.sa-detail-table-card {
+    min-height: 295px;
+    margin-top: 11px;
+}
+
+.sa-detail-table-card .sa-table-wrap { padding: 0; }
+
+.sa-detail-table {
+    --px-row: 41.5px;
+    font-size: 10px;
+}
+
+.sa-detail-table th { height: 34px; padding: 0 8px; font-size: 9.5px; }
+.sa-detail-table td { padding: 0 8px; }
+.sa-detail-table th:first-child,
+.sa-detail-table td:first-child { padding-left: 8px; }
+/* En la referencia la columna Total va alineada a la izquierda, no al borde derecho. */
+.sa-detail-table th.is-end,
+.sa-detail-table td.is-end { padding-left: 18px; text-align: left; }
+.sa-detail-table .px-product { gap: 10px; }
+.sa-detail-table .sa-thumb { width: 18px; height: 18px; border-radius: 4px; background: transparent; }
+.sa-detail-table .px-product-name { font-size: 10px; font-weight: 500; }
+
+.sa-detail-table-card .sa-pagination { height: 43px; padding: 0 29px 0 8px; }
+.sa-detail-table-card .sa-pagination-summary { font-size: 9.5px; }
+.sa-detail-table-card .sa-pages { gap: 14px; }
+.sa-detail-table-card .sa-pages .px-pg { min-width: 26px; height: 26px; }
+
+/* ------------------------------------------------------------------ */
+/* Reportes de ventas (panel 1200x475, recorte superior): Exportar       */
+/* y=36..66, fechas y=88..118, pestañas y=139..169, KPI y=181..259,       */
+/* tendencia desde y=283                                                */
+/* ------------------------------------------------------------------ */
+.sa-reports-page .sa-header { height: 88px; }
+.sa-reports-page .sa-header-side { flex-direction: row; align-items: center; gap: 0; margin-top: 26px; }
+.sa-reports-page .sa-header-side .ix-header-actions { margin: 0 14px 0 0; }
+.sa-reports-page .sa-header-actions { order: -1; margin-right: 26px; }
+.sa-reports-page .sa-header-actions .sa-btn { height: 30px; padding: 0 12px; font-size: 10px; }
+.sa-reports-page .sa-header-actions .sa-btn .ti { font-size: 12px; }
+.sa-reports-page .sa-header-actions .sa-btn .sa-btn-chevron { margin-left: 2px; font-size: 11px; color: #6b7280; }
+.sa-reports-page .sa-dates { height: 30px; gap: 20px; }
+.sa-reports-page .sa-date { width: 256px; height: 30px; }
+.sa-reports-page .sa-compare { width: 263px; height: 30px; }
+.sa-page .sa-report-tabs { height: 30px; margin: 21px 0 0; }
+.sa-report-tabs a { padding: 0 26px; }
+.sa-report-tabs a:first-child { padding-left: 5px; }
+.sa-reports-page .iv-kpis { gap: 17px; margin-top: 12px; }
+.sa-reports-page .iv-kpis .ix-kpi { height: 78px; }
+
+.sa-trend-card { margin-top: 24px; padding-bottom: 14px; }
+
+.sa-trend-head {
+    display: flex;
+    align-items: center;
+    height: 44px;
+    padding: 6px 18px 0 16px;
+}
+
+.sa-trend-head .ix-card-title { font-size: 12px; }
+.sa-trend-head .sa-range { height: 27px; margin: 0; padding: 0 10px 0 12px; font-size: 9.5px; }
+
+.sa-page .sa-trend-legend {
+    height: auto;
+    margin: 0 253px 0 auto;
+    padding: 0;
+    gap: 24px;
+    font-size: 10px;
+}
+
+.sa-trend-legend .ix-swatch { position: relative; width: 26px; border-top-width: 2px; border-color: var(--ix-blue); }
+.sa-trend-legend .ix-swatch.is-gray { border-color: #4b6ea8; }
+.sa-trend-legend .ix-swatch::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -4px;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    border-radius: 50%;
+    background: currentColor;
+    color: var(--ix-blue);
+}
+.sa-trend-legend .ix-swatch.is-gray::after { color: #4b6ea8; }
+
+.sa-trend {
+    height: 142px;
+    margin: 4px 8px 0 4px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive                                                          */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1199.98px) {
+    /* Las tablas de Ventas son fluidas (colgroup); no heredan el mínimo de 900px de px-table. */
+    .sa-page .px-table { min-width: 0; }
+}
+
+@media (max-width: 1099.98px) {
+    .sa-page { padding: 0 16px 16px; }
+    .sa-header { height: auto; padding-bottom: 12px; }
+    .sa-charts, .sa-bottom, .sa-new-top, .sa-detail-top { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+    .sa-info-card, .sa-totals-card { padding-bottom: 16px; }
+    .sa-tabs { overflow-x: auto; }
+    .sa-products-bar { flex-wrap: wrap; height: auto; }
+    .sa-lines { overflow-x: auto; }
+    .sa-donut-body { flex-wrap: wrap; gap: 12px; padding-bottom: 12px; }
+    .sa-pay-card { min-height: 260px; }
+}
+
+@media (max-width: 899.98px) {
+    .sa-header { flex-wrap: wrap; }
+    .sa-header-side { align-items: flex-start; }
+    .sa-page .iv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sa-dates, .sa-filters { flex-wrap: wrap; height: auto; }
+    .sa-toolbar { flex-wrap: wrap; height: auto; }
+    .sa-toolbar-search { flex-basis: 100%; }
+    .sa-table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 639.98px) {
+    .sa-page .iv-kpis { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Modo normal (live): Nueva venta y Clientes conectados a la API.      */
+/* Misma geometría de referencia; solo se añaden controles reales.      */
+/* ------------------------------------------------------------------ */
+.sv-live { display: contents; }
+.sv-combo { position: relative; }
+.sv-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    max-height: 264px;
+    overflow-y: auto;
+    border: 1px solid var(--ix-border);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+.sv-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10.5px;
+    color: #1f2937;
+}
+.sv-option:not(.sv-option-product) { flex-direction: column; align-items: flex-start; gap: 2px; }
+.sv-option[aria-selected="true"], .sv-option:hover { background: #eef4ff; }
+.sv-option.is-out { opacity: 0.55; }
+.sv-option-text { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
+.sv-option-title, .sv-option-desc { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-option-title { font-weight: 600; }
+.sv-option-desc { font-size: 9.5px; color: #6b7280; }
+.sv-option-thumb { width: 30px; height: 30px; }
+.sv-option-stock { flex-shrink: 0; font-size: 9.5px; font-weight: 600; }
+.sv-option-stock.is-green { color: var(--ix-green); }
+.sv-option-stock.is-orange { color: var(--ix-orange, #d97706); }
+.sv-option-stock.is-red { color: var(--ix-red); }
+.sv-option-stock.is-gray { color: #6b7280; }
+.sv-list-empty { padding: 8px 10px; font-size: 10px; color: #6b7280; }
+
+.sv-feedback {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-size: 10.5px;
+    line-height: 14px;
+    border: 1px solid var(--ix-border);
+    background: #f8f9fb;
+    color: #374151;
+}
+.sv-feedback.is-success { background: var(--ix-green-soft); color: var(--ix-green); border-color: transparent; }
+.sv-feedback.is-error { background: #fdecec; color: var(--ix-red); border-color: transparent; }
+.sv-feedback.is-warning { background: #fff4e5; color: #b45309; border-color: transparent; }
+.sv-feedback[hidden] { display: none; }
+
+.sv-customer-empty { justify-content: center; margin-bottom: 0; font-size: 10px; color: #6b7280; }
+.sa-customer[hidden] { display: none; }
+.sa-customer .ix-row-text { min-width: 0; }
+.sa-customer .ix-row-title, .sa-customer .ix-row-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sa-field-box.sv-select {
+    width: 100%;
+    appearance: auto;
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+.sa-field-box.sv-select:focus-visible { outline: 2px solid var(--ix-blue); outline-offset: 1px; }
+
+.sa-lines-table .px-product-text { min-width: 0; flex: 1; }
+.sa-lines-table .px-product-sku { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-lines-table .is-end { white-space: nowrap; }
+.sv-input.sa-qty, .sv-input.sa-disc { display: inline-block; padding: 0 6px; font: inherit; font-size: 10px; }
+.sv-input.sa-disc { width: 64px; border-color: var(--ix-border); }
+.sv-percent { position: relative; display: inline-flex; align-items: center; }
+.sv-percent::after { content: '%'; position: absolute; right: 8px; font-size: 9.5px; color: #6b7280; pointer-events: none; }
+.sv-input.sa-disc { padding-right: 18px; }
+.sv-input[aria-invalid="true"] { border-color: var(--ix-red); color: var(--ix-red); }
+.sv-empty { margin: 0; padding: 22px 12px; text-align: center; font-size: 10.5px; color: #6b7280; }
+.sv-empty[hidden] { display: none; }
+.sa-btn:disabled, .px-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.sa-actionbar-actions .sa-btn.is-ghost:disabled { opacity: 0.55; }
+
+.sa-customers-table td > .sa-ref, .sa-customers-table td > .sa-muted { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-customers-page .sa-pagination .px-pg:disabled { opacity: 0.4; cursor: default; }
+
+.sv-drawer {
+    width: 420px;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0 0 0 auto;
+    padding: 20px 22px;
+    border: 0;
+    border-left: 1px solid var(--ix-border);
+    background: #fff;
+    color: #1f2937;
+    font: 12px/1.4 Inter, Arial, sans-serif;
+    box-shadow: 0 18px 45px rgba(28, 39, 52, 0.16);
+}
+.sv-drawer:not([open]) { display: none; }
+.sv-drawer::backdrop { background: rgba(45, 59, 78, 0.45); }
+.sv-drawer form { display: flex; flex-direction: column; gap: 14px; height: 100%; }
+.sv-drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sv-drawer-head h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; }
+.sv-drawer-close { border: 0; background: transparent; color: #647184; padding: 4px; cursor: pointer; font-size: 16px; }
+.sv-field { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 600; color: #374151; }
+.sv-field input, .sv-field select {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--ix-border);
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 400;
+    font-size: 11.5px;
+    color: #1f2937;
+    background: #fff;
+}
+.sv-field input:focus-visible, .sv-field select:focus-visible, .sv-input:focus-visible, .sv-list:focus-visible { outline: 2px solid var(--ix-blue); outline-offset: 1px; }
+.sv-drawer-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--ix-border); }
+
+/* Misma geometría de validación que ?ref=1 (precedente en ix_inventory.css): sin gutter de scrollbar. */
+html:has(.sa-new-page .sv-live, .sa-customers-page #cu-body, .sa-index-page .sv-live) {
+    scrollbar-width: none;
+}
+html:has(.sa-new-page .sv-live, .sa-customers-page #cu-body, .sa-index-page .sv-live)::-webkit-scrollbar {
+    display: none;
+}
+
+/* ---- Cotizaciones / Pedidos live (ix_sales_docs_live.js) y selector de productos compartido ---- */
+.sv-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-table tbody[aria-busy="true"] { opacity: 0.6; }
+.sv-status-select {
+    width: 100%; max-width: 150px; height: 26px; padding: 0 6px; font: inherit; font-size: 10px;
+    color: #374151; background: #fff; border: 1px solid var(--ix-border); border-radius: 6px;
+}
+.sv-status-select:focus-visible { outline: 2px solid var(--ix-blue); outline-offset: 1px; }
+.sa-toolbar .is-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.spl-product .ix-thumb, .ql-product .ix-thumb, .ol-product .ix-thumb { flex-shrink: 0; width: 36px; height: 40px; border-radius: 5px; background: #f4f5f7; }
+.ql-product .ix-thumb { width: 42px; height: 42px; }
+.ol-product .ix-thumb { width: 32px; height: 36px; }
+.spl-product-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spl-list input[aria-invalid="true"] { border-color: var(--ix-red); }
+.ql-layer .sv-combo, .ol-layer .sv-combo { position: relative; }
+/* Los iconos (lupa + chevron) de la referencia estaban pensados para <select>; en el combobox live no se repiten. */
+.ql-layer .sv-combo input[type="search"], .ol-layer .sv-combo input[type="search"] { background-repeat: no-repeat; appearance: none; }
+.ql-layer .sv-list, .ol-layer .sv-list { top: 100%; margin-top: 2px; }
+.ql-layer .sv-list li, .ol-layer .sv-list li { font-size: 11px; }
+.ql-layer input[readonly], .ol-layer input[readonly], .ql-layer select:disabled, .ol-layer select:disabled, .ol-layer input:disabled, .ol-layer textarea:disabled { color: #6b7280; background: #f7f8fb; cursor: default; }
+
+/* ---- Pedidos: metadatos en tabla (prioridad, pago), menú de acciones, detalle y diálogos compactos ---- */
+.ov-table { table-layout: fixed; width: 100%; }
+.ov-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-table .sa-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.ov-actions-head, .ov-actions { text-align: center; }
+.ov-dots {
+    display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0;
+    color: #6b7280; background: transparent; border: 0; border-radius: 6px; cursor: pointer;
+}
+.ov-dots svg { width: 18px; height: 18px; }
+.ov-dots:hover, .ov-dots[aria-expanded="true"] { color: #202b3d; background: #eef2f7; }
+.ov-dots:focus-visible { outline: 2px solid var(--ix-blue); outline-offset: 1px; }
+.ol-menu { width: 224px; }
+.ol-menu button { color: #202b3d; }
+.ol-menu button:hover:not(:disabled), .ol-menu button:focus-visible { background: #f2f5fa; }
+.ol-menu button.is-danger { color: var(--ix-red); }
+.ol-menu hr { margin: 4px 0; border: 0; border-top: 1px solid #eceef2; }
+.ol-compact { width: 400px; }
+.ol-compact .ol-more-header { margin-bottom: 14px; }
+.ol-compact .ol-footer { padding-top: 18px; }
+.ol-compact .ol-footer .ol-button { min-width: 110px; }
+.ol-radios { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.ol-layer .ol-radio { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid #e7e9ee; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.ol-radio:has(input:checked) { border-color: #246fda; background: #eff6ff; }
+.ol-layer .ol-radio input { width: 16px; height: 16px; margin: 0; padding: 0; display: inline-block; accent-color: #246fda; }
+.ol-detail-grid { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 6px 14px; margin: 0 0 14px; }
+.ol-detail-grid dt { color: #7b8290; font-size: 11px; }
+.ol-detail-grid dd { margin: 0; font-size: 12px; min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
+#ol-detail .ol-product-table th:first-child { width: 46%; }
+#ol-detail .ol-product-table th:nth-child(3) { width: 16%; }
+#ol-detail .ol-product-table th:last-child { width: 20%; }
+#ol-detail .ol-product-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ol-detail .ol-product > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ol-layer textarea { resize: vertical; }

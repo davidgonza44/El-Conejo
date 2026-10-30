@@ -1,0 +1,46 @@
+{# Modal LIVE "Generar solicitud de reposición" (clases rl-* de
+   ix_replenishment_layers.css). Crea UNA solicitud sin precios vía POST {{ live_view.order_url }} solo
+   tras la confirmación explícita del usuario (predictive_order.js). Nunca se crea al analizar.
+   Inventario ve únicamente producto, stock, cantidad sugerida, prioridad y motivo: sin montos. #}
+{% macro o_icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="M18 6 6 18M6 6l12 12"/>{% else %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h5M8 17h8"/>{% endif %}
+</svg>
+{%- endmacro %}
+<dialog id="rl-order" class="rl-dialog rl-order" aria-labelledby="rl-order-title"
+        data-order-url="{{ live_view.order_url }}" data-csrf="{{ csrf_token() }}"
+        data-purchases-url="{{ url_for('purchases.requests') }}">
+<header class="rl-header">
+    <h2 id="rl-order-title" tabindex="-1">Generar solicitud de reposición</h2>
+    <p>Confirma los productos y cantidades sugeridas. No incluye precios ni genera la orden de compra.</p>
+    <button type="button" class="rl-close" data-order-close aria-label="Cerrar generar solicitud de reposición">{{ o_icon('x') }}</button>
+</header>
+<form id="rl-order-form" method="dialog" novalidate>
+<div class="rl-order-body">
+<section class="rl-card rl-products">
+<h3>Productos incluidos (<span id="rl-order-count">0</span>)</h3>
+<div class="rl-table-scroll" role="region" aria-label="Productos seleccionados" tabindex="0">
+<table>
+    <thead><tr><th scope="col">Producto</th><th scope="col">Stock</th><th scope="col">Cantidad<br>sugerida</th><th scope="col">Prioridad</th><th scope="col">Motivo</th></tr></thead>
+    <tbody id="rl-order-lines"></tbody>
+</table>
+</div>
+</section>
+<section class="rl-card">
+<h3>Notas (opcional)</h3>
+<div class="rl-grid">
+    <label class="rl-field rl-wide">Notas para el asistente
+        <textarea id="rl-notes" name="notes" maxlength="500" placeholder="Agrega notas o instrucciones para quien prepara la compra..."></textarea>
+        <span id="rl-note-count" class="rl-counter">0/500</span>
+    </label>
+</div>
+</section>
+<p id="rl-order-error" class="rl-error" role="alert" hidden></p>
+</div>
+<footer class="rl-footer">
+    <button type="button" class="rl-button" data-order-close>Cancelar</button>
+    <button type="submit" class="rl-button rl-primary" id="rl-order-submit">{{ o_icon('file') }}Generar solicitud</button>
+</footer>
+</form>
+</dialog>
+<p id="rl-feedback" class="rl-feedback" role="status" hidden></p>

@@ -1,0 +1,103 @@
+{# Capas de Pedidos (drawer Nuevo/Editar pedido, rango de fechas, estado, Más filtros, menú de
+   acciones, detalle, cambio de estado / estado de pago). Con `fixture` (solo ?ref=1): valores
+   desechables, sin red. Sin fixture: ix_orders_live.js conecta la misma geometría a /api/orders.
+   Prioridad, estado de pago (Pendiente/Pagado), teléfono, dirección y notas se persisten por pedido;
+   IVA y pagos parciales no existen en el backend: se omiten, nunca se inventan. #}
+{% macro icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="m18 6-12 12M6 6l12 12"/>
+{% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{% elif name == 'filter' %}<path d="M4 3h16v2l-6 7v7l-4 2v-9L4 5z"/>
+{% elif name == 'save' %}<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2ZM7 3v6h10V3M7 21v-8h10v8"/>
+{% elif name == 'reset' %}<path d="M3 11a9 9 0 1 1 2.4 7M3 4v7h7"/>
+{% endif %}</svg>
+{%- endmacro %}
+{% macro select(id, label, placeholder, options, required=False) %}
+<label>{{ label }}{% if required %}<em>*</em>{% endif %}<select id="{{ id }}" {% if required %}required{% endif %}>{% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}{% for option in options %}{% if option is string %}<option>{{ option }}</option>{% else %}<option value="{{ option[0] }}">{{ option[1] }}</option>{% endif %}{% endfor %}</select></label>
+{% endmacro %}
+{% macro combo(id, label, placeholder, required=False) %}
+<label class="sv-combo">{{ label }}{% if required %}<em>*</em>{% endif %}<input id="{{ id }}" type="search" placeholder="{{ placeholder }}" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="{{ id }}-list" autocomplete="off"><ul class="sv-list" id="{{ id }}-list" role="listbox" hidden></ul><input type="hidden" id="{{ id }}-id" value=""></label>
+{% endmacro %}
+{% set priorities = [('low','Baja'),('medium','Media'),('high','Alta'),('urgent','Urgente')] %}
+{% set payment_statuses = [('pending','Pendiente'),('paid','Pagado')] %}
+{% if fixture %}{% set clients = fixture.rows|map(attribute=2)|unique|list %}
+<script id="ol-fixture" type="application/json">{{ fixture.rows|tojson }}</script>{% endif %}
+<dialog id="ol-drawer" class="ol-layer ol-drawer" aria-labelledby="ol-new-title" aria-describedby="ol-new-desc">
+ <header class="ol-header"><h2 id="ol-new-title">Nuevo pedido</h2><p id="ol-new-desc">Registra un nuevo pedido de cliente</p><button class="ol-close" data-ol-close aria-label="Cerrar Nuevo pedido">{{ icon('x') }}</button></header>
+ <form id="ol-order-form" class="ol-order-body"{% if not fixture %} novalidate{% endif %}>
+  <h3>Información del pedido</h3>
+  <div class="ol-grid">
+   {% if fixture %}{{ select('ol-customer','Cliente',None,clients,True) }}
+   <label>Fecha del pedido <em>*</em><input id="ol-order-date" class="ol-date-input" inputmode="numeric" placeholder="dd/mm/aaaa" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" value="31/05/2024" required></label>
+   <label>Entrega estimada <em>*</em><input id="ol-order-delivery" class="ol-date-input" inputmode="numeric" placeholder="dd/mm/aaaa" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" value="07/06/2024" required></label>
+   {{ select('ol-order-status','Estado',None,['Pendiente','En proceso','Completado','Cancelado'],True) }}
+   {{ select('ol-order-priority','Prioridad',None,['Normal','Alta','Baja']) }}
+   <label>Teléfono / Contacto<input type="tel" value="0414 123 4567"></label>
+   <label class="ol-wide">Dirección de entrega<input value="Av. Principal, Urb. Industrial, Valencia"></label>
+   <label class="ol-wide">Notas adicionales<textarea rows="2">Incluir factura electrónica. Entregar en horario de oficina.</textarea></label>
+   {% else %}{{ combo('ol-customer','Cliente','Buscar y seleccionar un cliente...',True) }}
+   <label>Fecha del pedido <em>*</em><input id="ol-order-date" class="ol-date-input" value="{{ commercial_today.split('-')|reverse|join('/') }}" readonly title="La fija el servidor (hora de Venezuela)."></label>
+   <label>Entrega estimada <em>*</em><input id="ol-order-delivery" type="date" min="{{ commercial_today }}" value="{{ commercial_today }}" required></label>
+   {{ select('ol-order-status','Estado',None,[('pending','Pendiente'),('processing','En proceso')],True) }}
+   {{ select('ol-order-priority','Prioridad',None,priorities,True) }}
+   {{ select('ol-order-payment','Estado de pago',None,payment_statuses,True) }}
+   <label class="ol-wide">Teléfono / Contacto<input id="ol-order-phone" type="tel" maxlength="30" placeholder="Ej. 0414 123 4567" autocomplete="off"></label>
+   <label class="ol-wide">Dirección de entrega<input id="ol-order-address" maxlength="255" placeholder="Calle, urbanización, ciudad..." autocomplete="off"></label>
+   <label class="ol-wide">Notas adicionales<textarea id="ol-order-notes" rows="2" maxlength="500" placeholder="Instrucciones de entrega u observaciones"></textarea></label>
+   {% endif %}
+  </div>
+  <section class="ol-products"><div class="ol-section-heading"><h3>Productos</h3><button type="button" class="ol-button ol-soft" id="ol-add">{{ icon('plus') }}Agregar producto</button></div>
+   {% if fixture %}<div id="ol-add-controls" hidden><label>Producto<select id="ol-catalog"><option value="0">Cemento Gris 42.5 kg</option><option value="1">Tubo PVC 1/2&quot; x 3m</option></select></label><button type="button" class="ol-button" id="ol-add-confirm">Agregar</button></div>{% endif %}
+   <div class="ol-product-table"><table><thead><tr><th>Producto</th><th>Precio unitario</th><th>Cantidad</th><th>Subtotal</th><th><span class="ol-sr">Eliminar</span></th></tr></thead><tbody id="ol-products"></tbody></table></div>
+   <div class="ol-summary"><h4>Resumen del pedido</h4><dl><div><dt id="ol-subtotal-label">Subtotal (2 productos)</dt><dd id="ol-subtotal"></dd></div>{% if fixture %}<div><dt>IVA (16%)</dt><dd id="ol-tax"></dd></div>{% endif %}<div class="ol-total"><dt>Total</dt><dd id="ol-total"></dd></div></dl></div>
+  </section><p id="ol-order-error" role="status"></p>
+ </form>
+ <footer class="ol-footer"><button class="ol-button" data-ol-close>Cancelar</button><button type="submit" form="ol-order-form" class="ol-button ol-primary" id="ol-save">{{ icon('save') }}Guardar pedido</button></footer>
+</dialog>
+<section id="ol-dates" class="ol-layer ol-dates" role="dialog" aria-label="Seleccionar rango de fechas" hidden>
+ <div class="ol-date-body"><nav class="ol-quick" aria-label="Accesos rápidos">{% for label in ['Hoy','Últimos 7 días','Últimos 30 días','Este mes','Mes pasado','Rango personalizado'] %}<button type="button" data-ol-quick="{{ loop.index0 }}">{{ label }}</button>{% endfor %}</nav><div id="ol-calendars" class="ol-calendars"></div></div>
+ <footer class="ol-footer"><span id="ol-range" aria-live="polite"></span><button class="ol-button" data-ol-close>Cancelar</button><button class="ol-button ol-primary" id="ol-date-apply">Aplicar</button></footer>
+</section>
+<section id="ol-status" class="ol-layer ol-status" role="listbox" aria-label="Estado del pedido" hidden></section>
+<dialog id="ol-more" class="ol-layer ol-more" aria-labelledby="ol-more-title" aria-describedby="ol-more-desc">
+ <header class="ol-header ol-more-header"><span class="ol-heading-icon">{{ icon('filter') }}</span><div><h2 id="ol-more-title">Más filtros</h2><p id="ol-more-desc">Refina la búsqueda de pedidos con múltiples criterios</p></div><button class="ol-close" data-ol-close aria-label="Cerrar Más filtros">{{ icon('x') }}</button></header>
+ <form id="ol-filter-form"{% if not fixture %} novalidate{% endif %}><div class="ol-grid">
+  {% if fixture %}{{ select('ol-filter-client','Cliente','Seleccionar cliente...',clients) }}
+  {{ select('ol-filter-product','Producto','Seleccionar producto...',['Cemento Gris 42.5 kg','Tubo PVC 1/2" x 3m']) }}
+  {{ select('ol-filter-seller','Vendedor','Seleccionar vendedor...',['Administrador','María Pérez']) }}
+  {{ select('ol-filter-priority','Prioridad','Todas las prioridades',['Normal','Alta','Baja']) }}
+  {% else %}{{ combo('ol-filter-client','Cliente','Buscar o seleccionar cliente...') }}
+  {{ combo('ol-filter-product','Producto','Buscar o seleccionar producto...') }}
+  {{ select('ol-filter-seller','Vendedor','Todos los vendedores',[]) }}
+  {{ select('ol-filter-priority','Prioridad','Todas las prioridades',priorities) }}
+  {% endif %}
+  <fieldset><legend>Rango de entrega</legend><div class="ol-pair"><input id="ol-filter-from" type="date" aria-label="Fecha desde"><span>–</span><input id="ol-filter-to" type="date" aria-label="Fecha hasta"></div></fieldset>
+  {% if fixture %}{{ select('ol-filter-payment','Estado de pago','Todos los estados',['Pendiente','Parcial','Pagado']) }}
+  {% else %}{{ select('ol-filter-payment','Estado de pago','Todos los estados de pago',payment_statuses) }}{% endif %}
+  <fieldset><legend>Cantidad de productos</legend><div class="ol-pair"><input id="ol-filter-min" type="number" min="0" step="1" placeholder="Mínimo" aria-label="Mínimo"><input id="ol-filter-max" type="number" min="0" step="1" placeholder="Máximo" aria-label="Máximo"></div></fieldset>
+ </div><p id="ol-filter-error" role="status"></p>
+ <footer class="ol-footer"><button type="button" class="ol-button ol-reset" id="ol-reset">{{ icon('reset') }}Limpiar filtros</button><button type="button" class="ol-button" data-ol-close>Cancelar</button><button type="submit" class="ol-button ol-primary">Aplicar filtros</button></footer></form>
+</dialog>
+{% if not fixture %}
+<section id="ol-menu" class="ol-layer ol-status ol-menu" role="menu" aria-label="Acciones del pedido" hidden></section>
+<dialog id="ol-detail" class="ol-layer ol-drawer" aria-labelledby="ol-detail-title">
+ <header class="ol-header"><h2 id="ol-detail-title">Detalle del pedido</h2><p id="ol-detail-desc"></p><button class="ol-close" data-ol-close aria-label="Cerrar detalle">{{ icon('x') }}</button></header>
+ <div class="ol-order-body"><dl id="ol-detail-fields" class="ol-detail-grid"></dl>
+  <h3>Productos</h3>
+  <div class="ol-product-table"><table><thead><tr><th>Producto</th><th>Precio unitario</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody id="ol-detail-lines"></tbody></table></div>
+  <div class="ol-summary"><h4>Resumen del pedido</h4><dl><div><dt>Subtotal</dt><dd id="ol-detail-subtotal"></dd></div><div class="ol-total"><dt>Total</dt><dd id="ol-detail-total"></dd></div></dl></div>
+ </div>
+ <footer class="ol-footer"><button class="ol-button" data-ol-close>Cerrar</button></footer>
+</dialog>
+{% for id, title, field in [('state', 'Cambiar estado', 'status'), ('payment', 'Cambiar estado de pago', 'payment_status')] %}
+<dialog id="ol-{{ id }}" class="ol-layer ol-more ol-compact" aria-labelledby="ol-{{ id }}-title">
+ <form id="ol-{{ id }}-form" novalidate>
+  <header class="ol-header ol-more-header"><div><h2 id="ol-{{ id }}-title">{{ title }}</h2><p id="ol-{{ id }}-desc"></p></div><button type="button" class="ol-close" data-ol-close aria-label="Cerrar {{ title|lower }}">{{ icon('x') }}</button></header>
+  <fieldset id="ol-{{ id }}-options" class="ol-radios"><legend class="ol-sr">{{ title }}</legend></fieldset>
+  <p id="ol-{{ id }}-error" role="status"></p>
+  <footer class="ol-footer"><button type="button" class="ol-button" data-ol-close>Cancelar</button><button type="submit" class="ol-button ol-primary" id="ol-{{ id }}-save">Actualizar</button></footer>
+ </form>
+</dialog>
+{% endfor %}
+{% endif %}
+<p id="ol-notice" class="ol-notice" role="status" hidden></p>

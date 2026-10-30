@@ -1,0 +1,96 @@
+{% extends "ix_base.html" %}
+{% import "purchases/_icons.html" as st %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "replenishment_requests" %}
+{% set sidebar_variant = "purchases" %}
+{% set f = view.filters %}
+{% set p = view.pagination %}
+{% block title %}Solicitudes de reposición · El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_purchases.css') }}">{% endblock %}
+{% block main_class %} po-page sr-page{% endblock %}
+{% block main %}
+<div class="sr-content">
+<header class="po-header">
+  <div>
+    <h1 class="ix-title">Solicitudes de reposición</h1>
+    <p class="ix-subtitle">Pedidos internos de inventario. No son órdenes de compra y no mueven el stock.</p>
+  </div>
+  <div class="po-header-side">
+    <div class="ix-header-actions">
+      <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">{{ st.icon('menu') }}</button>
+      {{ iv.shell_chrome(reference_mode, 'Buscar solicitudes, productos...') }}
+    </div>
+  </div>
+</header>
+<form id="sr-filters" class="po-card po-filters sr-filters" method="get" action="/purchases/requests" aria-label="Buscar solicitudes de reposición">
+  {% if reference_mode %}<input type="hidden" name="ref" value="1">{% endif %}
+  <input type="hidden" name="per_page" value="{{ p.per_page }}">
+  <div class="sr-search-field">
+    <label for="sr-search">Buscar solicitud o producto</label>
+    <div class="sr-search-control">{{ st.icon('search') }}
+      <input id="sr-search" type="search" name="search" value="{{ f.search }}" placeholder="Código SR o nombre del producto">
+    </div>
+  </div>
+  <div>
+    <label for="sr-status">Estado</label>
+    <select id="sr-status" name="status">
+      <option value="">Todos</option>
+      {% for item in view.statuses %}<option value="{{ item.value }}"{{ ' selected' if f.status == item.value }}>{{ item.label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div><label for="sr-start-date">Fecha inicio</label><input id="sr-start-date" type="date" name="start" value="{{ f.start }}" aria-describedby="sr-filter-error sr-server-error"></div>
+  <div><label for="sr-end-date">Fecha fin</label><input id="sr-end-date" type="date" name="end" value="{{ f.end }}" aria-describedby="sr-filter-error sr-server-error"></div>
+  <div class="sr-filter-actions">
+    <button type="submit" class="po-btn is-primary">{{ st.icon('filter') }}Aplicar filtros</button>
+    <a class="po-clear" href="/purchases/requests{{ '?ref=1' if reference_mode else '' }}">{{ st.icon('refresh') }}Limpiar filtros</a>
+  </div>
+  <p id="sr-filter-error" class="sr-filter-error" role="alert" hidden></p>
+  <p id="sr-server-error" class="sr-filter-error" role="alert"{% if not view.filter_error %} hidden{% endif %}>{{ view.filter_error or '' }}</p>
+</form>
+<section class="po-card" aria-labelledby="sr-list-title">
+  <div class="po-card-heading"><h2 id="sr-list-title">Solicitudes{% if not view.filter_error %}<span class="sr-result-count">{{ p.total }}</span>{% endif %}</h2><span class="sr-scope">{{ 'Mis solicitudes' if not show_creator else 'Solicitudes de inventario' }}</span></div>
+  <div class="po-table-scroll">
+    <table class="po-table sr-table">
+      <colgroup>
+        <col class="sr-col-number">
+        {% if show_creator %}<col class="sr-col-creator">{% endif %}
+        <col class="sr-col-date"><col class="sr-col-status"><col class="sr-col-origin"><col><col class="sr-col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          {% for title in ['Solicitud'] + (['Creada por'] if show_creator else []) + ['Fecha', 'Estado', 'Origen', 'Productos', 'Acciones'] %}
+          <th scope="col">{{ title }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in view['items'] %}
+        <tr>
+          <td class="sr-number-cell" data-label="Solicitud"><a class="po-number" href="/purchases/requests/{{ row.id }}{{ '?ref=1' if reference_mode else '' }}">{{ row.request_number }}</a></td>
+          {% if show_creator %}<td data-label="Creada por">{{ row.creator.name or '—' }}</td>{% endif %}
+          <td data-label="Fecha">{% if row.created_on %}{{ row.created_on[8:10] }}/{{ row.created_on[5:7] }}/{{ row.created_on[:4] }}{% else %}—{% endif %}</td>
+          <td data-label="Estado"><span class="po-badge sr-badge is-{{ row.status }}">{{ 'Convertida en OC' if row.status == 'fulfilled' else row.status_label }}</span></td>
+          <td data-label="Origen">{{ row.origin_label }}</td>
+          <td class="sr-products-cell" data-label="Productos">{{ row['items']|map(attribute='product_name')|join(', ') }}</td>
+          <td class="sr-action-cell" data-label="Acciones"><a class="po-icon-btn" href="/purchases/requests/{{ row.id }}{{ '?ref=1' if reference_mode else '' }}" aria-label="Ver detalle de {{ row.request_number }}" title="Ver detalle de {{ row.request_number }}">{{ st.icon('eye') }}</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ 7 if show_creator else 6 }}" class="po-empty">{% if view.filter_error %}Corrija los filtros para consultar las solicitudes.{% else %}<strong>No hay solicitudes con estos filtros.</strong><span>Pruebe con otro estado, búsqueda o rango de fechas.</span>{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <footer class="po-pagination">
+    <span>{% if view.filter_error %}Revise los filtros indicados.{% else %}Mostrando {{ p.from }} a {{ p.to }} de {{ p.total }} solicitudes{% endif %}</span>
+    {% if not view.filter_error %}
+    <nav aria-label="Paginación de solicitudes">
+      {% if p.page > 1 %}<a href="/purchases/requests?{{ view.query }}&amp;page={{ p.page - 1 }}" aria-label="Página anterior">‹</a>{% else %}<span aria-disabled="true">‹</span>{% endif %}
+      {% for n in p.numbers %}{% if n %}<a href="/purchases/requests?{{ view.query }}&amp;page={{ n }}"{{ ' aria-current=page' if n == p.page }}>{{ n }}</a>{% else %}<span>…</span>{% endif %}{% endfor %}
+      {% if p.page < p.pages %}<a href="/purchases/requests?{{ view.query }}&amp;page={{ p.page + 1 }}" aria-label="Página siguiente">›</a>{% else %}<span aria-disabled="true">›</span>{% endif %}
+    </nav>
+    {% endif %}
+  </footer>
+</section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/ix_replenishment_requests.js') }}"></script>{% endblock %}

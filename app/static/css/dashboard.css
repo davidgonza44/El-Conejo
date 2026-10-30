@@ -1,0 +1,339 @@
+/* Ajustes visuales sobre Tabler.
+   Lenguaje visual aprobado (references/README.md): fondo claro, sidebar
+   claro, azul como color principal, tarjetas blancas, bordes suaves y
+   esquinas redondeadas. Geometría tomada de references/01_inicio (1600x900). */
+
+:root {
+    --dash-dark-blue: #1d3d5f;
+    --dash-gold: #d9a521;
+    --app-bg: #f5f6f8;
+    --app-border: #e6e8ee;
+    --app-text: #1c2536;
+    --app-muted: #6b7484;
+    --app-primary: #2563eb;
+    --app-primary-soft: #e8effd;
+    --app-radius: 12px;
+    --app-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 1px 6px rgba(15, 23, 42, 0.03);
+    --app-gap: 1rem;
+    --tblr-page-padding: 1.5rem;
+}
+
+/* Tabler desplaza :root el ancho de la barra de scroll (≥992px); con un
+   sidebar fijo eso separa el contenido del sidebar. Se anula. */
+html {
+    margin-left: 0 !important;
+}
+
+body {
+    background-color: var(--app-bg);
+    color: var(--app-text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar claro (compartido por todas las páginas)                     */
+/* ------------------------------------------------------------------ */
+.page {
+    --tblr-sidebar-width: 15rem;
+}
+
+.app-sidebar {
+    background-color: #fff !important;
+    border-right: 1px solid var(--app-border);
+    overflow-y: auto !important;
+}
+
+@media (min-width: 992px) {
+    .app-sidebar.navbar-expand-lg {
+        width: var(--tblr-sidebar-width);
+    }
+}
+
+.navbar-vertical.app-sidebar .navbar-brand {
+    padding: 1.375rem 1.375rem 1.25rem;
+    margin: 0;
+}
+
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--app-text);
+}
+
+/* El logo oficial va en una baldosa de 44px, como el icono de la referencia. */
+.app-brand-logo {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0.2rem;
+    border: 1px solid var(--app-border);
+    border-radius: 0.625rem;
+    background-color: #fff;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.app-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.app-brand-name {
+    font-weight: 700;
+    font-size: 1.0625rem;
+    white-space: nowrap;
+}
+
+.app-brand-sub {
+    font-size: 0.75rem;
+    color: var(--app-muted);
+    white-space: nowrap;
+}
+
+.app-sidebar .navbar-nav {
+    padding-top: 0.75rem !important;
+}
+
+.app-nav-section {
+    list-style: none;
+    padding: 0.75rem 1.5rem 0.25rem;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #98a2b3;
+}
+
+/* Misma especificidad que la regla de padding de Tabler para el sidebar. */
+.app-sidebar.navbar-vertical.navbar-expand-lg .navbar-collapse .navbar-nav .nav-link {
+    padding: 0 0.75rem;
+}
+
+.app-sidebar .nav-link {
+    color: #3f4b5f;
+    border-radius: 0.625rem;
+    margin: 0 0.75rem 0.3125rem;
+    min-height: 2.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.app-sidebar .nav-link-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-right: 0.9375rem !important;
+    font-size: 1.125rem;
+    color: #64748b;
+}
+
+.app-sidebar .nav-link:hover {
+    background-color: #f3f6fa;
+    color: var(--app-text);
+}
+
+.app-sidebar .nav-item.active .nav-link {
+    background-color: var(--app-primary-soft);
+    color: var(--app-primary);
+    font-weight: 600;
+}
+
+.app-sidebar .nav-item.active .nav-link-icon {
+    color: var(--app-primary);
+}
+
+.navbar-vertical .nav-link.disabled {
+    opacity: 0.55;
+}
+
+.app-sidebar .nav-link:focus-visible {
+    outline: 2px solid var(--app-primary);
+    outline-offset: 2px;
+}
+
+.app-sidebar .navbar-toggler {
+    border-color: var(--app-border);
+}
+
+.app-sidebar-footer {
+    padding: 0.75rem 0.875rem 1.5rem;
+}
+
+.app-user-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--app-border);
+    border-radius: 0.75rem;
+    color: var(--app-text);
+    text-decoration: none;
+}
+
+.app-user-card:hover {
+    background-color: #f3f6fa;
+}
+
+.app-user-avatar {
+    width: 2.125rem;
+    height: 2.125rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.app-user-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    line-height: 1.25;
+}
+
+.app-user-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-user-meta {
+    font-size: 0.6875rem;
+    color: var(--app-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-user-chevron {
+    color: var(--app-muted);
+}
+
+/* Cabecera superior: título de página a la izquierda, acciones a la derecha. */
+.app-topbar {
+    background-color: var(--app-bg);
+    border-bottom: 0;
+    min-height: 0;
+    padding: 1.25rem 0 1.125rem;
+}
+
+/* Las acciones se alinean con la línea del título, no con el bloque completo. */
+.app-topbar > .container-fluid,
+.app-topbar > .container-xl {
+    align-items: flex-start;
+}
+
+.app-topbar-title {
+    min-width: 0;
+}
+
+.app-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--app-text);
+    line-height: 1.15;
+}
+
+.app-page-subtitle {
+    font-size: 0.8125rem;
+    color: var(--app-muted);
+    margin-top: 0.125rem;
+}
+
+.app-topbar .navbar-nav {
+    min-height: 2rem;
+}
+
+.app-topbar .btn-sm {
+    border-radius: 0.5rem;
+}
+
+.page-body {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Clases compartidas (dashboard, inventario, notas, predicciones)      */
+/* ------------------------------------------------------------------ */
+.kpi-card .card-body {
+    padding: 0.9rem 1rem;
+}
+
+.kpi-icon {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--dash-dark-blue);
+}
+
+.kpi-label {
+    font-size: 0.78rem;
+    color: var(--tblr-secondary, #6c757d);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-card.kpi-warning .kpi-value {
+    color: #b26a00;
+}
+
+.kpi-card.kpi-gold .kpi-value {
+    color: var(--dash-gold);
+}
+
+/* Altura fija de los gráficos para un grid ordenado y responsive. */
+.chart-holder {
+    position: relative;
+    height: 300px;
+}
+
+/* Mensaje de "Sin datos" o error dentro de la tarjeta del gráfico. */
+.widget-msg {
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tblr-secondary, #6c757d);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Tablas: evitar celdas gigantes con nombres largos. */
+.card-table td {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+    .kpi-value {
+        font-size: 1.1rem;
+    }
+
+    .chart-holder,
+    .widget-msg {
+        height: 240px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .app-page-title {
+        font-size: 1.25rem;
+    }
+}

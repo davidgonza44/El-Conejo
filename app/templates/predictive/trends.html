@@ -1,0 +1,130 @@
+{% extends "predictive/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% set active_page = "trends" %}
+{# Referencia (?ref=1): fixture.states[trend_state]. LIVE: live_view (demanda OBSERVADA: ventana actual vs.
+   anterior; "Patrón detectado" describe la serie, nunca causas externas). #}
+{% set state = fixture.states[trend_state] if fixture else live_view %}
+{% set live = None if fixture else live_view %}
+{% set is_all = trend_state == "all" %}
+
+{% block title %}Tendencias — Análisis predictivo{% endblock %}
+
+{% block main %}
+{{ px.header("Tendencias", state.subtitle if fixture else "Identifica productos con crecimiento, descenso o demanda estable para tomar mejores decisiones.",
+             "Tendencias", fixture.search_placeholder if fixture else "", "Actualizar análisis", reference_mode=reference_mode, live=live) }}
+
+{{ px.kpis(state.kpis) }}
+
+<div class="px-body is-from-filters">
+    <div class="px-main">
+        {% if live %}
+        {{ px.filters(state.filters, fill=True, live=live) }}
+        {% else %}
+        {{ px.filters({"search": "Buscar producto por nombre o código...",
+                       "selects": [("Categoría", "Todas"), ("Tendencia", state.trend_filter)],
+                       "date": ("Período de análisis", "Últimos 30 días"), "clear": False}, fill=True) }}
+        {% endif %}
+
+        <nav class="px-tabs" aria-label="Estados de tendencia">
+            {% if live %}
+            {% for key, label, href in state.tabs %}
+            <a href="{{ href }}"{% if key == trend_state %} aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            {% else %}
+            {% for key, label in fixture.tabs %}
+            <a href="{{ url_for('pages.trends', trend=key) }}&ref=1"{% if key == trend_state %} aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            {% endif %}
+        </nav>
+
+        <section class="ix-card px-table-card is-trends" aria-labelledby="trends-title">
+            <h2 class="px-card-title" id="trends-title">{{ state.table_title }}</h2>
+            <div class="px-table-wrap px-responsive-table" tabindex="0" role="region" aria-label="Tabla de tendencias">
+                <table class="px-table{{ ' is-dense' if is_all }}">
+                    <colgroup>
+                        {% if is_all %}
+                        <col style="width: 230px"><col style="width: 98px"><col style="width: 77px"><col style="width: 78px">
+                        <col style="width: 83px"><col style="width: 67px"><col style="width: 123px"><col style="width: 91px"><col>
+                        {% else %}
+                        <col style="width: 240px"><col style="width: 98px"><col style="width: 105px"><col style="width: 97px">
+                        <col style="width: 129px"><col style="width: 161px"><col>
+                        {% endif %}
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Producto</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Ventas<br><span class="px-th-sub">(período actual)</span></th>
+                            {% if is_all %}<th scope="col">Ventas<br><span class="px-th-sub">(período anterior)</span></th>{% endif %}
+                            <th scope="col">Variación</th>
+                            {% if is_all %}<th scope="col">Tendencia</th>{% endif %}
+                            <th scope="col">Tendencia (últimos {{ state.period or 30 }} días)</th>
+                            <th scope="col">{{ "Patrón detectado" if live else "Posible causa" }}</th>
+                            <th scope="col" class="is-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set cols = 9 if is_all else 7 %}
+                        {% for r in state.rows %}
+                        {% set flat = r.tone == "gray" or trend_state == "stable" %}
+                        {% set spark = "flat" if flat else ("up" if r.tone == "green" else "down") %}
+                        {% set spark_color = "#1570ef" if flat else ("#22c55e" if r.tone == "green" else "#ef4444") %}
+                        <tr>
+                            <td>{{ px.product_cell(r.p, wrap=True) }}</td>
+                            <td><span class="px-text-clamp" title="{{ r.cat }}">{{ r.cat }}</span></td>
+                            <td>{{ r.sales }}</td>
+                            {% if is_all %}<td>{{ r.prev }}</td>{% endif %}
+                            <td><span class="px-variation tone-{{ r.tone }}">{% if r.tone != "gray" and trend_state != "stable" %}{{ px.arrow("up" if r.tone == "green" else "down") }}{% endif %}{{ r.variation }}</span></td>
+                            {% if is_all %}<td>{{ px.badge(r.badge) }}</td>{% endif %}
+                            <td><svg class="px-spark" data-spark="{{ spark }}" data-color="{{ spark_color }}"{% if r.spark is defined %} data-points='{{ r.spark | tojson }}'{% endif %} aria-hidden="true"></svg></td>
+                            <td class="px-wrap"><span class="px-text-clamp" title="{{ r.cause }}">{{ r.cause }}</span></td>
+                            <td class="is-actions">{{ px.actions_cell(r) }}</td>
+                        </tr>
+                        {% else %}
+                        {{ px.empty_rows(state.state, cols) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {{ px.pagination(state.pagination) }}
+        </section>
+    </div>
+
+    <aside class="px-aside" aria-label="Resumen de tendencias">
+        <article class="ix-card px-aside-card px-chart-card">
+            <h2 class="px-card-title">Evolución de ventas por categoría</h2>
+            <div class="px-chart-body">
+                {% if state.chart.series %}
+                <div class="px-chart" data-category-chart='{{ state.chart | tojson }}'>
+                    <canvas role="img" aria-label="Evolución de ventas por categoría"></canvas>
+                </div>
+                <ul class="px-chart-legend">
+                    {% for s in state.chart.series %}
+                    <li><span class="px-dot tone-{{ s.tone }}"></span>{{ s.label }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="px-chart-empty">Sin demanda observada en el período para graficar.</p>
+                {% endif %}
+            </div>
+        </article>
+
+        <article class="ix-card px-aside-card px-top">
+            <h2 class="px-card-title">{{ state.top.title }}</h2>
+            <ol class="px-top-list">
+                {% for p, value in state.top.rows %}
+                <li>
+                    <span class="px-top-rank">{{ loop.index }}</span>
+                    {{ px.product_cell(p) }}
+                    <span class="px-top-value px-variation tone-{{ state.top.tone }}">{{ px.arrow(state.top.arrow) }}{{ value }}</span>
+                </li>
+                {% else %}
+                <li class="px-top-empty">Sin productos clasificados.</li>
+                {% endfor %}
+            </ol>
+        </article>
+
+        {{ px.info_card("Información", state.info) }}
+    </aside>
+</div>
+{% endblock %}

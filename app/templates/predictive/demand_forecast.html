@@ -1,0 +1,109 @@
+{% extends "predictive/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% set active_page = "demand_forecast" %}
+{% set compras_open = reference_mode %}
+{# Referencia (?ref=1): fixture determinista. LIVE: live_view calculado por predictive_controller. #}
+{% set v = fixture if fixture else live_view %}
+{% set live = None if fixture else live_view %}
+
+{% block title %}Pronóstico de demanda — Análisis predictivo{% endblock %}
+
+{% block head %}
+{{ super() }}
+{% if not reference_mode %}<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive_sources.css') }}">{% endif %}
+{% endblock %}
+
+{% block main_class %} px-page ds-page ds-forecast{% endblock %}
+
+{% block main %}
+{{ px.header("Pronóstico de demanda",
+             "Predice la demanda futura y toma mejores decisiones de abastecimiento",
+             None, fixture.search_placeholder if fixture else "", "Actualizar modelo", reference_mode=reference_mode, live=live) }}
+{% if not reference_mode %}
+{% with current_source='operational' %}{% include "predictive/_source_selector.html" %}{% endwith %}
+{% endif %}
+
+<div class="px-forecast">
+{# WAPE es una métrica de error del backtest: la nota evita leerla como porcentaje de precisión. #}
+{{ px.kpis(v.kpis, outline=True, notes={"Error del modelo (WAPE)": "Error del backtest: menor es mejor."}) }}
+{{ px.filters(v.filters, live=live) }}
+
+<div class="px-body is-from-filters">
+    <div class="px-main">
+        <section class="ix-card px-table-card is-forecast" aria-labelledby="forecast-title">
+            <div class="px-card-head">
+                <h2 class="px-card-title" id="forecast-title">{{ v.table_title }}</h2>
+                {{ px.link(v.top.link, v.top.link_href) }}
+            </div>
+            <div class="px-table-wrap px-responsive-table" tabindex="0" role="region" aria-label="Tabla de pronóstico de demanda">
+                <table class="px-table is-tall">
+                    <colgroup>
+                        {% for col in ['product', 'category', 'stock', 'demand', 'risk', 'suggestion', 'actions'] %}<col class="c-{{ col }}">{% endfor %}
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Producto</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Stock actual</th>
+                            <th scope="col">Demanda estimada<span class="px-th-sub">Próx. {{ v.horizon or 30 }} días</span></th>
+                            <th scope="col">Riesgo</th>
+                            <th scope="col">Sugerencia</th>
+                            <th scope="col" class="is-actions"><span class="px-visually-hidden">Acciones</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in v.rows %}
+                        <tr>
+                            <td>
+                                {{ px.product_cell(r.p, wrap=True) }}
+                                {% if r.demand_pattern is defined and r.prediction_status is defined %}
+                                <small class="px-text-clamp">Patrón: {{ r.demand_pattern }} · Experimental: {{ r.prediction_status }}</small>
+                                {% endif %}
+                            </td>
+                            <td data-label="Categoría"><span class="px-text-clamp">{{ r.cat }}</span></td>
+                            <td data-label="Stock actual"><span class="px-cell-2"><strong>{{ r.stock }}</strong><small class="tone-{{ r.stock_state[1] }}">{{ r.stock_state[0] }}</small></span></td>
+                            <td data-label="Demanda estimada · próx. {{ v.horizon or 30 }} días"><span class="px-cell-2"><strong>{{ r.demand }}</strong><small>{{ r.delta }}</small></span></td>
+                            <td data-label="Riesgo"><span class="px-cell-2">{{ px.badge(r.risk) }}<small>{{ r.risk_note }}</small></span></td>
+                            <td data-label="Sugerencia"><span class="ds-suggestion">{% if r.buy %}<strong>{{ r.buy }}</strong>{% endif %}<small>{{ r.when }}</small></span></td>
+                            <td class="is-actions">{{ px.actions_cell(r) }}</td>
+                        </tr>
+                        {% else %}
+                        {{ px.empty_rows(v.state, 7) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {{ px.pagination(v.pagination) }}
+        </section>
+    </div>
+
+    <aside class="px-aside" aria-label="Resumen del pronóstico">
+        {{ px.donut_card(v.donut, "forecast-donut", "is-short") }}
+        <article class="ix-card px-aside-card px-top is-compact">
+            <h2 class="px-card-title">{{ v.top.title }}</h2>
+            <span class="px-toggle" role="group" aria-label="Horizonte">
+                {% for t in v.top.toggle %}
+                {% if t is string %}<span{% if loop.first %} class="is-active"{% endif %}>{{ t }}</span>
+                {% elif t[1] %}<a href="{{ t[1] }}">{{ t[0] }}</a>
+                {% else %}<span class="is-active" aria-current="true">{{ t[0] }}</span>{% endif %}
+                {% endfor %}
+            </span>
+            <ol class="px-top-list">
+                {% for name, pct, value in v.top.rows %}
+                <li>
+                    <span class="px-top-rank">{{ loop.index }}</span>
+                    <span class="px-top-name">{{ name }}</span>
+                    <span class="px-bar" aria-hidden="true"><span style="width: {{ pct }}%"></span></span>
+                    <span class="px-top-value">{{ value }}</span>
+                </li>
+                {% else %}
+                <li class="px-top-empty">{{ 'Pronóstico no disponible.' if live and live.computation_status in ('error', 'unavailable', 'expired') else 'Pronóstico pendiente.' if live and live.computation_status != 'ready' else 'Sin productos con pronóstico.' }}</li>
+                {% endfor %}
+            </ol>
+            {{ px.link(v.top.link, v.top.link_href) }}
+        </article>
+        {{ px.model_info_card(v.model_info, with_icon=False) }}
+    </aside>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,204 @@
+{# Macros del módulo Inventario (ix_inventory.css). Los datos llegan desde
+   app/utils/inventory_reference.py (modo referencia) y las macros solo dibujan. #}
+{% import "predictive/_macros.html" as px %}
+
+{# Glifos rellenos que la webfont de Tabler no ofrece con el trazo de la referencia. #}
+{% set SVG = {
+    "cube": '<path d="M12 2.4 3.2 6.8v10.4L12 21.6l8.8-4.4V6.8z"/><path d="M3.2 6.8 12 11.2l8.8-4.4M12 11.2v10.4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>',
+    "alert-triangle": '<path d="M10.3 3.6 2.2 17.9A2 2 0 0 0 3.9 21h16.2a2 2 0 0 0 1.7-3.1L13.7 3.6a2 2 0 0 0-3.4 0z"/><path d="M12 9v5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="#fff"/>',
+    "cart": '<circle cx="9" cy="20" r="1.8"/><circle cx="17.5" cy="20" r="1.8"/><path d="M2 3h2.6l2.9 11.4a1.6 1.6 0 0 0 1.6 1.2h9.2a1.6 1.6 0 0 0 1.5-1.1L22 7H6.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M6.4 7.3h15l-1.8 7H8.2z"/>',
+    "x-circle": '<circle cx="12" cy="12" r="10"/><path d="m8.6 8.6 6.8 6.8M15.4 8.6l-6.8 6.8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
+    "users": '<circle cx="9" cy="8" r="3.6"/><path d="M2.2 19.4c0-3.5 3-6.3 6.8-6.3s6.8 2.8 6.8 6.3v.6H2.2z"/><circle cx="17" cy="9" r="2.9"/><path d="M16.9 20c0-2.5-.9-4.7-2.5-6.3.8-.4 1.7-.6 2.6-.6 2.8 0 5 2.1 5 4.7V20z"/>',
+    "tag": '<path d="M3 3h8.6a2 2 0 0 1 1.4.6l8.4 8.4a2 2 0 0 1 0 2.8l-6.6 6.6a2 2 0 0 1-2.8 0L3.6 13A2 2 0 0 1 3 11.6z"/><circle cx="8" cy="8" r="1.8" fill="#fff"/>',
+    "star": '<path d="m12 2.6 2.9 6 6.5.9-4.7 4.5 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.6 9.5l6.5-.9z"/>',
+    "transfer": '<path d="M4 8.5h13.5l-3-3M20 15.5H6.5l3 3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+    "adjust": '<path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="9" cy="7" r="2.3" fill="#fff" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="12" r="2.3" fill="#fff" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="17" r="2.3" fill="#fff" stroke="currentColor" stroke-width="2"/>',
+    "download": '<path d="M12 3v11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m7.5 10 4.5 4.5L16.5 10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    "upload": '<path d="M12 14V3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    "building": '<path d="M4 21V5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V21z"/><path d="M16 10h3a1 1 0 0 1 1 1v10h-4z"/><path d="M7 8h2M11 8h2M7 12h2M11 12h2M7 16h2M11 16h2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>',
+    "box": '<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>',
+    "wrench": '<path d="M20.5 6.4a5 5 0 0 1-6.3 6.3L7.4 19.5a2 2 0 0 1-2.9-2.9l6.8-6.8a5 5 0 0 1 6.3-6.3l-2.9 2.9 2.9 2.9z"/>',
+    "shield": '<path d="M12 2.2 4 5.4v5.8c0 4.6 3.4 8.6 8 10.6 4.6-2 8-6 8-10.6V5.4z"/><path d="m9 12 2 2 4-4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    "dots": '<circle cx="6" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18" cy="12" r="2"/>',
+    "bolt": '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+    "hammer": '<path d="m4 20 7.5-7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M13.5 3.5 20.5 10.5 17 14 10 7z"/>',
+    "star-o": '<path d="m12 2.6 2.9 6 6.5.9-4.7 4.5 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.6 9.5l6.5-.9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+    "cube-o": '<path d="M12 2.4 3.2 6.8v10.4L12 21.6l8.8-4.4V6.8zM3.2 6.8 12 11.2l8.8-4.4M12 11.2v10.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+    "home": '<path d="M3.5 11 12 3.6l8.5 7.4V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/>',
+    "user": '<circle cx="12" cy="7.5" r="4.2"/><path d="M4 20.5c0-3.9 3.6-6.8 8-6.8s8 2.9 8 6.8z"/>',
+} %}
+
+{% macro icon(name) -%}
+{%- if name.startswith("svg:") -%}
+<svg viewBox="0 0 24 24" fill="currentColor" class="ix-svg" aria-hidden="true">{{ SVG[name[4:]] | safe }}</svg>
+{%- else -%}
+<i class="ti {{ name }}" aria-hidden="true"></i>
+{%- endif -%}
+{%- endmacro %}
+
+{# ---- Cabecera: título/subtítulo + búsqueda/campana (+ acciones a la derecha) ---- #}
+{# ---- Búsqueda global + campana de la cáscara compartida. Referencia: maqueta estática
+   (insignia "3"); vivo: combobox y panel reales que llena ix_shell.js desde /api/shell. ---- #}
+{% macro shell_chrome(reference_mode, placeholder, search=True, search_class="", chevron=False) %}
+{% if reference_mode %}
+{% if search %}
+<label class="ix-search{{ ' ' ~ search_class if search_class }}">
+    <i class="ti ti-search" aria-hidden="true"></i>
+    <input type="search" placeholder="{{ placeholder }}" aria-label="Buscar">
+    {% if chevron %}<i class="ti ti-chevron-down sa-search-chevron" aria-hidden="true"></i>{% endif %}
+</label>
+{% endif %}
+<button type="button" class="ix-bell" aria-label="Notificaciones: 3 sin leer">
+    <i class="ti ti-bell" aria-hidden="true"></i>
+    <span class="ix-bell-badge" aria-hidden="true">3</span>
+</button>
+{% else %}
+<div class="ix-search-wrap" id="ix-global-search">
+    <label class="ix-search{{ ' ' ~ search_class if search_class }}">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        {# Ventas está retirada para todos los roles: el texto solo nombra los grupos que la búsqueda devuelve. #}
+        {% set search_scope = (['productos'] if has_permission('products:read') else []) + (['clientes'] if has_permission('customers:read') else []) %}
+        <input type="search" id="ix-search-input" placeholder="Buscar {{ search_scope | join(' y ') if search_scope else 'en el sistema' }}..." aria-label="Búsqueda global"
+               role="combobox" aria-expanded="false" aria-controls="ix-search-results" aria-autocomplete="list" autocomplete="off">
+    </label>
+    <div class="ix-search-results" id="ix-search-results" role="listbox" aria-label="Resultados de búsqueda" hidden></div>
+</div>
+<div class="ix-bell-wrap">
+    <button type="button" class="ix-bell" id="ix-bell" aria-label="Alertas de inventario" aria-haspopup="dialog" aria-expanded="false" aria-controls="ix-bell-panel">
+        <i class="ti ti-bell" aria-hidden="true"></i>
+        <span class="ix-bell-badge" id="ix-bell-badge" hidden></span>
+    </button>
+    <div class="ix-bell-panel" id="ix-bell-panel" role="dialog" aria-label="Alertas de inventario" hidden>
+        <p class="ix-bell-title">Alertas de inventario</p>
+        <ul class="ix-bell-list" id="ix-bell-list"><li class="ix-bell-empty">Cargando…</li></ul>
+        <a class="ix-bell-footer" id="ix-bell-all" href="{{ url_for('pages.products', status='bajo_stock') }}">Ver todas</a>
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro header(title, subtitle, placeholder, actions=[], reference_mode=True, chrome=None) %}
+<header class="ix-header iv-header{{ ' has-actions' if actions }}">
+    <div class="iv-heading">
+        <h1 class="ix-title">{{ title }}</h1>
+        <p class="ix-subtitle">{{ subtitle }}</p>
+    </div>
+    <div class="iv-header-side">
+        <div class="ix-header-actions">
+            <button type="button" class="ix-menu-toggle" id="ix-menu-toggle"
+                    aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">
+                <i class="ti ti-menu-2" aria-hidden="true"></i>
+            </button>
+            {% if chrome is none or chrome %}{{ shell_chrome(reference_mode, placeholder) }}{% endif %}
+        </div>
+        {% if actions %}
+        <div class="px-actions iv-actions">{{ buttons(actions) }}</div>
+        {% endif %}
+    </div>
+</header>
+{% endmacro %}
+
+{# Botones de acción: lista de (etiqueta, icono, primario). #}
+{% macro buttons(actions) -%}
+{%- for label, ico, primary in actions -%}
+<button type="button" class="px-btn{{ ' is-primary' if primary }}"><i class="ti {{ ico }}" aria-hidden="true"></i>{{ label }}</button>
+{%- endfor -%}
+{%- endmacro %}
+
+{# ---- Tarjetas KPI (misma geometría que Inicio: icono redondo, valor + variación, línea secundaria) ---- #}
+{% macro kpis(items) %}
+<section class="ix-grid ix-kpis iv-kpis" aria-label="Indicadores">
+    {% for k in items %}
+    <article class="ix-card ix-kpi" title="{{ k.label }}: {{ k.value }}">
+        <span class="ix-kpi-icon tone-{{ k.tone }}{{ ' is-plain' if k.solid == 'plain' else (' is-solid' if k.solid) }}" aria-hidden="true">{{ icon(k.icon) }}</span>
+        <div class="ix-kpi-body">
+            <p class="ix-kpi-label">{{ k.label }}</p>
+            <p class="ix-kpi-line">
+                <span class="ix-kpi-value"{% if k.value_id %} id="{{ k.value_id }}"{% endif %}>{{ k.value }}</span>
+                {% if k.trend %}
+                <span class="ix-trend is-{{ k.trend_tone }}">{% if k.arrow %}<i class="ti ti-arrow-{{ k.arrow }}" aria-hidden="true"></i>{% elif k.arrow is none %}<i class="ti ti-minus" aria-hidden="true"></i>{% endif %}{{ k.trend }}</span>
+                {% elif k.trend_id %}
+                <span class="ix-trend is-gray" id="{{ k.trend_id }}" hidden></span>
+                {% endif %}
+            </p>
+            {% if k.sub or k.sub_trend or k.sub_id %}
+            <p class="ix-kpi-sub"{% if k.sub_id %} id="{{ k.sub_id }}"{% endif %}>{% if k.sub_trend %}<span class="ix-trend is-green"><i class="ti ti-arrow-up" aria-hidden="true"></i>{{ k.sub_trend }}</span>{% endif %}{{ k.sub or "" }}</p>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endmacro %}
+
+{# ---- Dona con leyenda (paleta de Inicio; la dibuja ix_inventory.js) ---- #}
+{% macro donut_card(d, id, extra_class="") %}
+<article class="ix-card iv-donut-card{{ ' ' ~ extra_class if extra_class }}">
+    <div class="ix-card-head iv-card-head"><h2 class="ix-card-title">{{ d.title }}</h2></div>
+    <div class="iv-donut-body">
+        <div class="iv-donut" data-donut='{{ d["items"] | map(attribute=3) | list | tojson }}' data-tones='{{ d["items"] | map(attribute=2) | list | tojson }}'>
+            <canvas id="{{ id }}" role="img" aria-label="{{ d.title }}"></canvas>
+            <div class="ix-donut-center">
+                <span class="ix-donut-value">{{ d.center_value }}</span>
+                <span class="ix-donut-label">{{ d.center_label }}</span>
+            </div>
+        </div>
+        <ul class="ix-legend iv-legend iv-card-scroll-body">
+            {% for name, sub, tone, _ in d["items"] %}
+            <li><span class="ix-legend-dot iv-dot-{{ tone }}"></span><span class="ix-legend-text"><span class="ix-legend-name" title="{{ name }}">{{ name }}</span>{% if sub %}<span class="ix-legend-sub">{{ sub }}</span>{% endif %}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+</article>
+{% endmacro %}
+
+{# href: destino real (modo vivo); sin href el enlace es decorativo (referencia). #}
+{% macro card_head(title, link=None, id=None, href=None) %}
+<div class="ix-card-head iv-card-head">
+    <h2 class="ix-card-title"{% if id %} id="{{ id }}"{% endif %}>{{ title }}</h2>
+    {% if link and href %}<a href="{{ href }}" class="ix-link-btn">{{ link }}</a>
+    {% elif link %}<a href="#" class="ix-link-btn" aria-disabled="true">{{ link }}</a>{% endif %}
+</div>
+{% endmacro %}
+
+{# Miniatura real (p.src, puede faltar) o recorte de referencia (p.thumb). #}
+{% macro thumb_img(p) -%}
+{%- if p.src %}<img src="{{ p.src }}" alt="">{% elif p.thumb %}<img src="{{ url_for('static', filename=p.thumb) }}" alt="">{% endif -%}
+{%- endmacro %}
+
+{# Miniatura + nombre (+ SKU opcional) #}
+{% macro product(p, sku=False) %}
+<div class="px-product iv-product">
+    <span class="ix-thumb px-thumb">{{ thumb_img(p) }}</span>
+    <span class="px-product-text">
+        <span class="px-product-name" title="{{ p.name }}">{{ p.name }}</span>
+        {% if sku and p.sku %}<span class="px-product-sku">{{ p.sku }}</span>{% endif %}
+    </span>
+</div>
+{% endmacro %}
+
+{# Iconos de acción de fila: ver / editar / más #}
+{% macro row_actions(edit=True) %}
+<div class="iv-row-actions">
+    <button type="button" class="iv-icon-btn" aria-label="Ver detalle"><i class="ti ti-eye" aria-hidden="true"></i></button>
+    {% if edit %}<button type="button" class="iv-icon-btn" aria-label="Editar"><i class="ti ti-pencil" aria-hidden="true"></i></button>{% endif %}
+    <button type="button" class="iv-icon-btn" aria-label="Más acciones"><i class="ti ti-dots-vertical" aria-hidden="true"></i></button>
+</div>
+{% endmacro %}
+
+{% macro footer(f) %}
+<footer class="iv-footer">
+    <span>{{ f[0] }}</span>
+    <span>{{ f[1] }}</span>
+</footer>
+{% endmacro %}
+
+{# ---- Modo normal: la pantalla aún no dispone de datos en la aplicación ---- #}
+{% macro unavailable(title) %}
+<section class="ix-card px-unavailable" aria-live="polite">
+    <i class="ti ti-database-search" aria-hidden="true"></i>
+    <h2 class="px-card-title">{{ title }} no disponible</h2>
+    <p>Esta vista todavía no cuenta con datos propios en la aplicación. Consulta los
+       <a href="{{ url_for('pages.inventory') }}">movimientos de inventario</a> o el
+       <a href="{{ url_for('pages.products') }}">catálogo de productos</a>.</p>
+</section>
+{% endmacro %}

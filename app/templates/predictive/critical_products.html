@@ -1,0 +1,102 @@
+{% extends "predictive/_page.html" %}
+{% import "predictive/_macros.html" as px %}
+{% set active_page = "critical_products" %}
+{# Referencia (?ref=1): fixture. LIVE: riesgo operativo siempre (stock vs. mínimo) y riesgo
+   predictivo (cobertura) solo con pronóstico; la vista dice qué pudo calcular. #}
+{% set v = fixture if fixture else live_view %}
+{% set live = None if fixture else live_view %}
+
+{% block title %}Productos críticos — Análisis predictivo{% endblock %}
+
+{% block main %}
+{{ px.header("Productos críticos",
+             "Identifica productos en riesgo de quiebre, con bajo stock o alta rotación para tomar acciones inmediatas.",
+             "Productos críticos", fixture.search_placeholder if fixture else "", "Actualizar análisis", reference_mode=reference_mode, live=live) }}
+
+{{ px.kpis(v.kpis) }}
+{{ px.filters(v.filters, live=live) }}
+
+<div class="px-body is-from-filters" style="--px-aside: 357px">
+    <div class="px-main">
+        <section class="ix-card px-table-card is-critical" aria-labelledby="critical-title">
+            <h2 class="px-card-title" id="critical-title">{{ v.table_title }}
+                {% if live and not live.predictive_available %}<span class="px-title-note">Riesgo operativo (sin pronóstico)</span>{% endif %}
+            </h2>
+            <div class="px-table-wrap px-responsive-table" tabindex="0" role="region" aria-label="Tabla de productos críticos">
+                <table class="px-table is-dense" style="--px-row: 44px">
+                    <colgroup>
+                        <col style="width: 208px"><col style="width: 90px"><col style="width: 70px"><col style="width: 70px">
+                        <col style="width: 92px"><col style="width: 72px"><col style="width: 72px"><col style="width: 104px"><col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Producto</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Stock<br><span class="px-th-sub">actual</span></th>
+                            <th scope="col">Stock<br><span class="px-th-sub">mínimo</span></th>
+                            <th scope="col">Demanda estimada<br><span class="px-th-sub">({{ v.horizon or 30 }} días)</span></th>
+                            <th scope="col">Días de<br><span class="px-th-sub">cobertura</span></th>
+                            <th scope="col">Nivel de<br><span class="px-th-sub">riesgo</span></th>
+                            <th scope="col">Motivo</th>
+                            <th scope="col" class="is-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in v.rows %}
+                        <tr>
+                            <td>{{ px.product_cell(r.p, wrap=True) }}</td>
+                            <td><span class="px-text-clamp" title="{{ r.cat }}">{{ r.cat }}</span></td>
+                            <td><strong class="tone-{{ r.stock_tone or 'red' }}">{{ r.stock }}</strong></td>
+                            <td>{{ r.minimum }}</td>
+                            <td class="px-wrap">{{ r.demand }}{% if live and r.forecast_reason %}
+                                <small class="px-title-note" tabindex="0" aria-label="Motivo: {{ r.forecast_reason }}" title="Este producto no dispone de un pronóstico válido para el horizonte seleccionado. {{ r.forecast_reason }}">Ver motivo</small>
+                                {% endif %}</td>
+                            <td class="px-wrap{% if r.cover_tone %} tone-{{ r.cover_tone }}{% endif %}">{{ r.cover }}</td>
+                            <td>{{ px.badge(r.risk) }}</td>
+                            <td class="px-wrap"><span class="px-text-clamp" tabindex="0" title="{{ r.reasons|join('; ') if live else r.motive }}">{{ r.motive }}</span></td>
+                            <td class="is-actions">{{ px.actions_cell(r) }}</td>
+                        </tr>
+                        {% else %}
+                        {{ px.empty_rows(v.state, 9) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {{ px.pagination(v.pagination) }}
+        </section>
+    </div>
+
+    <aside class="px-aside" aria-label="Resumen de criticidad">
+        {{ px.donut_card(v.donut, "critical-donut") }}
+        <article class="ix-card px-aside-card px-top is-risk">
+            <h2 class="px-card-title">{{ v.top.title }}</h2>
+            <ol class="px-top-list">
+                {% for t in v.top.rows %}
+                <li>
+                    <span class="px-top-rank">{{ loop.index }}</span>
+                    <span class="px-product">
+                        <span class="ix-thumb px-thumb"><i class="ti ti-package" aria-hidden="true"></i>{% import "inventory/_macros.html" as iv %}{{ iv.thumb_img(t.p) }}</span>
+                        <span class="px-product-text">
+                            <span class="px-product-name">{{ t.p.name }}</span>
+                            <span class="px-product-sku tone-{{ t.badge[1] }}">{{ t.sub }}</span>
+                        </span>
+                    </span>
+                    {{ px.badge(t.badge) }}
+                </li>
+                {% else %}
+                <li class="px-top-empty">Sin productos en riesgo.</li>
+                {% endfor %}
+            </ol>
+        </article>
+        <article class="px-info">
+            {{ px.icon("svg:info") }}
+            <div>
+                <h2 class="px-card-title">{{ v.recommendation.title }}</h2>
+                <p>{{ v.recommendation.text }}</p>
+                {% if v.recommendation.link %}<a href="{{ v.recommendation.link }}" class="px-link">{{ v.recommendation.link_text }} <i class="ti ti-arrow-right" aria-hidden="true"></i></a>
+                {% else %}<a href="#" class="px-link" aria-disabled="true">{{ v.recommendation.link_text }} <i class="ti ti-arrow-right" aria-hidden="true"></i></a>{% endif %}
+            </div>
+        </article>
+    </aside>
+</div>
+{% endblock %}

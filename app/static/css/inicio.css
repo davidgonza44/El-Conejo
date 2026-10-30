@@ -1,0 +1,1594 @@
+/* Pantalla Inicio (/dashboard): shell y composición propios, aislados de
+   Tabler (solo se reutilizan sus controles de formulario y alertas).
+   Geometría medida sobre references/01_inicio/01_inicio.png a 1600x900:
+   sidebar 244px, contenido x=268..1576, KPI y=88..194, fila principal
+   y=208..470, fila inferior y=481..757, tabla inferior desde y=768. */
+
+:root {
+    --ix-bg: #fdfdfd;
+    --ix-card: #ffffff;
+    --ix-border: #ebedf1;
+    --ix-border-soft: #f0f1f4;
+    --ix-ink: #0f172a;
+    --ix-ink-2: #374151;
+    --ix-muted: #7b8194;
+    --ix-blue: #1570ef;
+    --ix-blue-soft: #ecf5fe;
+    --ix-green: #16a34a;
+    --ix-green-soft: #e4f9e6;
+    --ix-orange: #f28c1e;
+    --ix-orange-soft: #fdf1e3;
+    --ix-purple: #7c5cd6;
+    --ix-purple-soft: #f1eef9;
+    --ix-red: #dc2626;
+    --ix-red-soft: #fbe9e9;
+    --ix-radius: 12px;
+    --ix-gap: 12px;
+    --ix-sidebar: 244px;
+    --ix-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Tabler desplaza :root el ancho de la barra de scroll (≥992px). */
+html {
+    margin-left: 0 !important;
+}
+
+/* La maqueta de referencia no muestra barra de scroll; en el modo de
+   validación visual se oculta (la página sigue desplazándose con rueda/teclado). */
+html[data-reference-mode="1"] {
+    scrollbar-width: none;
+}
+
+html[data-reference-mode="1"]::-webkit-scrollbar {
+    display: none;
+}
+
+body.ix-body {
+    margin: 0;
+    background: var(--ix-bg);
+    color: var(--ix-ink);
+    font-family: var(--ix-font);
+    font-size: 14px;
+    line-height: 1.35;
+    -webkit-font-smoothing: antialiased;
+}
+
+.ix-body h1, .ix-body h2, .ix-body h3, .ix-body p, .ix-body ul {
+    margin: 0;
+}
+
+.ix-body ul {
+    padding: 0;
+    list-style: none;
+}
+
+.ix-body a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.ix-body .ti {
+    line-height: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shell                                                               */
+/* ------------------------------------------------------------------ */
+.ix-shell {
+    min-height: 100vh;
+}
+
+.ix-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--ix-sidebar);
+    background: var(--ix-bg);
+    border-right: 1px solid #f0f1f3;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.ix-main {
+    margin-left: var(--ix-sidebar);
+    padding: 0 24px 20px;
+    min-width: 0;
+}
+
+/* Marca */
+.ix-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 21px 16px 0;
+}
+
+.ix-brand-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(160deg, #0a8dfb 0%, #0b5ff5 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+}
+
+.ix-brand-logo img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+}
+
+.ix-brand-logo.is-image {
+    background: transparent;
+    border: none;
+}
+
+.ix-brand-name {
+    display: block;
+    font-family: Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #0C1230;
+    white-space: nowrap;
+}
+
+.ix-brand-sub {
+    display: block;
+    margin-top: 1px;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.15;
+    color: #0C1230;
+    white-space: nowrap;
+}
+
+/* Navegación */
+.ix-nav {
+    padding: 36px 10px 0 9px;
+}
+
+.ix-nav-section {
+    padding: 14px 15px 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9aa1af;
+}
+
+.ix-nav a {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    margin-bottom: 5px;
+    padding: 0 12px 0 15px;
+    border-radius: 10px;
+    color: #3f4652;
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ix-nav a .ti {
+    font-size: 18px;
+    color: #6b7280;
+    margin-right: 15px;
+}
+
+.ix-nav a .ix-nav-chevron {
+    margin-left: auto;
+    margin-right: 0;
+    font-size: 14px;
+    color: #7a7a82;
+}
+
+.ix-nav a:hover {
+    background: #f4f6f9;
+}
+
+.ix-nav a[aria-current="page"] {
+    background: var(--ix-blue-soft);
+    color: var(--ix-blue);
+    font-weight: 600;
+}
+
+.ix-nav a[aria-current="page"] .ti {
+    color: var(--ix-blue);
+}
+
+.ix-nav a:focus-visible,
+.ix-body :is(button, a, input, select):focus-visible {
+    outline: 2px solid var(--ix-blue);
+    outline-offset: 2px;
+}
+
+/* Grupos desplegables (Compras, Análisis predictivo): la cabecera comparte la
+   geometría de los enlaces; los hijos cuelgan de una línea guía y el activo
+   se marca con un punto azul (04_analisis_predictivo). */
+.ix-nav-group > button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+    margin-bottom: 5px;
+    padding: 0 12px 0 15px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #3f4652;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    text-align: left;
+}
+
+.ix-nav-group > button .ti {
+    font-size: 18px;
+    color: #6b7280;
+    margin-right: 15px;
+}
+
+.ix-nav-group > button .ix-nav-chevron {
+    margin-left: auto;
+    margin-right: 0;
+    font-size: 14px;
+    color: #7a7a82;
+}
+
+.ix-nav-group > button:hover {
+    background: #f4f6f9;
+}
+
+.ix-nav-group > button.is-active {
+    background: var(--ix-blue-soft);
+    color: var(--ix-blue);
+    font-weight: 600;
+}
+
+.ix-nav-group > button.is-active .ti {
+    color: var(--ix-blue);
+}
+
+/* Cabecera de grupo que navega (Ventas): con un hijo activo queda en azul sin pastilla;
+   sin hijo activo lleva aria-current y hereda la pastilla de los enlaces. */
+.ix-nav-group > .ix-nav-group-link.is-active,
+.ix-nav-group > .ix-nav-group-link.is-active .ti {
+    color: var(--ix-blue);
+    font-weight: 600;
+}
+
+/* Variante de las referencias de Inventario: la cabecera abierta queda en azul sin
+   pastilla propia y el grupo Inventario descansa sobre un fondo apenas teñido. */
+.ix-nav-group.is-soft > button.is-active {
+    background: transparent;
+}
+
+.ix-nav-group.is-tinted {
+    margin: 0 -2px 6px;
+    padding: 0 2px;
+    border-radius: 12px;
+    background: #f8f9fe;
+}
+
+.ix-nav-group.is-tinted .ix-nav-children {
+    margin-bottom: 0;
+    padding-bottom: 7px;
+}
+
+/* Con Inventario y Análisis predictivo desplegados a la vez, las referencias de
+   Inventario compactan el paso vertical del menú para que el pie siga visible a 900px. */
+.ix-sidebar.is-inventory .ix-nav {
+    padding-top: 20px;
+}
+
+.ix-sidebar.is-inventory .ix-nav a,
+.ix-sidebar.is-inventory .ix-nav-group > button {
+    height: 36px;
+}
+
+.ix-sidebar.is-inventory .ix-nav-children a {
+    height: 30px;
+}
+
+.ix-sidebar.is-inventory .ix-nav-group:not(.is-tinted) .ix-nav-children {
+    margin-top: -4px;
+}
+
+.ix-sidebar.is-inventory .ix-nav-group:not(.is-tinted) .ix-nav-children a {
+    height: 28px;
+}
+
+.ix-sidebar.is-inventory .ix-sidebar-footer {
+    padding-bottom: 32px;
+}
+
+.ix-sidebar.is-inventory .ix-branch {
+    margin-bottom: 14px;
+}
+
+.ix-sidebar.is-inventory .ix-user-meta {
+    font-size: 10px;
+}
+
+.ix-nav-children {
+    position: relative;
+    margin: -2px 0 6px;
+    padding-left: 12px;
+}
+
+.ix-nav-children::before {
+    content: "";
+    position: absolute;
+    left: 31px;
+    top: 4px;
+    bottom: 4px;
+    border-left: 1.5px solid #e3e6ec;
+}
+
+.ix-nav-children a {
+    position: relative;
+    height: 30px;
+    margin-bottom: 2px;
+    padding-left: 41px;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.ix-nav-children a[aria-current="page"] {
+    font-weight: 600;
+}
+
+.ix-nav-children a[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border-radius: 50%;
+    background: var(--ix-blue);
+    z-index: 1;
+}
+
+/* Pie del sidebar: usuario */
+.ix-sidebar-footer {
+    margin-top: auto;
+    padding: 0 18px 64px 17px;
+}
+
+.ix-branch {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    height: auto;
+    padding: 0 14px 0 15px;
+    border: 1px solid var(--ix-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ix-ink-2);
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.ix-branch .ti {
+    font-size: 18px;
+    color: #6b7280;
+    margin-right: 12px;
+}
+
+.ix-branch .ix-nav-chevron {
+    margin-left: auto;
+    margin-right: 0;
+    font-size: 14px;
+}
+
+/* Variante de dos líneas del texto del pie. */
+.ix-branch-text {
+    min-width: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+.ix-branch-name {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 14px;
+}
+
+.ix-branch-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ix-muted);
+    line-height: 13px;
+}
+
+.ix-divider {
+    border-top: 1px solid var(--ix-border-soft);
+    margin-bottom: 18px;
+}
+
+.ix-user {
+    display: flex;
+    align-items: center;
+    color: var(--ix-ink);
+}
+
+.ix-user .ix-user-avatar {
+    margin-right: 15px;
+}
+
+.ix-user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--ix-blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.ix-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ix-user-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.ix-user-name {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-user-meta {
+    display: block;
+    font-size: 10.5px;
+    color: var(--ix-muted);
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-user .ix-nav-chevron {
+    font-size: 14px;
+    color: #7a7a82;
+    margin: 0 8px 0 6px;
+}
+
+/* Cabecera */
+.ix-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    height: 88px;
+    padding-top: 20px;
+}
+
+.ix-title {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 29px;
+    letter-spacing: -0.01em;
+}
+
+.ix-subtitle {
+    margin-top: 13px;
+    font-size: 12.5px;
+    line-height: 16px;
+    color: var(--ix-muted);
+}
+
+.ix-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: -3px;
+    height: 36px;
+}
+
+.ix-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 287px;
+    height: 36px;
+    padding: 0 12px 0 11px;
+    border: 1px solid var(--ix-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ix-muted);
+}
+
+.ix-search .ti {
+    font-size: 18px;
+    color: #8b909c;
+}
+
+.ix-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 11px;
+    color: var(--ix-ink);
+}
+
+.ix-search input::placeholder {
+    color: #9096a3;
+}
+
+.ix-bell {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #4b5563;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-right: 2px;
+}
+
+.ix-bell-badge {
+    position: absolute;
+    top: -6px;
+    right: 5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--ix-blue);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* Búsqueda global (vivo): desplegable agrupado bajo el campo; misma geometría del campo. */
+.ix-search-wrap,
+.ix-bell-wrap {
+    position: relative;
+}
+
+.ix-search-results,
+.ix-bell-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    z-index: 40;
+    min-width: 100%;
+    background: #fff;
+    border: 1px solid var(--ix-border);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    text-align: left;
+}
+
+.ix-search-results {
+    left: 0;
+    width: max(100%, 320px);
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+
+.ix-search-group {
+    margin: 6px 0 2px;
+    padding: 0 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ix-muted);
+}
+
+.ix-search-option {
+    display: block;
+    padding: 6px 12px;
+    color: inherit;
+    text-decoration: none;
+    min-width: 0;
+}
+
+.ix-search-option:hover,
+.ix-search-option[aria-selected="true"] {
+    background: #f1f5ff;
+    color: inherit;
+}
+
+.ix-search-option:focus-visible {
+    outline: 2px solid var(--ix-blue);
+    outline-offset: -2px;
+}
+
+.ix-search-title,
+.ix-search-sub {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-search-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.ix-search-sub {
+    font-size: 11px;
+    color: var(--ix-muted);
+}
+
+.ix-search-empty,
+.ix-bell-empty {
+    margin: 0;
+    padding: 12px;
+    font-size: 11.5px;
+    color: var(--ix-muted);
+    text-align: center;
+    white-space: normal;
+}
+
+/* Campana (vivo): alertas reales de stock, sin estado leído/no leído. */
+.ix-bell-panel {
+    right: 0;
+    width: 320px;
+    padding: 0;
+}
+
+.ix-bell-title {
+    margin: 0;
+    padding: 12px 14px 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1f2937;
+    border-bottom: 1px solid var(--ix-border-soft);
+}
+
+.ix-bell-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 14px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ix-bell-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    border-bottom: 1px solid var(--ix-border-soft);
+}
+
+.ix-bell-item:last-child {
+    border-bottom: 0;
+}
+
+.ix-bell-item .ix-badge {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.ix-bell-item .ix-thumb {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+}
+
+.ix-bell-footer {
+    display: block;
+    padding: 10px 14px;
+    border-top: 1px solid var(--ix-border-soft);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ix-blue);
+    text-align: center;
+    text-decoration: none;
+}
+
+.ix-bell-footer:hover {
+    background: #f4f7fb;
+}
+
+/* Bandeja persistente: fila-botón (marca leída), no leídas resaltadas, "Marcar todas" como botón. */
+.ix-bell-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    padding: 0 12px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ix-bell-row:hover,
+.ix-bell-row:focus-visible {
+    background: #f4f7fb;
+    outline: none;
+}
+
+.ix-bell-item.is-unread .ix-row-title {
+    font-weight: 700;
+}
+
+.ix-bell-item.is-unread .ix-bell-row::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--ix-blue);
+}
+
+.ix-bell-read-all {
+    width: 100%;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.ix-menu-toggle {
+    display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tarjetas y rejillas                                                 */
+/* ------------------------------------------------------------------ */
+.ix-card {
+    background: var(--ix-card);
+    border: 1px solid var(--ix-border);
+    border-radius: var(--ix-radius);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ix-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 35px;
+    padding: 9px 16px 0;
+    flex-shrink: 0;
+}
+
+.ix-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-link-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--ix-border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ix-blue);
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.ix-link-btn:hover {
+    background: #f4f7fb;
+}
+
+.ix-count {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ix-muted);
+    white-space: nowrap;
+}
+
+.ix-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ix-gap);
+}
+
+.ix-grid {
+    display: grid;
+    gap: var(--ix-gap);
+    align-items: stretch;
+}
+
+.ix-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ix-main-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 262px;
+}
+
+.ix-lower {
+    grid-template-columns: minmax(0, 1.195fr) minmax(0, 1fr) minmax(0, 1.015fr);
+    grid-template-areas:
+        "activity lowstock actions"
+        "top top actions";
+    grid-template-rows: 276px auto;
+}
+
+#card-activity { grid-area: activity; }
+#card-lowstock { grid-area: lowstock; }
+#card-actions { grid-area: actions; }
+#card-top { grid-area: top; }
+
+/* Aviso global (401 / 403 / error de carga). */
+.ix-body #global-alert {
+    margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* KPI                                                                 */
+/* ------------------------------------------------------------------ */
+.ix-kpi {
+    height: 106px;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 0 15px;
+}
+
+.ix-kpi-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    margin-top: -9px;
+}
+
+.ix-kpi-icon.is-solid {
+    background: #eef4ff;
+}
+
+.ix-kpi-icon.is-solid .ti {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--ix-blue);
+    color: #fff;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ix-svg {
+    width: 1em;
+    height: 1em;
+    display: block;
+}
+
+.tone-blue { background: var(--ix-blue-soft); color: var(--ix-blue); }
+.tone-green { background: var(--ix-green-soft); color: var(--ix-green); }
+.tone-orange { background: var(--ix-orange-soft); color: var(--ix-orange); }
+.tone-purple { background: var(--ix-purple-soft); color: var(--ix-purple); }
+.tone-red { background: var(--ix-red-soft); color: var(--ix-red); }
+.tone-gray { background: #f1f3f6; color: #8a909c; }
+
+.ix-kpi-body {
+    min-width: 0;
+    flex: 1;
+}
+
+.ix-kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 17px;
+    color: #3f4652;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-kpi-line {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 4px;
+    min-width: 0;
+}
+
+.ix-kpi-value {
+    min-width: 0;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 24px;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ix-green);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ix-trend.is-red {
+    color: var(--ix-red);
+}
+
+.ix-trend.is-gray {
+    color: var(--ix-muted);
+}
+
+.ix-diario:disabled {
+    color: var(--ix-muted);
+    cursor: not-allowed;
+}
+
+.ix-trend .ti {
+    font-size: 13px;
+}
+
+.ix-kpi-sub {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 16px;
+    color: #8a90a0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ */
+/* Gráficos                                                            */
+/* ------------------------------------------------------------------ */
+.ix-chart-card .ix-card-head {
+    height: 40px;
+    padding-top: 6px;
+}
+
+.ix-diario {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    height: 30px;
+    padding: 0 12px 0 14px;
+    border: 1px solid var(--ix-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ix-ink-2);
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.ix-diario .ti {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.ix-body .ix-chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 16px;
+    margin: 2px 0 6px;
+    padding-left: 80px;
+    font-size: 10.5px;
+    color: #6b7280;
+}
+
+.ix-chart-legend li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.ix-swatch {
+    width: 28px;
+    height: 0;
+    border-top: 2.5px solid var(--ix-blue);
+}
+
+.ix-swatch.is-dashed {
+    border-top-style: dashed;
+    border-color: #8ab4f8;
+}
+
+.ix-chart {
+    position: relative;
+    height: 196px;
+    margin: 0 8px 0 4px;
+}
+
+.ix-chart canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.ix-chart-tip {
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 11px;
+    background: #fff;
+    border: 1px solid var(--ix-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    font-size: 12px;
+    color: var(--ix-muted);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.ix-chart-tip.is-visible {
+    display: flex;
+}
+
+.ix-chart-tip strong {
+    font-size: 13px;
+    color: var(--ix-ink);
+}
+
+.ix-category-body {
+    display: flex;
+    align-items: flex-start;
+    flex: 1;
+    min-height: 0;
+    padding: 0 16px;
+}
+
+.ix-donut {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: -10px 0 0 112px;
+    flex-shrink: 0;
+}
+
+.ix-donut canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.ix-donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none;
+}
+
+.ix-donut-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 26px;
+    letter-spacing: -0.01em;
+}
+
+.ix-donut-label {
+    width: 90px;
+    font-size: 12px;
+    line-height: 16px;
+    color: #4b5563;
+}
+
+/* La leyenda absorbe el ancho sobrante; la dona (flex-shrink: 0) nunca cede espacio. */
+.ix-legend {
+    margin-left: 52px;
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ix-legend li {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: start;
+    line-height: 14px;
+}
+
+.ix-legend-text {
+    min-width: 0;
+}
+
+.ix-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 2px;
+}
+
+.ix-legend-name {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-legend-sub {
+    display: block;
+    font-size: 10.5px;
+    color: var(--ix-muted);
+    white-space: nowrap;
+}
+
+/* Mensaje de "Sin datos" o error dentro de una tarjeta. */
+.ix-msg {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--ix-muted);
+    text-align: center;
+}
+
+.ix-msg.is-error {
+    color: var(--ix-red);
+}
+
+/* ------------------------------------------------------------------ */
+/* Listas (movimientos, bajo stock)                                    */
+/* ------------------------------------------------------------------ */
+.ix-list {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 16px;
+}
+
+.ix-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 46px;
+    border-bottom: 1px solid var(--ix-border-soft);
+}
+
+.ix-row:last-child {
+    border-bottom: 0;
+}
+
+.ix-row-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.ix-thumb {
+    width: 40px;
+    height: 40px;
+    min-width: 0;
+    border-radius: 8px;
+    background: #f1f3f6;
+    color: #98a0ad;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.ix-thumb:has(img) > :not(img) {
+    display: none;
+}
+
+.ix-thumb img {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    object-fit: cover;
+    display: block;
+}
+
+.ix-row-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.ix-row-title {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 15px;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-row-desc {
+    display: block;
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--ix-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-row-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+
+.ix-row-time {
+    font-size: 10.5px;
+    line-height: 14px;
+    color: var(--ix-muted);
+    white-space: nowrap;
+}
+
+.ix-row-amount {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 15px;
+    white-space: nowrap;
+}
+
+.ix-row-amount.is-up { color: var(--ix-green); }
+.ix-row-amount.is-down { color: var(--ix-red); }
+.ix-row-amount.is-neutral { color: var(--ix-muted); }
+
+.ix-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ix-badge.is-orange { background: var(--ix-orange-soft); color: var(--ix-orange); }
+.ix-badge.is-red { background: var(--ix-red-soft); color: var(--ix-red); }
+
+/* ------------------------------------------------------------------ */
+/* Acciones rápidas                                                    */
+/* ------------------------------------------------------------------ */
+#card-actions .ix-card-head {
+    height: 50px;
+    padding-top: 22px;
+}
+
+.ix-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 16px 16px;
+}
+
+.ix-action .ix-row-title {
+    font-size: 11px;
+    line-height: 15px;
+}
+
+.ix-action .ix-row-desc {
+    font-size: 10.5px;
+}
+
+.ix-action {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 53px;
+    padding: 0 16px 0 14px;
+    border: 1px solid var(--ix-border-soft);
+    border-radius: 10px;
+    color: var(--ix-ink);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ix-action:hover {
+    background: #f8fafc;
+    border-color: var(--ix-border);
+}
+
+.ix-action .ix-row-icon.is-solid {
+    background: var(--ix-blue);
+    color: #fff;
+}
+
+.ix-action .ix-nav-chevron {
+    font-size: 14px;
+    color: #7a7a82;
+    flex-shrink: 0;
+}
+
+/* Acción sin ruta implementada (Compras): visible, honesta y no navegable. */
+.ix-action.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+}
+
+.ix-action.is-disabled:hover {
+    background: #fff;
+    border-color: var(--ix-border-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tabla inferior                                                      */
+/* ------------------------------------------------------------------ */
+#card-top .ix-card-head {
+    height: 26px;
+    padding-top: 3px;
+}
+
+.ix-table-wrap {
+    padding: 0 16px 8px;
+    overflow: hidden;
+}
+
+/* Columnas fijas: un nombre largo nunca ensancha la tabla ni la página. */
+.ix-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 11px;
+    color: #1f2937;
+}
+
+.ix-table th:nth-child(3), .ix-table td:nth-child(3) { width: 30%; }
+.ix-table th:nth-child(4), .ix-table td:nth-child(4) { width: 15%; }
+.ix-table th:nth-child(5), .ix-table td:nth-child(5) { width: 19%; }
+
+.ix-table th {
+    height: 20px;
+    padding: 0 6px;
+    border-bottom: 1px solid var(--ix-border-soft);
+    font-size: 10.5px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.ix-table td {
+    height: 17px;
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ix-table tr > :first-child {
+    padding-left: 4px;
+    width: 40px;
+}
+
+.ix-table .is-center { text-align: center; }
+.ix-table .is-end { text-align: right; padding-right: 52px; }
+
+.ix-table .ix-cell-product {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ix-table .ix-cell-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Miniatura cuadrada acotada a la fila de 17 px; `contain` conserva la foto completa. */
+.ix-table .ix-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.ix-table .ix-thumb img {
+    object-fit: contain;
+}
+
+/* Productos más vendidos: miniatura 40x40 legible; el scroll horizontal vive
+   solo en esta tarjeta y aparece únicamente si la tabla excede su ancho. */
+#card-top .ix-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    font-size: 20px;
+}
+
+#card-top .ix-table {
+    min-width: 560px;
+}
+
+#card-top .ix-table td {
+    height: 48px;
+}
+
+#card-top .ix-table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Misma altura que las cinco filas de la referencia: la tarjeta no cambia de tamaño. */
+.ix-table .ix-empty td {
+    height: 85px;
+    text-align: center;
+    color: var(--ix-muted);
+}
+
+.ix-table .ix-empty td.is-error {
+    color: var(--ix-red);
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive                                                          */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1399.98px) {
+    .ix-sidebar { overflow-y: auto; }
+    .ix-sidebar > * { flex-shrink: 0; }
+    .ix-donut { margin-left: 24px; }
+    .ix-legend { margin-left: 28px; }
+}
+
+@media (max-width: 1199.98px) {
+    .ix-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ix-lower {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "activity lowstock"
+            "actions actions"
+            "top top";
+        grid-template-rows: auto;
+    }
+    .ix-search { width: 220px; }
+}
+
+@media (max-width: 1099.98px) {
+    .ix-sidebar {
+        visibility: hidden;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        border-right-color: var(--ix-border);
+        box-shadow: none;
+    }
+    .ix-shell.is-nav-open .ix-sidebar {
+        visibility: visible;
+        transform: none;
+        box-shadow: 0 0 0 100vmax rgba(15, 23, 42, 0.25);
+    }
+    .ix-main { margin-left: 0; padding: 0 16px 16px; }
+    .ix-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--ix-border);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ix-ink-2);
+        font-size: 20px;
+    }
+    .ix-shell.is-nav-open .ix-menu-toggle { position: fixed; top: 16px; right: 16px; z-index: 21; }
+}
+
+@media (max-width: 899.98px) {
+    .ix-main-row { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+    .ix-main-row .ix-card { min-height: 262px; }
+    .ix-lower {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "activity" "lowstock" "actions" "top";
+    }
+    .ix-category-body { flex-wrap: wrap; justify-content: center; gap: 12px; padding-bottom: 16px; }
+    .ix-donut, .ix-legend { margin-left: 0; }
+    .ix-header { height: auto; padding-bottom: 16px; flex-wrap: wrap; }
+    .ix-search { display: none; }
+}
+
+@media (max-width: 639.98px) {
+    .ix-kpis { grid-template-columns: minmax(0, 1fr); }
+    .ix-kpi-value { font-size: 22px; }
+    .ix-title { font-size: 20px; }
+}
+
+/* Current-user disclosure stays within the fixed sidebar at short viewports. */
+.ix-account-toggle{width:100%;border:0;text-align:left;cursor:pointer;font:inherit;background:#eff6ff;border-radius:9px}
+.ix-account-toggle>.st-icon{width:17px;height:17px;margin-left:auto;flex:none;transform:rotate(90deg)}
+.ix-account-toggle[aria-expanded=true]>.st-icon{transform:rotate(-90deg)}
+.ix-account-menu{background:white;border:1px solid #edf0f5;border-radius:9px;padding:5px;box-shadow:0 2px 5px #192f4910}
+.ix-account-menu[hidden]{display:none}
+.ix-account-menu a,.ix-account-menu button{display:flex;align-items:center;gap:12px;width:100%;padding:8px 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#344b70;text-decoration:none;text-align:left;cursor:pointer;border-radius:5px}
+.ix-account-menu .st-icon{width:20px;height:20px;flex:none}
+.ix-account-menu a:hover,.ix-account-menu button:hover{background:#eff6ff}
+.ix-account-menu :focus-visible,.ix-account-toggle:focus-visible{outline:2px solid #06f;outline-offset:2px}
+.ix-sidebar .ix-nav{min-height:0;overflow-y:auto;flex:1}
+.ix-sidebar .ix-sidebar-footer{flex:none;margin-top:auto}
+@media(max-height:800px){.ix-sidebar{overflow:hidden}.ix-sidebar>.ix-nav{flex-shrink:1}}

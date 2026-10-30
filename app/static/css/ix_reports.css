@@ -1,0 +1,423 @@
+/* Dashboard de Reportes: composición sobre el shell "ix" (inicio.css) reutilizando los
+   componentes de Inventario (ix_inventory.css) y predictive.css. Geometría medida sobre la
+   referencia a 1600x900: contenido x=266..1578; cabecera y=0..46; barra de fechas y=46..78;
+   KPI y=86..168; gráficos y=180..396; listas y=408..642; Análisis predictivo desde y=650
+   (KPI y=680..742, tarjetas inferiores y=755..893). */
+
+.rp-page {
+    padding: 0 22px 3px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabecera y barra de fechas                                          */
+/* ------------------------------------------------------------------ */
+.rp-header {
+    height: 46px;
+    padding-top: 7px;
+    align-items: flex-start;
+}
+
+.rp-header .ix-title {
+    font-size: 25px;
+    line-height: 30px;
+}
+
+.rp-header .ix-header-actions {
+    height: 30px;
+    margin: 0 8px 0 0;
+    gap: 22px;
+}
+
+.rp-header .ix-search {
+    width: 280px;
+    height: 30px;
+}
+
+.rp-toolbar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+}
+
+.rp-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: 241px;
+    height: 32px;
+    padding: 0 12px 0 19px;
+    border: 1px solid var(--ix-border);
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.rp-date .ti {
+    font-size: 15px;
+    color: #4b5563;
+}
+
+.rp-date-chevron {
+    margin-left: auto;
+    font-size: 13px !important;
+    color: #6b7280 !important;
+}
+
+.rp-compare {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 226px;
+    height: 32px;
+    margin-left: 15px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    font-size: 10.5px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.rp-actions {
+    margin: 0 30px 0 auto;
+    gap: 14px;
+}
+
+.rp-actions .px-btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 11.5px;
+    justify-content: center;
+}
+
+.rp-actions .px-btn:nth-child(1) { width: 100px; }
+.rp-actions .px-btn:nth-child(2) { width: 49px; margin: 0 19px 0 -3px; }
+.rp-actions .px-btn:nth-child(3) { width: 147px; }
+.rp-actions .px-btn:nth-child(4) { width: 150px; }
+.rp-actions .px-btn .ti { font-size: 15px; }
+.rp-actions .rp-ico-red { color: #dc2626; }
+.rp-actions .rp-ico-green { color: #16a34a; }
+
+/* ------------------------------------------------------------------ */
+/* KPI (cinco tarjetas)                                                */
+/* ------------------------------------------------------------------ */
+.rp-page .iv-kpis {
+    margin-top: 8px;
+    grid-template-columns: 262fr 268fr 241fr 249fr 244fr;
+    gap: 12px;
+}
+
+.rp-page .iv-kpis .ix-kpi { height: 82px; padding: 0 10px 0 16px; gap: 14px; }
+.rp-page .iv-kpis .ix-kpi-icon { width: 41px; height: 41px; margin-top: 0; font-size: 20px; }
+.rp-page .iv-kpis .ix-kpi-icon .ix-svg { width: 22px; height: 22px; }
+.rp-page .iv-kpis .ix-kpi-icon.is-solid { width: 46px; height: 46px; margin-left: -2px; }
+.rp-page .iv-kpis .ix-kpi-icon.is-solid .ti { width: 38px; height: 38px; font-size: 20px; }
+.rp-page .iv-kpis .ix-kpi-label { font-size: 11.5px; line-height: 15px; }
+.rp-page .iv-kpis .ix-kpi-line { margin-top: 3px; gap: 10px; }
+.rp-page .iv-kpis .ix-kpi-value { font-size: 17px; line-height: 22px; }
+.rp-page .iv-kpis .ix-kpi-value .ix-trend { font-size: 11px; }
+.rp-page .iv-kpis .ix-kpi-sub { margin-top: 3px; font-size: 10.5px; line-height: 14px; }
+
+/* ------------------------------------------------------------------ */
+/* Filas de tarjetas                                                   */
+/* ------------------------------------------------------------------ */
+.rp-row {
+    display: grid;
+    grid-template-columns: minmax(0, 511fr) minmax(0, 393fr) minmax(0, 384fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+.rp-charts {
+    margin-top: 12px;
+    grid-auto-rows: 216px;
+}
+
+.rp-lists {
+    margin-top: 12px;
+    grid-auto-rows: 234px;
+}
+
+.rp-page .iv-card-head {
+    height: 34px;
+    padding-top: 7px;
+}
+
+.rp-page .iv-card-head .ix-card-title { font-size: 13px; }
+.rp-page .iv-card-head .ix-link-btn { height: 22px; padding: 0 9px; font-size: 10.5px; color: var(--ix-blue); }
+
+.rp-range {
+    height: 22px;
+    margin-top: 0;
+    padding: 0 10px 0 12px;
+    gap: 10px;
+    font-size: 10.5px;
+}
+
+.rp-page .rp-legend {
+    height: 16px;
+    margin: -3px 0 0;
+    padding-left: 39px;
+    gap: 30px;
+    font-size: 10.5px;
+}
+
+.rp-legend li { gap: 8px; }
+.rp-legend .ix-swatch { width: 30px; }
+
+.rp-chart {
+    height: 160px;
+    margin: 2px 6px 0 4px;
+}
+
+.rp-chart-tip {
+    align-items: flex-start;
+    gap: 1px;
+    padding: 5px 8px;
+    font-size: 9.5px;
+    line-height: 12px;
+}
+
+.rp-chart-tip strong { font-size: 10px; }
+
+.rp-bars {
+    height: 182px;
+    margin: 0 8px 0 6px;
+}
+
+/* Dona de distribución */
+.rp-donut-card .iv-donut-body { padding: 0 8px 0 18px; }
+.rp-donut-card .iv-donut { width: 152px; height: 152px; margin-top: 12px; }
+.rp-donut-card .iv-donut .ix-donut-value { font-size: 19px; line-height: 23px; }
+.rp-donut-card .iv-donut .ix-donut-label { font-size: 11px; line-height: 14px; }
+.rp-donut-card .iv-legend { margin: 2px 0 0 24px; gap: 4px; }
+.rp-donut-card .iv-legend li { line-height: 13px; column-gap: 8px; grid-template-columns: 10px 1fr; }
+.rp-donut-card .iv-legend .ix-legend-dot { width: 10px; height: 10px; margin-top: 1px; }
+.rp-donut-card .ix-legend-name { font-size: 10.5px; }
+.rp-donut-card .ix-legend-sub { font-size: 10px; }
+
+/* Productos más vendidos */
+.rp-table-wrap { padding: 0 6px 0 12px; }
+
+.rp-table {
+    --px-row: 31.3px;
+    font-size: 9.5px;
+    color: #1f2937;
+}
+
+.rp-table th {
+    height: 19px;
+    padding: 0 6px;
+    background: #f5f6f8;
+    font-size: 9.5px;
+    line-height: 12px;
+    white-space: nowrap;
+}
+
+.rp-table th:first-child,
+.rp-table td:first-child { padding-left: 8px; }
+.rp-table td { padding: 0 6px; border-bottom-color: #f0f1f4; }
+.rp-table td:not(:last-child),
+.rp-table th:not(:last-child) { border-right: 1px solid #f0f1f4; }
+.rp-table tr:last-child td { border-bottom-color: #f0f1f4; }
+.rp-rank { color: #4b5563; }
+.rp-table .px-cell-muted { color: #4b5563; }
+.rp-top-table .px-product { gap: 8px; }
+.rp-top-table td { white-space: nowrap; }
+.rp-top-table .px-cell-muted { font-size: 9px; }
+.rp-top-table .px-thumb { width: 23px; height: 23px; background: transparent; }
+.rp-top-table .px-product-name { font-size: 9px; font-weight: 500; }
+
+.rp-table-footer {
+    margin-top: auto;
+    padding-bottom: 8px;
+    text-align: center;
+    font-size: 10.5px;
+    color: #6b7280;
+}
+
+/* Movimientos recientes */
+.rp-activity .iv-activity-list { padding: 0 16px 0 14px; }
+.rp-activity .iv-activity-list .ix-row { height: 37px; gap: 10px; border-bottom: 1px solid #f3f4f6; }
+.rp-activity .iv-activity-list .ix-row:last-child { border-bottom: 0; }
+.rp-activity .iv-activity-list .ix-row-icon { width: 30px; height: 30px; border-radius: 50%; }
+.rp-activity .iv-activity-list .ix-row-icon .ix-svg { width: 16px; height: 16px; }
+.rp-activity .ix-row-title { font-size: 10.5px; line-height: 14px; }
+.rp-activity .ix-row-desc { font-size: 10px; line-height: 13px; }
+.rp-activity .ix-row-time { font-size: 10px; line-height: 13px; }
+.rp-activity .ix-row-amount { font-size: 10.5px; line-height: 14px; }
+
+/* Alertas de stock */
+.rp-alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: -5px;
+    padding: 0 12px;
+}
+
+.rp-alert-list li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 30px;
+    padding: 0 12px 0 14px;
+    border-radius: 6px;
+    background: #fdf4ea;
+}
+
+.rp-alert-list .iv-alert-icon { width: 17px; height: 17px; }
+.rp-alert-list .iv-alert-icon .ix-svg { width: 17px; height: 17px; }
+.rp-alert-list .ix-row-title { font-size: 10.5px; line-height: 13px; }
+.rp-alert-list .ix-row-desc { font-size: 10px; line-height: 12px; }
+.rp-alert-chevron { font-size: 13px; color: #6b7280; }
+
+.rp-alerts-more {
+    display: block;
+    margin-top: auto;
+    padding-bottom: 10px;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ix-blue);
+    text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ */
+/* Análisis predictivo                                                 */
+/* ------------------------------------------------------------------ */
+.rp-pred-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    height: 20px;
+    margin-top: 13px;
+}
+
+.rp-pred-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 20px;
+    color: var(--ix-ink);
+}
+
+.rp-pred-subtitle {
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--ix-muted);
+}
+
+.rp-pred-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 11px;
+    margin-top: 5px;
+}
+
+.rp-pkpi {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    height: 62px;
+    padding: 0 12px 0 15px;
+}
+
+.rp-pkpi-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.rp-pkpi-icon .ix-svg { width: 22px; height: 22px; }
+.rp-pkpi-body { min-width: 0; }
+.rp-pkpi-label { font-size: 11px; font-weight: 600; line-height: 14px; color: #3f4652; white-space: nowrap; }
+.rp-pkpi-value { font-size: 17px; font-weight: 700; line-height: 20px; letter-spacing: -0.01em; color: var(--ix-ink); }
+.rp-pkpi-sub { font-size: 10px; line-height: 13px; color: var(--ix-muted); white-space: nowrap; }
+
+.rp-pred-body {
+    grid-template-columns: minmax(0, 511fr) minmax(0, 270fr) minmax(0, 509fr);
+    gap: 11px;
+    margin-top: 13px;
+    grid-auto-rows: 142px;
+}
+
+.rp-forecast-head { height: 33px; padding-top: 3px; align-items: flex-start; }
+.rp-forecast-head .ix-card-title { font-size: 13px; line-height: 16px; }
+.rp-card-subtitle { margin-top: 2px; font-size: 10.5px; line-height: 13px; color: var(--ix-muted); white-space: nowrap; }
+.rp-forecast-head .rp-range { margin-top: 1px; }
+
+.rp-page .rp-forecast .rp-legend {
+    margin-top: 0;
+    padding-left: 0;
+    justify-content: center;
+    gap: 24px;
+}
+
+.rp-forecast-chart {
+    height: 80px;
+    margin: 0 8px 0 4px;
+}
+
+.rp-risk-body {
+    display: flex;
+    align-items: center;
+    padding: 0 8px 0 20px;
+    margin-top: -4px;
+}
+
+.rp-risk-donut { width: 94px; height: 94px; margin-top: 0; }
+.rp-risk-donut .ix-donut-value { font-size: 15px; line-height: 18px; }
+.rp-risk-donut .ix-donut-label { width: 60px; font-size: 8.5px; line-height: 10px; }
+.rp-risk-legend { margin: 0 0 0 26px; gap: 9px; }
+.rp-risk-legend li { grid-template-columns: 11px 1fr; column-gap: 10px; line-height: 13px; }
+.rp-risk-legend .ix-legend-dot { width: 11px; height: 11px; margin-top: 1px; }
+.rp-risk-legend .ix-legend-name { font-size: 10.5px; font-weight: 600; }
+.rp-risk-legend .ix-legend-sub { font-size: 10px; }
+
+.rp-critical .iv-card-head { height: 22px; padding-top: 3px; }
+.rp-critical .iv-card-head .ix-card-title { line-height: 16px; }
+.rp-critical .rp-table-wrap { padding: 0 12px 0 16px; }
+.rp-critical-table { --px-row: 18px; font-size: 9.5px; }
+.rp-critical-table th { height: 17px; padding: 0 6px; font-size: 9.5px; }
+.rp-critical-table td { padding: 0 6px; }
+.rp-critical-table th:first-child,
+.rp-critical-table td:first-child { padding-left: 8px; }
+.rp-critical-table td:not(:last-child),
+.rp-critical-table th:not(:last-child) { border-right: 0; }
+.rp-pill { height: 14px; min-width: 0; padding: 0 9px; border-radius: 999px; font-size: 8.5px; }
+.rp-pill.is-orange { background: #fdf3d7; color: #d29a12; }
+
+/* ------------------------------------------------------------------ */
+/* Responsive                                                          */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1399.98px) {
+    .rp-row, .rp-pred-body { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }
+    .rp-pred-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rp-toolbar { flex-wrap: wrap; height: auto; gap: 10px; }
+    .rp-actions { margin-left: 0; margin-right: 0; }
+    .rp-chart-card, .rp-top, .rp-activity, .rp-alerts, .rp-forecast, .rp-risk, .rp-critical { min-height: 216px; }
+}
+
+@media (max-width: 1199.98px) {
+    .rp-page .iv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rp-header { height: auto; padding-bottom: 12px; }
+}
+
+@media (max-width: 899.98px) {
+    .rp-row, .rp-pred-body, .rp-pred-kpis { grid-template-columns: minmax(0, 1fr); }
+    .rp-header { flex-wrap: wrap; }
+    .rp-table-wrap { overflow-x: auto; }
+    .rp-risk-body { flex-wrap: wrap; }
+    .rp-risk-legend { margin-left: 0; }
+}
+
+@media (max-width: 639.98px) {
+    .rp-page .iv-kpis { grid-template-columns: minmax(0, 1fr); }
+}

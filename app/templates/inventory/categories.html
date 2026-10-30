@@ -1,0 +1,169 @@
+{% extends "inventory/_page.html" %}
+{# Categorías: una sola geometría aprobada. ?ref=1 usa fixture; live enlaza MySQL/API. #}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "categories" %}
+{% set movements_live = not reference_mode %}
+{% set can_write = can_write|default(false) %}
+{% set can_view_cost = can_view_cost|default(false) %}
+{% set cat_actions = fixture.actions if reference_mode else [("Exportar", "ti-download", false)] + ([("Nueva categoría", "ti-plus", true)] if can_propose else []) %}
+{% set value_kpi = [{"icon": "svg:cube", "tone": "purple", "label": "Valor total en inventario", "value": "—", "value_id": "ix-cat-kpi-value", "sub": "En todas las categorías", "solid": "plain"}] if can_view_cost else [] %}
+{% set live_kpis = [
+    {"icon": "svg:box", "tone": "blue", "label": "Total categorías", "value": "—", "value_id": "ix-cat-kpi-total", "sub": "Activas: —  ·  Inactivas: —", "sub_id": "ix-cat-kpi-sub", "solid": "plain"},
+    {"icon": "svg:tag", "tone": "green", "label": "Productos en categorías", "value": "—", "value_id": "ix-cat-kpi-products", "sub": "En todas las categorías", "solid": "plain"}
+] + value_kpi %}
+
+{% block title %}Categorías — Inventario{% endblock %}
+
+{% block main_class %} iv-page iv-cat-page{% if not reference_mode %} iv-cat-live{% endif %}{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_category_layers.css') }}">
+{% if not reference_mode %}<style>
+#ix-cat-filters{height:auto;min-height:81px;flex-wrap:wrap;gap:10px;padding-top:12px;padding-bottom:12px}
+#ix-cat-filters :is(.px-search,.px-select,.px-clear){margin:0}
+#ix-cat-filters .px-search{flex:1 1 220px;width:auto}
+#ix-cat-filters .px-select{flex:1 1 135px;width:auto}
+#ix-cat-filters select{opacity:1}
+</style>{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% include "inventory/_category_layers.html" %}
+{% if reference_mode %}
+<script src="{{ url_for('static', filename='js/ix_category_layers.js') }}"></script>
+{% else %}
+<script>window.CAN_WRITE = {{ can_write|tojson }}; window.CAN_PROPOSE = {{ can_propose|tojson }}; window.CAN_APPROVE = {{ can_approve|tojson }}; window.CURRENT_USER_ID = {{ current_user.id|tojson }}; window.CAN_VIEW_COST = {{ can_view_cost|tojson }};</script>
+<script src="{{ url_for('static', filename='js/ix_categories_live.js') }}"></script>
+{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ iv.header("Categorías", "Organiza y administra las categorías de productos",
+             fixture.search_placeholder if reference_mode else "Buscar productos, clientes, reportes...",
+             actions=cat_actions, reference_mode=reference_mode, chrome=true) }}
+
+<section class="iv-cat-top" aria-label="Resumen de categorías">
+    <div class="iv-cat-left">
+        {{ iv.kpis(fixture.kpis if reference_mode else live_kpis) }}
+        {% if reference_mode %}
+        {{ px.filters(fixture.filters, extra_class="iv-cat-filters") }}
+        {% else %}
+        <form id="ix-cat-filters" class="ix-card px-filters iv-cat-filters" role="search" aria-label="Filtros" onsubmit="return false;">
+            <label class="px-search">
+                <i class="ti ti-search" aria-hidden="true"></i>
+                <input id="ix-cat-search" type="search" placeholder="Buscar categoría..." aria-label="Buscar categoría">
+            </label>
+            <label class="px-select">
+                <span class="px-select-label">Estado</span>
+                <span class="px-select-box">
+                    <select id="ix-cat-status" aria-label="Estado">
+                        <option value="all">Todas</option>
+                        <option value="active">Activas</option>
+                        <option value="inactive">Inactivas</option>
+                    </select>
+                    <i class="ti ti-chevron-down" aria-hidden="true"></i>
+                </span>
+            </label>
+            <label class="px-select">
+                <span class="px-select-label">Estado de aprobación</span>
+                <span class="px-select-box">
+                    <select id="ix-cat-approval" aria-label="Estado de aprobación">
+                        <option value="">Todos</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="approved">Aprobado</option>
+                        <option value="rejected">Rechazado</option>
+                    </select>
+                </span>
+            </label>
+            <label class="px-select">
+                <span class="px-select-label">Ordenar por</span>
+                <span class="px-select-box">
+                    <select id="ix-cat-sort" aria-label="Ordenar por">
+                        <option value="name-asc">Nombre (A-Z)</option>
+                        <option value="name-desc">Nombre (Z-A)</option>
+                        <option value="products-desc">Más productos</option>
+                        <option value="products-asc">Menos productos</option>
+                        {% if can_view_cost %}
+                        <option value="value-desc">Mayor valor</option>
+                        <option value="value-asc">Menor valor</option>
+                        {% endif %}
+                    </select>
+                    <i class="ti ti-chevron-down" aria-hidden="true"></i>
+                </span>
+            </label>
+            <button type="button" id="ix-cat-clear" class="px-clear"><i class="ti ti-refresh" aria-hidden="true"></i>Limpiar filtros</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <article class="ix-card iv-cat-dist">
+        <h2 class="ix-card-title">{{ fixture.donut.title if reference_mode else "Distribución por categorías" }}</h2>
+        <div class="iv-cat-dist-body">
+            {% if reference_mode %}
+            <div class="iv-donut iv-donut-md" data-donut='{{ fixture.donut["items"] | map(attribute=3) | list | tojson }}' data-tones='{{ fixture.donut["items"] | map(attribute=2) | list | tojson }}' data-cutout="60">
+                <canvas role="img" aria-label="{{ fixture.donut.title }}"></canvas>
+            </div>
+            <ul class="iv-type-legend iv-cat-legend">
+                {% for name, pct, tone, _ in fixture.donut["items"] %}
+                <li><span class="ix-legend-dot iv-dot-{{ tone }}"></span><span class="iv-type-name">{{ name }}</span><span class="iv-type-value">{{ pct }}</span></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="iv-donut iv-donut-md" id="ix-cat-donut" data-cutout="60">
+                <canvas role="img" aria-label="Distribución por categorías"></canvas>
+            </div>
+            <ul class="iv-type-legend iv-cat-legend" id="ix-cat-legend" aria-live="polite"></ul>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<article class="ix-card iv-cat-table-card">
+    {{ iv.card_head(fixture.table.title if reference_mode else "Listado de categorías") }}
+    <div class="px-table-wrap iv-table-wrap"{% if not reference_mode %} id="ix-cat-wrap" aria-busy="true"{% endif %}>
+        <table class="px-table iv-table iv-cat-table">
+            <colgroup>
+                <col style="width: 263px"><col style="width: 320px"><col style="width: 190px">
+                {% if reference_mode or can_view_cost %}<col style="width: 188px">{% endif %}<col style="width: 130px"><col>
+            </colgroup>
+            <thead>
+                <tr>{% for c in (fixture.table.columns if reference_mode else (["Categoría", "Descripción", "Productos", "Valor en inventario", "Estado", "Acciones"] if can_view_cost else ["Categoría", "Descripción", "Productos", "Estado", "Acciones"])) %}<th scope="col"{% if loop.index > 2 %} class="is-center"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody{% if not reference_mode %} id="ix-cat-body"{% endif %}>
+                {% if reference_mode %}
+                {% for c in fixture.table.rows %}
+                <tr>
+                    <td>
+                        <span class="iv-cat-name">
+                            <span class="iv-cat-icon tone-{{ c.tone }}" aria-hidden="true">{{ iv.icon(c.icon) }}</span>{{ c.name }}
+                        </span>
+                    </td>
+                    <td class="px-cell-muted">{{ c.description }}</td>
+                    <td class="is-center px-cell-muted">{{ c.products }}</td>
+                    <td class="is-center">{{ c.value }}</td>
+                    <td class="is-center"><span class="px-badge is-{{ c.status[1] }} iv-badge-dot">{{ c.status[0] }}</span></td>
+                    <td class="is-center">{{ iv.row_actions() }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="6" class="px-cell-muted">Cargando categorías…</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% if reference_mode %}
+    {{ px.pagination(fixture.table.pagination) }}
+    {% else %}
+    <footer class="px-pagination" id="ix-cat-pagination">
+        <span class="px-pagination-summary" id="ix-cat-page-summary"></span>
+        <nav class="px-pages" id="ix-cat-pages" aria-label="Paginación"></nav>
+        <label class="px-select px-per-page"><span class="px-select-box"><select id="ix-cat-per-page" aria-label="Por página">{% for n in [5, 6, 10, 20, 50] %}<option value="{{ n }}"{% if n == 10 %} selected{% endif %}>{{ n }} por página</option>{% endfor %}</select><i class="ti ti-chevron-down" aria-hidden="true"></i></span></label>
+    </footer>
+    {% endif %}
+</article>
+
+{% if reference_mode %}{{ iv.footer(fixture.footer) }}{% endif %}
+{% endblock %}

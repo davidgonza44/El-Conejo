@@ -1,0 +1,43 @@
+{# Selector de productos compartido (Nueva venta, Nueva cotización, Nuevo pedido). Lucide SVG paths.
+   Con `fixture` (solo ?ref=1) incluye el catálogo determinista y el escáner simulado; en modo
+   normal el mismo drawer lo alimenta ix_sales_shared.js desde /api/sales/products (sin fixtures). #}
+{% macro icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'x' %}<path d="m18 6-12 12M6 6l12 12"/>
+{% elif name == 'search' %}<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+{% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{% elif name == 'cart' %}<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L22 6H5M7 16l-1 4h14"/>
+{% elif name == 'barcode' %}<path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>
+{% else %}<path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% set spl_target = spl_target | default("a la venta") %}
+{% if fixture %}<script type="application/json" id="spl-fixtures">{{ fixture.catalog|tojson }}</script>{% endif %}
+<dialog id="spl-drawer" class="spl-dialog spl-drawer" aria-labelledby="spl-drawer-title" aria-describedby="spl-drawer-desc">
+    <header class="spl-header"><h2 id="spl-drawer-title">Agregar producto</h2><p id="spl-drawer-desc">Busca y selecciona productos para agregarlos {{ spl_target }}.</p><button type="button" class="spl-close" data-spl-close aria-label="Cerrar Agregar producto">{{ icon('x') }}</button></header>
+    <div class="spl-filters">
+        <label class="spl-search">{{ icon('search') }}<input id="spl-search" type="search" aria-label="Buscar producto" placeholder="Buscar producto por nombre o código..." autocomplete="off"></label>
+        <div class="spl-filter-grid">
+            <label>Categoría<select id="spl-category"><option value="">Todas las categorías</option>{% if fixture %}{% for category in fixture.catalog|map(attribute='category')|unique %}<option>{{ category }}</option>{% endfor %}{% endif %}</select></label>
+            <label>Estado de stock<select id="spl-stock"><option value="">Todos los productos</option>{% if fixture %}<option>Disponible</option><option>Bajo stock</option><option>Agotado</option>{% else %}<option value="disponible">Disponible</option><option value="bajo_stock">Bajo stock</option><option value="agotado">Agotado</option>{% endif %}</select></label>
+        </div>
+    </div>
+    <div class="spl-list"><table><thead><tr><th>Producto</th><th>Stock disp.</th><th>Precio unit.</th><th>Cantidad</th><th><span class="sltw:sr-only">Acción</span></th></tr></thead><tbody id="spl-products"{% if not fixture %} aria-busy="true"{% endif %}></tbody></table><p id="spl-empty" hidden>No se encontraron productos.</p></div>
+    <div class="spl-selection"><details><summary>{{ icon('cart') }}<span id="spl-count">Productos seleccionados: 0</span></summary><ul id="spl-selected"></ul></details></div>
+    <p class="spl-feedback" id="spl-drawer-feedback" role="status"></p>
+    <footer class="spl-footer"><button type="button" class="spl-button" data-spl-close>Cancelar</button><button type="button" class="spl-button spl-primary" id="spl-confirm">Agregar productos</button></footer>
+</dialog>
+{% if fixture %}
+<dialog id="spl-scanner" class="spl-dialog spl-scanner" aria-labelledby="spl-scan-title" aria-describedby="spl-scan-desc">
+    <header class="spl-header"><h2 id="spl-scan-title">Escanear producto</h2><p id="spl-scan-desc">Escanea el código de barras o QR del producto.</p><button type="button" class="spl-close" data-spl-close aria-label="Cerrar Escanear producto">{{ icon('x') }}</button></header>
+    <button type="button" class="spl-camera" id="spl-simulate" aria-label="Simular escaneo de TAL-750W">
+        <span class="spl-package" aria-hidden="true"><span class="spl-barcode"></span></span>
+        <span class="spl-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></span>
+        <span class="spl-camera-caption">{{ icon('barcode') }} Alinea el código dentro del área de escaneo</span>
+    </button>
+    <label class="spl-manual">Código manual<span class="spl-search">{{ icon('barcode') }}<input id="spl-code" type="text" placeholder="Ingresa o pega el código del producto" autocomplete="off"></span></label>
+    <section class="spl-last"><h3>Último escaneo</h3><div id="spl-last-product"></div></section>
+    <p class="spl-feedback" id="spl-scan-feedback" role="status"></p>
+    <footer class="spl-footer"><button type="button" class="spl-button" data-spl-close>Cancelar</button><button type="button" class="spl-button spl-primary" id="spl-scan-confirm">{{ icon('scan') }}Escanear y agregar</button></footer>
+</dialog>
+{% endif %}

@@ -1,0 +1,129 @@
+{% extends "ix_base.html" %}
+{% import "purchases/_icons.html" as st %}
+{% import "purchases/_money.html" as pm %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "replenishment_requests" %}
+{% set sidebar_variant = "purchases" %}
+{% block title %}{{ row.request_number }} · Solicitud de reposición{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_purchases.css') }}">{% endblock %}
+{% block main_class %} po-page sr-page sr-detail{% endblock %}
+{% block main %}
+<div class="sr-content">
+<header class="po-header">
+  <div>
+    <p class="ix-subtitle"><a href="/purchases/requests{{ '?ref=1' if reference_mode else '' }}">Solicitudes de reposición</a></p>
+    <h1 class="ix-title">{{ row.request_number }}</h1>
+  </div>
+  <div class="po-header-side">
+    <div class="ix-header-actions">
+      <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">{{ st.icon('menu') }}</button>
+      {{ iv.shell_chrome(reference_mode, 'Buscar solicitudes, productos...') }}
+    </div>
+  </div>
+</header>
+<section class="po-card" aria-labelledby="sr-meta-title">
+  <h2 id="sr-meta-title" class="visually-hidden">Datos de la solicitud</h2>
+  <dl class="po-form-grid">
+    <div><dt>Estado</dt><dd><span class="po-badge sr-badge is-{{ row.status }}">{{ 'Convertida en OC' if row.status == 'fulfilled' else row.status_label }}</span></dd></div>
+    <div><dt>Origen</dt><dd>{{ row.origin_label }}</dd></div>
+    <div><dt>Creada por</dt><dd>{{ row.creator.name or '—' }}</dd></div>
+    <div><dt>Fecha</dt><dd>{% if row.created_on %}{{ row.created_on[8:10] }}/{{ row.created_on[5:7] }}/{{ row.created_on[:4] }}{% else %}—{% endif %}</dd></div>
+    <div><dt>Procesada por</dt><dd>{{ row.processed_by.name if row.processed_by else ('Aún no iniciado' if row.status == 'open' else 'No registrado') }}</dd></div>
+    <div><dt>Fecha de proceso</dt><dd>{% if row.processed_on %}{{ row.processed_on[8:10] }}/{{ row.processed_on[5:7] }}/{{ row.processed_on[:4] }}{% else %}{{ 'Aún no iniciado' if row.status == 'open' else 'No registrado' }}{% endif %}</dd></div>
+    <div><dt>Orden de compra</dt><dd>{% if row.purchase_order %}<a href="/purchases?detail={{ row.purchase_order.id }}{{ '&amp;ref=1' if reference_mode else '' }}">{{ row.purchase_order.order_number or 'Número no registrado' }}</a> · {{ order_status_label }}{% else %}Aún no tiene orden{% endif %}</dd></div>
+    {% if row.source_purchase_order %}
+    <div><dt>Faltante de la orden</dt><dd><a href="/purchases?detail={{ row.source_purchase_order.id }}{{ '&amp;ref=1' if reference_mode else '' }}">{{ row.source_purchase_order.order_number or 'Número no registrado' }}</a> · {{ row.source_purchase_order.status_label or 'Estado no registrado' }}</dd></div>
+    {% endif %}
+    <div><dt>Notas</dt><dd>{{ row.notes or '—' }}</dd></div>
+    {% if row.status == 'cancelled' %}
+    <div><dt>Anulada por</dt><dd>{{ row.cancelled_by.name if row.cancelled_by else 'No registrado' }}</dd></div>
+    <div><dt>Fecha de anulación</dt><dd>{{ row.cancelled_on or 'No registrado' }}</dd></div>
+    {% endif %}
+    {% if row.purchase_order %}
+    <div><dt>OC preparada por</dt><dd>{{ row.purchase_order.prepared_by or 'No registrado' }}</dd></div>
+    <div><dt>Fecha de preparación (UTC)</dt><dd>{{ row.purchase_order.prepared_at or 'No registrado' }}</dd></div>
+    <div><dt>Cotización utilizada</dt><dd>{{ row.purchase_order.quote_number or 'No registrado' }}</dd></div>
+    <div><dt>Proveedor</dt><dd>{{ row.purchase_order.supplier_name or 'No registrado' }}</dd></div>
+    {% endif %}
+  </dl>
+</section>
+<section class="po-card" aria-labelledby="sr-lines-title">
+  <h2 id="sr-lines-title">Productos</h2>
+  <div class="po-table-scroll">
+    <table class="po-table">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Producto</th>
+          <th scope="col">Unidad</th>
+          <th scope="col">Stock al solicitar</th>
+          <th scope="col">Cantidad solicitada</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in row['items'] %}
+        <tr>
+          <td>{{ item.product_code }}</td>
+          <td>{{ item.product_name }}</td>
+          <td>{{ item.unit }}</td>
+          <td>{% if item.stock_on_hand is not none %}{{ item.stock_on_hand }}{% else %}No registrado{% endif %}</td>
+          <td>{{ item.quantity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% if can_process and row.status in ('open', 'processing') %}
+<section class="po-card" id="sr-actions" data-id="{{ row.id }}" data-csrf="{{ csrf_token() }}" aria-labelledby="sr-action-title">
+  <h2 id="sr-action-title">Procesar solicitud</h2>
+  <p id="sr-error" class="po-form-error" role="alert" hidden></p>
+  {% if row.status == 'open' %}
+  <p>Iniciar el procesamiento no crea la orden de compra. Después podrá cotizar y prepararla.</p>
+  <button type="button" class="po-btn is-primary" id="sr-start">Iniciar procesamiento</button>
+  {% else %}
+  {% if quotes.notice %}<p>{{ quotes.notice }}</p>{% endif %}
+  {% if quotes.covering %}
+  <form id="sr-prepare">
+    <label>Cotización vigente
+      <select name="supplier_quote_id" required>
+        {% for quote in quotes.covering %}
+        <option value="{{ quote.id }}">{{ quote.quote_number }} · {{ quote.supplier_name }} · {{ quote.currency }}{% for price in quote.prices %} · {{ price.product_code }} {{ pm.money(price.unit_price, quote.currency) }}{% endfor %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="po-btn is-primary">Preparar orden de compra</button>
+  </form>
+  {% endif %}
+  <form id="sr-quote">
+    <h3>Nueva cotización para esta solicitud</h3>
+    <p>Un proveedor aprobado y activo, con asociaciones activas a todos los productos. Guardar la cotización no crea la orden.</p>
+    {% if not suppliers %}<p id="sr-supplier-notice" role="status">{{ no_supplier_notice }}</p>{% endif %}
+    <fieldset style="border:0;padding:0;margin:0;min-width:0"{% if not suppliers %} disabled aria-describedby="sr-supplier-notice"{% endif %}>
+      <legend class="visually-hidden">Datos de la cotización</legend>
+    <div class="po-form-grid">
+      <label>Proveedor
+        <select name="supplier_id" required>
+          <option value="">Seleccione</option>
+          {% for supplier in suppliers %}<option value="{{ supplier.id }}">{{ supplier.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Moneda<select name="currency" required><option value="USD">USD ($)</option><option value="VES" selected>VES (Bs.)</option></select></label>
+      <label>Emisión<input type="date" name="issued_on" max="{{ today }}" required value="{{ today }}"></label>
+      <label>Válida hasta<input type="date" name="valid_until" min="{{ today }}" required></label>
+      {% for item in row['items'] %}
+      <label>Precio de {{ item.product_name }} (<span data-quote-symbol>Bs.</span>)
+        <input type="number" min="0.01" max="9999999999.99" step="0.01" data-product-id="{{ item.product_id }}" inputmode="decimal" required placeholder="0.00">
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="po-btn">Guardar cotización</button>
+    </fieldset>
+  </form>
+  {% endif %}
+  <button type="button" class="po-btn" id="sr-cancel">Anular solicitud</button>
+</section>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}{% if can_process and row.status in ('open', 'processing') %}<script src="{{ url_for('static', filename='js/ix_replenishment_requests.js') }}"></script>{% endif %}{% endblock %}

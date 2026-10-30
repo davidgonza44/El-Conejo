@@ -1,0 +1,213 @@
+{% extends "base_app.html" %}
+{% set active_page = "predictions" %}
+
+{% block title %}Análisis predictivo — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictions.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header mb-3">
+    <div class="row align-items-center">
+        <div class="col">
+            <h1 class="page-title mb-1">
+                <i class="ti ti-chart-line me-2 text-primary"></i>
+                Análisis predictivo y preparación de datos
+            </h1>
+            <div class="text-secondary">
+                Evaluación de la disponibilidad y suficiencia del historial para futuros pronósticos.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="page-alert" class="alert d-none" role="alert"></div>
+
+<div id="no-forecast-banner" class="alert alert-info" role="status">
+    Esta vista solo diagnostica la suficiencia del historial. Aún no se generan pronósticos ni recomendaciones de reabastecimiento.
+</div>
+
+<div id="insufficient-banner" class="alert alert-warning d-none" role="status">
+    <strong>Historial insuficiente.</strong>
+    No existen datos históricos suficientes para generar una predicción confiable.
+</div>
+
+<div class="row row-deck row-cards mb-3" id="kpi-row">
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-blue-lt text-blue"><i class="ti ti-box"></i></div>
+                <div class="kpi-value" id="kpi-active">—</div>
+                <div class="kpi-label">Productos activos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-azure-lt text-azure"><i class="ti ti-history"></i></div>
+                <div class="kpi-value" id="kpi-with-history">—</div>
+                <div class="kpi-label">Productos con historial</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-secondary-lt text-secondary"><i class="ti ti-circle-off"></i></div>
+                <div class="kpi-value" id="kpi-no-history">—</div>
+                <div class="kpi-label">Sin historial</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card kpi-warning">
+            <div class="card-body">
+                <div class="kpi-icon bg-orange-lt text-orange"><i class="ti ti-alert-triangle"></i></div>
+                <div class="kpi-value" id="kpi-insufficient">—</div>
+                <div class="kpi-label">Historial insuficiente</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-yellow-lt text-yellow"><i class="ti ti-alert-circle"></i></div>
+                <div class="kpi-value" id="kpi-limited">—</div>
+                <div class="kpi-label">Historial limitado</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-cyan-lt text-cyan"><i class="ti ti-chart-bar"></i></div>
+                <div class="kpi-value" id="kpi-simple">—</div>
+                <div class="kpi-label">Aptos para modelo simple</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-green-lt text-green"><i class="ti ti-chart-dots-3"></i></div>
+                <div class="kpi-value" id="kpi-advanced">—</div>
+                <div class="kpi-label">Aptos para análisis avanzado</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form id="filters-form" class="row g-2 align-items-end" autocomplete="off">
+            <div class="col-12 col-md-4">
+                <label class="form-label mb-1" for="f-search">Buscar</label>
+                <input type="text" id="f-search" class="form-control form-control-sm"
+                       placeholder="Código o nombre">
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label mb-1" for="f-class">Clasificación</label>
+                <select id="f-class" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    <option value="NO_HISTORY">Sin historial</option>
+                    <option value="INSUFFICIENT">Insuficiente</option>
+                    <option value="LIMITED">Limitado</option>
+                    <option value="SIMPLE_READY">Apto simple</option>
+                    <option value="ADVANCED_READY">Apto avanzado</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label mb-1" for="f-status">Estado</label>
+                <select id="f-status" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="active">Activo</option>
+                    <option value="inactive">Inactivo</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="ti ti-filter me-1"></i>Aplicar
+                </button>
+                <button type="button" id="btn-clear-filters" class="btn btn-outline-secondary btn-sm flex-fill">
+                    Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Diagnóstico por producto</h3>
+        <div class="card-actions">
+            <span class="text-secondary small" id="products-count">Cargando…</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter table-striped card-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Período histórico</th>
+                    <th class="text-end">Eventos</th>
+                    <th class="text-end">Períodos positivos</th>
+                    <th class="text-end">Proporción de ceros</th>
+                    <th class="text-end">Demanda promedio</th>
+                    <th>Clasificación</th>
+                    <th>Estado</th>
+                    <th class="w-1">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="products-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal" id="detail-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detail-title">Diagnóstico de producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detail-error" class="alert alert-danger d-none" role="alert"></div>
+                <div id="detail-loading" class="text-center py-4 text-secondary">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Cargando diagnóstico…
+                </div>
+                <div id="detail-content" class="d-none">
+                    <div id="detail-insufficient" class="alert alert-warning d-none" role="status">
+                        No existen datos históricos suficientes para generar una predicción confiable.
+                    </div>
+                    <div class="row g-2 mb-3" id="detail-meta"></div>
+                    <div class="row g-2 mb-3" id="detail-stats"></div>
+                    <div id="detail-inconsistencies" class="d-none mb-3"></div>
+                    <div id="chart-wrap" class="d-none">
+                        <h4 class="mb-2">Demanda histórica observada</h4>
+                        <div class="chart-holder">
+                            <canvas id="history-chart" aria-label="Demanda histórica observada"></canvas>
+                        </div>
+                    </div>
+                    <div id="chart-empty" class="widget-msg d-none">
+                        Sin historial disponible para graficar.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/predictions.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "ix_base.html" %}
+{% import "purchases/_icons.html" as st %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "purchase_approvals" if view.filters.status == "pending_approval" else "purchases" %}
+{% set sidebar_variant = "purchases" %}
+{% set k = view.kpis %}
+{% set f = view.filters %}
+{% set p = view.pagination %}
+{% set suffix = '?ref=1' if reference_mode else '' %}
+{% import "purchases/_money.html" as pm %}
+{% macro money(value, currency) %}{% if can_view_cost %}{{ pm.money(value, currency) }}{% else %}—{% endif %}{% endmacro %}
+{% macro badge(row) %}<span class="po-badge is-{{ row.status }}"><span class="po-badge-dot" aria-hidden="true"></span>{{ row.status_label }}</span>{% endmacro %}
+{% macro day(value) %}{{ value[8:10] }}/{{ value[5:7] }}/{{ value[:4] }}{% endmacro %}
+{# Agrupación solo visual del filtro: mismos valores y etiquetas; el flujo anterior queda separado como histórico. #}
+{% set status_groups = [
+  ('En curso', [('pending_approval','Borrador pendiente de aprobación'),('approved','Aprobada / pendiente de recepción')]),
+  ('Cerradas', [('closed_complete','Cerrada completa'),('closed_partial','Cerrada parcial'),('closed_unavailable','Cerrada por falta de disponibilidad'),('closed_price_change','Cerrada por cambio de precio')]),
+  ('Rechazadas o anuladas', [('rejected','Rechazada'),('cancelled','Anulada por error')]),
+  ('Flujo anterior · histórico', [('pending','Pendiente (flujo anterior)'),('partial','Parcialmente recibida (flujo anterior)'),('completed','Completada (flujo anterior)')]),
+] %}
+{# Segmentos del gráfico: los mismos conteos y porcentajes del servidor, un color por estado. #}
+{% set chart_states = [('pending_approval','Por aprobar','#f59e0b'),('approved','Aprobadas','#2f6fed'),('pending','Pendientes · flujo anterior','#94a3b8'),('partial','Parciales · flujo anterior','#7c5cd6'),('completed','Completadas · flujo anterior','#16a34a')] %}
+{% set show_closure = not reference_mode and (can_close_request or can_close_approve) %}
+{% block title %}Compras · El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_purchases.css') }}">{% endblock %}
+{% block main_class %} po-page ds-page ds-purchases{% endblock %}
+{% block main %}
+<header class="po-header">
+  <div><h1 class="ix-title">Compras</h1><p class="ix-subtitle">Gestiona tus órdenes de compra, proveedores y recepciones</p></div>
+  <div class="po-header-side"><div class="ix-header-actions">
+    <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">{{ st.icon('menu') }}</button>
+    {{ iv.shell_chrome(reference_mode, 'Buscar productos, clientes, reportes...') }}
+  </div><div class="po-actions">
+    {% if can_close_approve and not reference_mode %}<a class="po-btn" href="/purchases?closure_status=pending&amp;start=&amp;end=">{{ st.icon('clock') }}Cierres pendientes</a>{% endif %}
+    <button class="po-btn" id="po-toggle-filters" aria-expanded="true" aria-controls="po-filters">{{ st.icon('filter') }}Filtros</button>
+    <a class="po-btn" id="po-export" href="/api/purchases/export.csv?{{ view.query }}">{{ st.icon('upload') }}Exportar CSV</a>
+    {% if can_write %}<a class="po-btn is-primary" id="po-new" href="/purchases/requests{{ suffix }}" title="Toda orden nace de una solicitud de reposición en proceso">{{ st.icon('plus') }}Preparar orden desde solicitud</a>{% endif %}
+  </div></div>
+</header>
+{% if not view.available %}<div class="po-notice" role="status">Compras aún no está disponible: falta aplicar la migración de órdenes de compra. No se muestran datos de ejemplo.</div>{% endif %}
+<section class="po-kpis" aria-label="Indicadores de compras">
+  <article class="po-card po-kpi"><span class="po-kpi-icon is-blue" aria-hidden="true">{{ st.icon('cart') }}</span><div><h2>Órdenes de compra</h2><strong class="po-kpi-value">{{ k.count }}</strong><p>Total en el período</p></div></article>
+  <article class="po-card po-kpi"><span class="po-kpi-icon is-green" aria-hidden="true">{{ st.icon('dollar') }}</span><div><h2>Monto total compras</h2>
+    {% set totals = k.totals_by_currency|default([]) %}
+    {# Variación de cada moneda contra la ventana anterior de igual duración; nunca se convierten ni suman monedas. #}
+    {% set compared = {} %}{% for row in k.comparison_by_currency|default([]) %}{% set _ = compared.update({row.currency: row.text}) %}{% endfor %}
+    {% if not can_view_cost %}<strong class="po-kpi-value">—</strong>
+    {% elif totals %}<ul class="ds-money-list" aria-label="Montos por moneda">{% for row in totals %}<li><span class="ds-currency">{{ row.currency or 'Sin moneda' }}</span><strong>{{ pm.money(row.amount, row.currency) }}</strong>{% if row.currency in compared %}<span class="ds-money-change" style="flex-basis:100%;font-size:12.5px;line-height:1.4;color:var(--ds-muted)">{{ compared[row.currency] }}</span>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<strong class="po-kpi-value">Sin importes</strong>{% endif %}
+    {% if not (can_view_cost and compared) %}<p>{{ k.comparison or 'Sin datos comparables' }}</p>{% endif %}{% if can_view_cost and totals %}<p>Sin convertir monedas; sin rechazadas ni anuladas.</p>{% endif %}</div></article>
+  <article class="po-card po-kpi"><span class="po-kpi-icon is-orange" aria-hidden="true">{{ st.icon('clock') }}</span><div><h2>Pendientes de aprobación</h2><strong class="po-kpi-value">{{ k.pending }}</strong><p>Borradores aún no autorizados</p></div></article>
+  <article class="po-card po-kpi"><span class="po-kpi-icon is-purple" aria-hidden="true">{{ st.icon('check') }}</span><div><h2>Completadas</h2><strong class="po-kpi-value">{{ k.completed }}</strong><p>Incluye cerradas completas</p><p>{{ k.completed_percent }}{{ ' del gráfico de estados' if k.relevant }}</p></div></article>
+</section>
+<form class="po-card po-filters ds-filters{{ ' has-closure' if show_closure }}" id="po-filters" method="get" action="/purchases" aria-label="Filtros de órdenes">
+  {% if reference_mode %}<input type="hidden" name="ref" value="1">{% endif %}<input type="hidden" name="per_page" value="{{ p.per_page }}">
+  <label class="po-search ds-field ds-f-search"><span class="ds-field-label">Buscar órdenes</span><span class="ds-input-icon">{{ st.icon('search') }}<input type="search" name="search" value="{{ f.search }}" placeholder="Número, proveedor o producto"></span></label>
+  <label class="ds-field ds-f-status"><span class="ds-field-label">Estado</span><select name="status"><option value="">Todos los estados</option>{% for group, options in status_groups %}<optgroup label="{{ group }}">{% for key, label in options %}<option value="{{ key }}"{{ ' selected' if f.status == key }}>{{ label }}</option>{% endfor %}</optgroup>{% endfor %}</select></label>
+  <label class="ds-field ds-f-supplier"><span class="ds-field-label">Proveedor</span><select name="supplier_id"><option value="">Todos</option>{% for supplier in view.suppliers %}<option value="{{ supplier.id }}"{{ ' selected' if f.supplier_id|string == supplier.id|string }}>{{ supplier.name }}</option>{% endfor %}</select></label>
+  <label class="ds-field ds-f-date"><span class="ds-field-label">Fecha inicio</span><input type="date" name="start" value="{{ f.start }}"></label>
+  <label class="ds-field ds-f-date"><span class="ds-field-label">Fecha fin</span><input type="date" name="end" value="{{ f.end }}"></label>
+  {% if show_closure %}<label class="ds-field ds-f-closure"><span class="ds-field-label">Cierre comercial</span><select name="closure_status"><option value="">Todos</option><option value="pending"{{ ' selected' if f.get('closure_status') == 'pending' }}>Cierres pendientes</option></select></label>{% endif %}
+  <a class="po-clear" id="po-clear" href="/purchases?start=&amp;end={{ '&ref=1' if reference_mode }}" aria-label="Limpiar filtros" title="Limpiar filtros">{{ st.icon('refresh') }}Limpiar</a>
+  <button type="submit" class="visually-hidden">Aplicar filtros</button>
+</form>
+<div class="po-content">
+  <section class="po-card po-orders" aria-labelledby="po-orders-title">
+    <div class="po-card-heading ds-card-head"><div><h2 id="po-orders-title">Órdenes de compra</h2><p class="ds-card-sub">{{ p.total }} {{ 'orden' if p.total == 1 else 'órdenes' }} con los filtros actuales</p></div><a class="po-small-link" id="po-view-all" href="/purchases?start=&amp;end={{ '&ref=1' if reference_mode }}">Ver todas las órdenes</a></div>
+    <div class="po-table-scroll" tabindex="0" role="region" aria-label="Órdenes de compra, tabla desplazable"><table class="po-table ds-table">
+      <colgroup>{% for col in ['number','supplier','date','status','units','total','received','pending','eta','actions'] %}<col class="c-{{ col }}">{% endfor %}</colgroup>
+      <thead><tr>{% for title, numeric in [('N° Orden',False),('Proveedor',False),('Fecha',False),('Estado',False),('Productos',True),('Monto total',True),('Recibido',True),('Pendiente',True),('Fecha estimada',False),('Acciones',True)] %}<th scope="col"{{ ' class=ds-num' if numeric }}{% if title == 'Productos' %} title="Unidades pedidas: suma de las cantidades de los renglones"{% elif title == 'Pendiente' %} title="Monto que la orden aún espera recibir. Una orden cerrada no espera mercancía: su faltante figura como no suministrado"{% endif %}>{{ title }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in view['items'] %}<tr data-order-id="{{ row.id }}" data-status="{{ row.status }}">
+        <td data-label="N° Orden"><button class="po-number" data-action="detail" data-id="{{ row.id }}">{{ row.order_number }}</button></td>
+        <td data-label="Proveedor" class="ds-cell-wide"><span class="po-supplier-text"><strong>{{ row.supplier.name }}</strong><small>RIF: {{ row.supplier.tax_id }}</small></span></td>
+        <td data-label="Fecha">{{ day(row.ordered_date) }}</td>
+        <td data-label="Estado">{{ badge(row) }}{% if row.closure_request and row.closure_request.status == 'pending' and row.status == 'approved' %}<small class="po-status-note">Cierre pendiente de revisión</small>{% endif %}</td>
+        <td data-label="Productos" class="ds-num" title="{{ pm.count(row.line_count, 'renglón', 'renglones') }}; {{ pm.count(row.units, 'unidad', 'unidades') }}">{{ row.units }}</td>
+        <td data-label="Monto total" class="ds-num">{{ money(row.total, row.currency) }}</td>
+        <td data-label="Recibido" class="po-received is-{{ row.status }} ds-num"><span class="ds-progress-cell"><span class="ds-progress" aria-hidden="true"><span style="width:{{ row.received_percent }}%"></span></span>{{ row.received_percent }}%</span></td>
+        <td data-label="Pendiente" class="po-pending is-{{ row.status }} ds-num">{% if row.expecting_supply is not defined or row.expecting_supply %}{{ money(row.pending_amount, row.currency) }}{% else %}<span class="po-muted">Sin mercancía por recibir</span>{% if row.quantity_not_supplied %}<small>No suministrado: {{ pm.count(row.quantity_not_supplied, 'unidad', 'unidades') }}{% if can_view_cost %} · {{ pm.money(row.not_supplied_amount, row.currency) }}{% endif %}</small>{% endif %}{% endif %}</td>
+        <td data-label="Fecha estimada">{% if row.estimated_delivery_date %}{{ day(row.estimated_delivery_date) }}{% else %}<span class="ds-na">Sin fecha</span>{% endif %}</td>
+        <td class="ds-cell-action"><div class="po-row-actions"><button class="po-icon-btn" data-action="detail" data-id="{{ row.id }}" aria-label="Ver detalle {{ row.order_number }}" title="Ver detalle">{{ st.icon('eye') }}</button><button class="po-icon-btn" data-action="menu" data-id="{{ row.id }}" aria-label="Acciones {{ row.order_number }}" aria-haspopup="menu" aria-expanded="false" title="Más acciones">{{ st.icon('more') }}</button></div></td>
+      </tr>{% else %}<tr><td colspan="10" class="po-empty">{{ 'No hay órdenes que coincidan con los filtros.' if view.available else 'Módulo pendiente de migración.' }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    <footer class="po-pagination"><span>Mostrando {{ p.from }} a {{ p.to }} de {{ p.total }} órdenes de compra</span><nav aria-label="Paginación de órdenes">
+      {% if p.page > 1 %}<a href="/purchases?{{ view.query }}&amp;page={{ p.page - 1 }}" aria-label="Página anterior">‹</a>{% else %}<span aria-disabled="true">‹</span>{% endif %}
+      {% for n in p.numbers %}{% if n %}<a href="/purchases?{{ view.query }}&amp;page={{ n }}"{{ ' aria-current=page' if n == p.page }}>{{ n }}</a>{% else %}<span class="po-ellipsis">…</span>{% endif %}{% endfor %}
+      {% if p.page < p.pages %}<a href="/purchases?{{ view.query }}&amp;page={{ p.page + 1 }}" aria-label="Página siguiente">›</a>{% else %}<span aria-disabled="true">›</span>{% endif %}
+    </nav><label><span class="visually-hidden">Órdenes por página</span><select id="po-per-page">{% for n in [8,20,50] %}<option value="{{ n }}"{{ ' selected' if p.per_page == n }}>{{ n }} por página</option>{% endfor %}</select></label></footer>
+  </section>
+  <aside class="po-summary" aria-label="Resumen de compras">
+    <section class="po-card po-status"><h2>Estado de órdenes</h2><div class="po-status-body">
+      {% set ns = namespace(start=0, stops=[]) %}
+      {% for key, label, color in chart_states %}{% set n = k.counts.get(key, 0) %}{% if n and k.relevant %}{% set end = ns.start + n * 360 / k.relevant %}{% set ns.stops = ns.stops + [color ~ ' ' ~ ns.start ~ 'deg ' ~ end ~ 'deg'] %}{% set ns.start = end %}{% endif %}{% endfor %}
+      <div class="po-donut" role="img" aria-label="{{ k.relevant }} órdenes en el gráfico de estados" style="background:{{ 'conic-gradient(' ~ ns.stops|join(', ') ~ ')' if ns.stops else '#edf0f5' }}"><div><strong>{{ k.relevant }}</strong><span>en el gráfico</span></div></div>
+      <ul>{% for key, label, color in chart_states %}<li><span class="po-dot is-{{ key }}" style="--dot:{{ color }}"></span><div>{{ label }}<strong>{{ k.counts.get(key, 0) }} ({{ '{:.1f}'.format(k.counts.get(key, 0) * 100 / k.relevant) if k.relevant else '0.0' }}%)</strong></div></li>{% endfor %}</ul>
+    </div><p class="ds-card-sub">Base: {{ k.relevant }} de {{ k.count }} órdenes del período. No incluye cerradas, rechazadas ni anuladas.</p></section>
+    <section class="po-card po-upcoming"><div class="po-card-heading"><h2>Próximas recepciones</h2><a class="po-small-link" href="/purchases/receptions{{ suffix }}">Ver todas</a></div>
+      {% for row in view.upcoming %}<div class="po-upcoming-row"><div><button class="po-number" data-action="detail" data-id="{{ row.id }}">{{ row.order_number }}</button><span class="ds-upcoming-supplier">{{ row.supplier.name }}</span></div><div class="ds-upcoming-meta"><time datetime="{{ row.estimated_delivery_date }}">{{ day(row.estimated_delivery_date) }}</time>{{ badge(row) }}</div></div>{% else %}<p class="po-empty-small">Sin recepciones programadas.</p>{% endfor %}
+      <a class="po-panel-footer" href="/purchases/receptions{{ suffix }}">Ver todas las recepciones</a>
+    </section>
+    <section class="po-card po-top"><div class="po-card-heading"><h2>Proveedores principales</h2><a class="po-small-link" href="/suppliers{{ suffix }}">Ver todos</a></div>
+      {% for supplier in k.top_suppliers %}<div class="po-top-row"><span>{{ loop.index }}</span><strong>{{ supplier.name }}</strong><div class="po-bar" aria-hidden="true"><span style="width:{{ supplier.percent }}%"></span></div><b>{{ money(supplier.amount, supplier.currency) }}</b></div>{% else %}<p class="po-empty-small">Sin compras en el período.</p>{% endfor %}
+    </section>
+  </aside>
+</div>
+<div id="po-message" class="po-toast" role="status" hidden></div>
+<div id="po-menu" class="po-menu" role="menu" aria-label="Acciones de orden" hidden></div>
+<dialog id="po-dialog" class="po-dialog" aria-labelledby="po-dialog-title"><header><h2 id="po-dialog-title"></h2><button class="po-icon-btn" data-close aria-label="Cerrar">{{ st.icon('x') }}</button></header><div id="po-dialog-body"></div></dialog>
+<dialog id="po-supplier-dialog" class="po-dialog po-small-dialog" aria-labelledby="po-supplier-title"><header><h2 id="po-supplier-title">Nuevo proveedor</h2><button class="po-icon-btn" data-close aria-label="Cerrar">{{ st.icon('x') }}</button></header><form id="po-supplier-form"><div class="po-form-grid"><label>Nombre<input name="name" required maxlength="150"></label><label>RIF<input name="tax_id" required maxlength="30"></label><label>Persona de contacto<input name="contact_name" maxlength="150"></label><label>Teléfono<input name="phone" maxlength="30"></label><label>Correo electrónico<input name="email" type="email" maxlength="150"></label></div><p class="po-form-error" role="alert"></p><footer><button class="po-btn" type="button" data-close>Cancelar</button><button class="po-btn is-primary">Guardar proveedor</button></footer></form></dialog>
+<script type="application/json" id="po-context">{{ {'reference': reference_mode, 'canWrite': can_write, 'canReceive': can_receive, 'canCancel': can_cancel, 'canApprove': can_approve, 'canViewCost': can_view_cost, 'canCloseRequest': can_close_request, 'canCloseApprove': can_close_approve, 'canRequestShortage': can_request_shortage, 'userId': current_user.id, 'today': today, 'csrf': csrf_token(), 'items': view['items']}|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/purchase_money.js') }}"></script><script src="{{ url_for('static', filename='js/ix_purchases.js') }}"></script>{% endblock %}

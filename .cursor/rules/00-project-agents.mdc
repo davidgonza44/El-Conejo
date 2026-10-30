@@ -1,0 +1,6 @@
+---
+description: Follow the repository-wide agent instructions
+alwaysApply: true
+---
+
+Read and follow [AGENTS.md](../../AGENTS.md) before working in this repository; do not duplicate its rules here.

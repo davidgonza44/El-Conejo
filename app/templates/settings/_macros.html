@@ -1,0 +1,54 @@
+{# Inline Lucide geometry (24px viewBox), no runtime icon dependency. #}
+{% macro icon(name) -%}
+<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'search' %}<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+{% elif name == 'pencil' %}<path d="m16 3 5 5M4 16 16 4a3 3 0 0 1 4 4L8 20l-5 1 1-5Z"/>
+{% elif name == 'more' %}<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+{% elif name == 'calculator' %}<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2m4 0h2m-8 4h2m4 0h2m-8 4h2m4 0h2"/>
+{% elif name == 'database' %}<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5M3 12a9 3 0 0 0 18 0"/>
+{% elif name == 'server' %}<rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><path d="M6 6.5h.01M6 17.5h.01"/>
+{% elif name == 'refresh' %}<path d="M3 11a9 9 0 0 1 15-6l3 3M21 3v5h-5M21 13a9 9 0 0 1-15 6l-3-3M8 16H3v5"/>
+{% elif name == 'monitor' %}<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>
+{% elif name == 'smartphone' %}<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>
+{% elif name == 'wrench' %}<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-7 7a2.1 2.1 0 0 1-3-3l7-7a6 6 0 0 1 7.9-7.9l-3.8 3.8Z"/>
+{% elif name == 'store' %}<path d="m3 9 2-6h14l2 6M3 9v12h18V9M9 21v-8h6v8M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>
+{% elif name == 'home' %}<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z"/>
+{% elif name == 'bag' %}<path d="M5 7h14l2 14H3L5 7Zm3 2V5a4 4 0 0 1 8 0v4"/>
+{% elif name == 'mail' %}<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-9 6a2 2 0 0 1-2 0L2 7"/>
+{% elif name == 'phone' %}<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M9 7v3a5 5 0 0 0 5 5h2v-3l-2 1-4-4 1-2Z"/>
+{% elif name == 'message' %}<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/>
+{% elif name == 'truck' %}<path d="M10 17h4V5H2v12h3m10-8h4l3 4v4h-3m-5 0h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
+{% elif name == 'cart' %}<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l3.4 13.4a2 2 0 0 0 2 1.6H19a2 2 0 0 0 2-1.6L23 6H5"/>
+{% elif name == 'alert' %}<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4m0 4h.01"/>
+{% elif name == 'send' %}<path d="m22 2-7 20-4-9-9-4Z M22 2 11 13"/>
+{% elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-13 5h4"/>
+{% elif name == 'clock' %}<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+{% elif name == 'bell' %}<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>
+{% elif name == 'chart' %}<path d="M3 3v18h18M7 14l4-4 4 3 6-8"/>
+{% elif name == 'users' %}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/>
+{% elif name == 'shield' %}<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11"/><path d="m9 12 2 2 4-4"/>
+{% elif name == 'lock' %}<rect x="5" y="11" width="14" height="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4m-4 5v2"/>
+{% elif name == 'save' %}<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>
+{% elif name == 'reset' %}<path d="M3 11a9 9 0 1 1 2.7 6.4M3 4v7h7M12 7v5l3 2"/>
+{% elif name == 'chevron' %}<path d="m9 18 6-6-6-6"/>
+{% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{% elif name == 'upload' %}<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+{% elif name == 'image' %}<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>
+{% elif name == 'check' %}<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
+{% elif name == 'sliders' %}<path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/>
+{% elif name == 'clipboard' %}<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2m1 10 2 2 4-4"/>
+{% elif name == 'boxes' %}<path d="m12 3 9 5v8l-9 5-9-5V8l9-5Zm0 10v8M3 8l9 5 9-5M7 5l10 6"/>
+{% elif name == 'integrations' %}<path d="m12 3 4 4-4 4-4-4 4-4ZM5 10v7h7m0-6v6m0 0 4-4 4 4-4 4-4-4Z"/>
+{% else %}<path d="m9.5 3-.6 2-2 .9L5 5.4 3 8.8l1.5 1.5-.2 2.2L3 14l2 3.5 2-.5 1.9 1 .6 2h4l.6-2 2-1 2 .5 2-3.5-1.4-1.5.1-2.2 1.5-1.5-2-3.4-2 .5-1.9-.9-.6-2h-4Z"/><circle cx="11.5" cy="11.5" r="3"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% macro info(text) %}<div class="st-info"><span aria-hidden="true">i</span><p>{{ text }}</p></div>{% endmacro %}
+{% macro control(label, value, kind='select') %}<span class="st-control">{% if kind == 'select' %}<select aria-label="{{ label }}"><option>{{ value }}</option></select>{% else %}<input aria-label="{{ label }}" value="{{ value }}" inputmode="numeric">{% if kind %}<span class="st-addon">{{ kind }}</span>{% endif %}{% endif %}</span>{% endmacro %}
+{% macro row(label, desc, value, kind='select') %}<div class="st-row"><div><label>{{ label }}</label><p>{{ desc }}</p></div>{{ control(label,value,kind) }}</div>{% endmacro %}
+{% macro toggle(label, desc, checked=True, symbol=None) %}<label class="st-toggle-row">{% if symbol %}<span class="st-icon-block">{{ icon(symbol) }}</span>{% endif %}<span class="st-toggle-copy"><strong>{{ label }}</strong><span>{{ desc }}</span></span><input type="checkbox" role="switch" aria-label="{{ label }}" {% if checked %}checked{% endif %}></label>{% endmacro %}
+{# ---- Modo vivo: controles reales u honestamente no disponibles (misma geometría). ---- #}
+{% macro ro(label, value, help='No disponible en esta versión.') %}<span class="st-control is-readonly" title="{{ help }}"><input aria-label="{{ label }}" value="{{ value }}" readonly></span>{% endmacro %}
+{% macro ro_row(label, desc, value='No disponible', help='No disponible en esta versión.') %}<div class="st-row"><div><label>{{ label }}</label><p>{{ desc }}</p></div>{{ ro(label, value, help) }}</div>{% endmacro %}
+{% macro live_toggle(label, desc, name=None, checked=False, symbol=None, help='No disponible en esta versión.') %}<label class="st-toggle-row{{ ' is-disabled' if not name }}"{% if not name %} title="{{ help }}"{% endif %}>{% if symbol %}<span class="st-icon-block">{{ icon(symbol) }}</span>{% endif %}<span class="st-toggle-copy"><strong>{{ label }}</strong><span title="{{ desc }}">{{ desc }}</span></span><input type="checkbox" role="switch" aria-label="{{ label }}"{% if name %} name="{{ name }}"{% else %} disabled{% endif %}{% if checked %} checked{% endif %}></label>{% endmacro %}
+{% macro unavailable(text, symbol=None, primary=False, class='') %}<button type="button" class="st-button{{ ' st-primary' if primary }}{{ ' ' ~ class if class }}" disabled title="No disponible en esta versión.">{{ icon(symbol) if symbol }}{{ text }}</button>{% endmacro %}
+{% macro action(text, symbol=None, primary=False) %}<button type="button" class="st-button{{ ' st-primary' if primary }}" data-preview-action>{{ icon(symbol) if symbol }}{{ text }}</button>{% endmacro %}

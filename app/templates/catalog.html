@@ -1,0 +1,231 @@
+{% extends "base_app.html" %}
+{% set active_page = "catalog" %}
+
+{% block title %}Catálogo visual — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/catalog.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="catalog-page" aria-labelledby="catalog-title">
+    <header class="catalog-header mb-4">
+        <div class="catalog-header__content">
+            <div class="catalog-header__icon" aria-hidden="true">
+                <i class="ti ti-layout-grid"></i>
+            </div>
+            <div>
+                <h1 class="page-title mb-1" id="catalog-title">Catálogo visual</h1>
+                <p class="catalog-subtitle mb-0">Consulta de productos disponibles</p>
+            </div>
+        </div>
+        <div class="catalog-count" id="catalog-count" aria-live="polite">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Cargando productos…</span>
+        </div>
+    </header>
+
+    <div id="catalog-alert" class="alert d-none" role="alert" aria-live="assertive"></div>
+
+    <section class="card catalog-filters mb-4" aria-labelledby="catalog-filters-title">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="catalog-section-title mb-0" id="catalog-filters-title">
+                    <i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>
+                    Buscar y filtrar
+                </h2>
+                <span class="catalog-readonly-badge">
+                    <i class="ti ti-eye" aria-hidden="true"></i>
+                    Solo consulta
+                </span>
+            </div>
+
+            <form id="catalog-filters-form" autocomplete="off">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-5">
+                        <label class="form-label" for="catalog-search">Buscar producto</label>
+                        <div class="input-icon">
+                            <span class="input-icon-addon" aria-hidden="true">
+                                <i class="ti ti-search"></i>
+                            </span>
+                            <input type="search" class="form-control" id="catalog-search"
+                                   placeholder="Nombre, código o descripción"
+                                   aria-describedby="catalog-search-help">
+                        </div>
+                        <small class="form-hint" id="catalog-search-help">
+                            La búsqueda se actualiza mientras escribe.
+                        </small>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg">
+                        <label class="form-label" for="catalog-category">Categoría</label>
+                        <select class="form-select" id="catalog-category">
+                            <option value="">Todas las categorías</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg">
+                        <label class="form-label" for="catalog-stock-status">Estado de stock</label>
+                        <select class="form-select" id="catalog-stock-status">
+                            <option value="">Todos</option>
+                            <option value="available">Disponible</option>
+                            <option value="low">Bajo stock</option>
+                            <option value="out">Sin existencia</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="form-label" for="catalog-sort">Ordenar por</label>
+                        <select class="form-select" id="catalog-sort">
+                            <option value="name-asc">Nombre A-Z</option>
+                            <option value="name-desc">Nombre Z-A</option>
+                            <option value="price-asc">Precio: menor a mayor</option>
+                            <option value="price-desc">Precio: mayor a menor</option>
+                            <option value="stock-asc">Stock: menor a mayor</option>
+                            <option value="stock-desc">Stock: mayor a menor</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-lg-auto">
+                        <button type="button" class="btn btn-outline-secondary w-100"
+                                id="catalog-clear-filters">
+                            <i class="ti ti-filter-off me-1" aria-hidden="true"></i>
+                            Limpiar filtros
+                        </button>
+                    </div>
+                </div>
+
+                <div class="catalog-active-filter mt-3">
+                    <label class="form-check form-switch mb-0" for="catalog-active-only">
+                        <input class="form-check-input" type="checkbox"
+                               id="catalog-active-only" checked disabled>
+                        <span class="form-check-label">Solo productos activos</span>
+                    </label>
+                    <span class="text-secondary small">
+                        El catálogo excluye productos inactivos.
+                    </span>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section aria-label="Resultados del catálogo">
+        <div id="catalog-state" class="catalog-state" role="status" aria-live="polite">
+            <span class="spinner-border text-primary" aria-hidden="true"></span>
+            <span>Cargando catálogo…</span>
+        </div>
+
+        <div class="row row-cards catalog-grid d-none" id="catalog-grid"></div>
+
+        <nav class="catalog-pagination d-none" id="catalog-pagination"
+             aria-label="Paginación del catálogo">
+            <button type="button" class="btn btn-outline-primary" id="catalog-prev">
+                <i class="ti ti-chevron-left me-1" aria-hidden="true"></i>
+                Anterior
+            </button>
+            <span class="catalog-page-indicator" id="catalog-page-indicator"
+                  aria-live="polite">Página 1 de 1</span>
+            <button type="button" class="btn btn-outline-primary" id="catalog-next">
+                Siguiente
+                <i class="ti ti-chevron-right ms-1" aria-hidden="true"></i>
+            </button>
+        </nav>
+    </section>
+</main>
+
+<div class="modal fade" id="catalog-detail-modal" tabindex="-1"
+     aria-labelledby="catalog-detail-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content catalog-detail">
+            <div class="modal-header">
+                <div>
+                    <div class="catalog-detail__eyebrow">Detalle del producto</div>
+                    <h2 class="modal-title" id="catalog-detail-title">Producto</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Cerrar detalle"></button>
+            </div>
+
+            <div class="modal-body">
+                <div id="catalog-detail-loading" class="catalog-state catalog-state--compact"
+                     role="status">
+                    <span class="spinner-border spinner-border-sm text-primary"
+                          aria-hidden="true"></span>
+                    <span>Cargando detalle…</span>
+                </div>
+
+                <div id="catalog-detail-error" class="alert alert-danger d-none"
+                     role="alert"></div>
+
+                <div id="catalog-detail-content" class="row g-4 d-none">
+                    <div class="col-12 col-md-5">
+                        <div class="catalog-detail__visual" id="catalog-detail-visual"></div>
+                    </div>
+                    <div class="col-12 col-md-7">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="catalog-code" id="catalog-detail-code">—</span>
+                            <span id="catalog-detail-status"></span>
+                        </div>
+                        <h3 class="catalog-detail__name" id="catalog-detail-name">—</h3>
+                        <p class="text-secondary mb-4" id="catalog-detail-category">—</p>
+
+                        <div class="catalog-detail__price-block mb-4">
+                            <span>Precio de venta</span>
+                            <strong id="catalog-detail-price">0,00</strong>
+                        </div>
+
+                        <dl class="catalog-detail__facts">
+                            <div>
+                                <dt>Stock actual</dt>
+                                <dd id="catalog-detail-stock">—</dd>
+                            </div>
+                            <div id="catalog-detail-minimum-row">
+                                <dt>Stock mínimo</dt>
+                                <dd id="catalog-detail-minimum">—</dd>
+                            </div>
+                            <div id="catalog-detail-unit-row">
+                                <dt>Unidad</dt>
+                                <dd id="catalog-detail-unit">—</dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="col-12 d-none" id="catalog-detail-description-block">
+                        <div class="catalog-detail__section">
+                            <h4>Descripción</h4>
+                            <p class="mb-0" id="catalog-detail-description"></p>
+                        </div>
+                    </div>
+
+                    <div class="col-12 d-none" id="catalog-detail-dates-block">
+                        <div class="catalog-detail__dates">
+                            <div class="d-none" id="catalog-detail-created-row">
+                                <span>Creado</span>
+                                <strong id="catalog-detail-created">—</strong>
+                            </div>
+                            <div class="d-none" id="catalog-detail-updated-row">
+                                <span>Actualizado</span>
+                                <strong id="catalog-detail-updated">—</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <span class="catalog-readonly-note me-auto">
+                    <i class="ti ti-lock" aria-hidden="true"></i>
+                    Vista de solo consulta
+                </span>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/catalog.js') }}"></script>
+{% endblock %}

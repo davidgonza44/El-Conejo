@@ -1,0 +1,90 @@
+{% set backup = live.backup %}{% set last = backup.last %}{% set s = live.settings %}{% set schedule = backup.schedule %}{% set task = schedule.task %}{% set drive = backup.drive %}
+{% set can_create, can_manage, can_restore, can_write = has_permission('backups:create'), has_permission('backups:manage'), has_permission('backups:restore'), has_permission('settings:write') %}
+{% set status_labels = {'completed': 'Registrado', 'deleted': 'Eliminado', 'missing': 'Archivo no encontrado', 'corrupt': 'Corrupto', 'failed': 'Fallido'} %}
+<div class="st-backup-grid grid" id="st-backup" data-available="{{ '1' if backup.available else '0' }}" data-can-manage="{{ '1' if can_manage else '0' }}" data-can-write="{{ '1' if can_write else '0' }}" data-status='{{ backup|tojson }}'>
+  <section class="st-card st-backup-summary">
+    <div class="st-card-header"><div class="st-backup-summary-heading"><span class="st-icon-block">{{ st.icon('database') }}</span><h2>Resumen de respaldos</h2></div></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Métricas de respaldos">
+    <dl class="st-backup-metrics grid">
+      <div><dt>Estado actual</dt><dd id="st-backup-state">{% if last %}<span class="st-backup-success">{{ st.icon('check') }}Último respaldo registrado</span>{% elif backup.available %}<span class="st-backup-success is-muted">Sin respaldos registrados por la aplicación</span>{% else %}<span class="st-backup-success is-muted">Respaldo no configurado</span>{% endif %}</dd></div>
+      <div><dt>Próximo respaldo automático</dt><dd id="st-backup-next">{{ task.next_run if task.registered and task.next_run else 'No programado' }}</dd></div>
+      <div><dt>Último respaldo registrado</dt><dd id="st-backup-last" data-iso="{{ last.created_at if last else '' }}">{{ '—' if not last }}</dd></div>
+      <div><dt>Respaldos registrados</dt><dd id="st-backup-count">{{ backup.count }}</dd></div>
+      <div><dt>Tamaño del último respaldo</dt><dd id="st-backup-size">{{ last.byte_size|filesizeformat if last else '—' }}</dd></div>
+      <div><dt>Espacio utilizado</dt><dd class="st-backup-usage" id="st-backup-usage">{{ backup.stored_bytes|filesizeformat }} en {{ backup.count }} archivo{{ '' if backup.count == 1 else 's' }}</dd></div>
+    </dl>
+    <p class="st-backup-helper">Estado según el registro de la aplicación: el SHA-256 se calcula al crear el respaldo. «Verificar integridad» comprueba el archivo actual. Las métricas consideran los 50 registros más recientes.</p>
+    </div>
+    <div class="st-card-footer"><button type="button" class="st-backup-link" id="st-backup-history-toggle" aria-expanded="false" aria-controls="st-backup-history">Ver historial de respaldos {{ st.icon('chevron') }}</button></div>
+  </section>
+  <section class="st-card st-backup-manual">
+    <div class="st-card-header"><h2>Realizar respaldo manual</h2><p class="st-section-description">Base de datos con mysqldump y/o archivos persistentes en ZIP.</p></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Opciones de respaldo manual">
+    <div class="st-backup-note" id="st-backup-note">{% if not backup.table_ready %}La tabla <code>backups</code> no existe: ejecute <code>scripts/migrate_backups.py</code> antes de crear respaldos.{% elif not backup.mysqldump_configured %}Volcado de base de datos no disponible: configure <code>MYSQLDUMP_BIN</code> en el servidor. {{ 'Los respaldos de archivos siguen disponibles.' if backup.files_available }}{% else %}El respaldo completo incluye la base de datos (estructura y datos) y las carpetas de la aplicación: {{ backup.file_roots|join(', ') if backup.file_roots else 'ninguna carpeta de archivos existe todavía' }}.{% endif %} No es una imagen del servidor: no incluye variables de entorno, claves de cifrado, configuración del contenedor ni otros volúmenes.</div>
+    <fieldset><legend>Tipo de respaldo</legend>
+    <label class="st-backup-radio{{ '' if backup.available else ' is-disabled' }}"><input type="radio" name="backup_type" value="full"{% if not backup.available %} disabled{% endif %}><span><strong>Respaldo completo</strong><small>Base de datos + archivos persistentes en un ZIP con manifiesto.</small></span></label>
+    <label class="st-backup-radio{{ '' if backup.available else ' is-disabled' }}"><input type="radio" name="backup_type" value="database"{% if backup.available %} checked{% else %} disabled{% endif %}><span><strong>Solo base de datos</strong><small>Volcado SQL de la base de datos de la aplicación.</small></span></label>
+    <label class="st-backup-radio{{ '' if backup.files_available and backup.table_ready else ' is-disabled' }}"><input type="radio" name="backup_type" value="files"{% if not (backup.files_available and backup.table_ready) %} disabled title="No existen carpetas de archivos persistentes que respaldar."{% elif not backup.available %} checked{% endif %}><span><strong>Solo archivos</strong><small>{{ 'ZIP de ' ~ backup.file_roots|join(', ') if backup.files_available else 'No hay carpetas de archivos persistentes.' }}</small></span></label>
+    </fieldset>
+    </div>
+    <div class="st-card-footer">{% if can_create %}<button type="button" class="st-button st-primary" id="st-backup-create"{% if not (backup.available or (backup.files_available and backup.table_ready)) %} disabled title="Respaldo no disponible en este servidor."{% endif %}>{{ st.icon('refresh') }}Crear respaldo ahora</button>{% else %}<span class="st-backup-helper">Su rol no puede crear respaldos.</span>{% endif %}</div>
+  </section>
+  <section class="st-card st-backup-automatic">
+    <div class="st-card-header"><h2>Configuración de respaldo automático</h2><p class="st-section-description" id="st-schedule-summary">{% if task.registered %}Tarea «{{ schedule.task_name }}» registrada ({{ task.state }}).{% else %}Programa un respaldo periódico en este servidor.{% endif %}</p></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Opciones de respaldo automático">
+    <div class="st-backup-fields grid">
+      <label><span>Frecuencia</span><span class="st-control"><select name="backup.auto_frequency" aria-label="Frecuencia">{% for value, label in [('off', 'Desactivado'), ('daily', 'Diaria'), ('weekly', 'Semanal (lunes)'), ('monthly', 'Mensual (día 1)')] %}<option value="{{ value }}"{% if s['backup.auto_frequency'] == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></span></label>
+      <label><span>Hora del respaldo</span><span class="st-control st-backup-time">{{ st.icon('clock') }}<input type="time" name="backup.auto_time" aria-label="Hora del respaldo" value="{{ s['backup.auto_time'] }}"></span></label>
+      <label><span>Tipo automático</span><span class="st-control"><select name="backup.auto_kind" aria-label="Tipo de respaldo automático"><option value="database"{% if s['backup.auto_kind'] == 'database' %} selected{% endif %}>Solo base de datos</option><option value="full"{% if s['backup.auto_kind'] == 'full' %} selected{% endif %}>Completo</option></select></span></label>
+      <label><span>Retener respaldos por</span><span class="st-control"><input type="number" name="backup.retention_days" aria-label="Retener respaldos por (días)" min="0" max="3650" step="1" value="{{ s['backup.retention_days'] }}"><span class="st-addon">días (0 = todo)</span></span></label>
+      <label class="st-backup-wide"><span>Ubicación de almacenamiento</span><span class="st-control"><select name="backup.location" aria-label="Ubicación de almacenamiento"><option value="local"{% if s['backup.location'] == 'local' %} selected{% endif %}>Almacenamiento local (servidor)</option><option value="local_drive"{% if s['backup.location'] == 'local_drive' %} selected{% endif %}{% if not drive.connected %} disabled{% endif %}>Local + copia en Google Drive{{ '' if drive.connected else ' (conecte Drive)' }}</option></select></span></label>
+    </div>
+    </div>
+    <div class="st-card-footer"><div class="st-backup-schedule-actions"><span id="st-schedule-task">{% if not task.supported %}El planificador no está disponible en este servidor.{% elif task.registered %}Próxima ejecución: {{ task.next_run or '—' }}{% if task.error %} · {{ task.error }}{% endif %}{% elif can_write %}Guarda la configuración y registra la tarea para activar el respaldo automático.{% else %}Registra la tarea con la configuración ya guardada.{% endif %}</span>{% if can_manage %}<button type="button" class="st-button" id="st-schedule-apply"{% if not task.supported %} disabled{% endif %}>{{ st.icon('calendar') }}{{ 'Actualizar tarea' if task.registered else 'Registrar tarea' }}</button>{% endif %}</div></div>
+  </section>
+  <section class="st-card st-backup-storage">
+    <div class="st-card-header"><h2>Ubicación de almacenamiento</h2><p class="st-section-description">Carpeta real donde se guardan los respaldos del servidor.</p></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Ubicación de almacenamiento">
+    <h3>Ubicación primaria</h3><div class="st-backup-location">{{ st.icon('server') }}<span class="st-control st-backup-directory"><input name="backup.directory" aria-label="Carpeta de respaldos" value="{{ s['backup.directory'] }}" placeholder="{{ backup.default_directory }}" title="{{ backup.directory }}"></span><span class="st-badge" id="st-backup-dir-badge">{{ 'En uso' if backup.available else 'Inactiva' }}</span></div>
+    <p class="st-backup-helper" id="st-backup-free">Espacio disponible: {{ backup.free_bytes|filesizeformat }} · vacío = carpeta por defecto ({{ backup.default_directory }}).</p>
+    <p class="st-backup-helper">Cambiar la carpeta no mueve archivos. Si hay respaldos registrados, cópielos antes a la nueva carpeta: el sistema rechaza el cambio si quedarían inaccesibles. Una carpeta fuera de los volúmenes persistentes puede perderse al recrear el contenedor.</p>
+    <h3>Ubicación secundaria (opcional)</h3><div class="st-backup-drive" id="st-drive-row"><div class="st-backup-location{{ '' if drive.connected else ' is-disabled' }}"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0f9d58" d="M8 2h8L6 20l-5-8Z"/><path fill="#fbbc04" d="m8 2 8 0 8 14h-8Z"/><path fill="#4285f4" d="M6 16h18l-4 6H3l-2-4 2-4Z"/></svg><span id="st-drive-text">{% if drive.connected %}Google Drive — {{ drive.connection.account_email }}{% elif drive.connection and drive.connection.status == 'revoked' %}Google Drive — acceso revocado, vuelva a conectar{% elif drive.configured %}Google Drive — sin conectar{% else %}Google Drive — proveedor no configurado{% endif %}</span></div>{% if not can_manage %}{% elif drive.connected %}<button type="button" class="st-button" id="st-drive-disconnect">Desconectar</button>{% elif drive.configured %}<a class="st-button" id="st-drive-connect" href="{{ url_for('settings.drive_connect') }}">Conectar</a>{% else %}<button type="button" class="st-button" id="st-drive-help">Ver requisitos</button>{% endif %}</div>
+    <p class="st-backup-helper" id="st-drive-helper">{% if drive.connected %}Los respaldos con ubicación «Local + Google Drive» se copian a la carpeta «Respaldos Ferretería El Conejo» de la cuenta conectada.{% elif drive.configured %}Conecta una cuenta de Google con permiso drive.file para guardar copias externas.{% else %}Faltan en el servidor: {{ drive.missing|join(', ') }}.{% endif %}</p>
+    </div>
+  </section>
+  <section class="st-card st-backup-restore">
+    <div class="st-card-header"><h2>Restaurar respaldo</h2></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Opciones de restauración">
+    <p class="st-section-description">{{ 'Requiere el permiso «Restaurar respaldos»; su rol puede consultar el historial.' if not can_restore else 'Restaura la base de datos y/o los archivos desde un respaldo registrado.' if backup.restore_available else 'Restauración no disponible: ' ~ ('configure MYSQL_BIN (cliente mysql) en el servidor.' if not backup.mysql_configured else 'ejecute scripts/migrate_settings_full.py.') }}</p>
+    <div class="st-backup-warning">{{ st.icon('alert') }}<p>Restaurar reemplaza los datos actuales por los del respaldo. Antes de restaurar se crea automáticamente un respaldo de seguridad; si falla, la restauración se cancela.</p></div>
+    <label class="st-backup-selection"><span>Seleccionar respaldo</span><span class="st-control"><select id="st-restore-select" aria-label="Seleccionar respaldo"{% if not (backup.restore_available and can_restore) %} disabled{% endif %}><option value="">Seleccione un respaldo…</option>{% for item in backup.history if item.status == 'completed' %}<option value="{{ item.id }}">{{ item.filename }} · {{ item.kind_label }} · {{ item.byte_size|filesizeformat }}</option>{% endfor %}</select></span></label>
+    <p class="st-backup-helper" id="st-restore-helper">{{ 'Sin permiso de restauración.' if not can_restore else 'Antes de cambiar nada se validan el SHA-256 y las carpetas destino; exige escribir RESTAURAR y queda registrada en el historial.' if backup.restore_available else 'Sin restauración desde la aplicación en este servidor.' }}</p>
+    </div>
+    <div class="st-card-footer"><div class="st-backup-danger"><button type="button" class="st-button st-danger" id="st-restore-button"{% if not (backup.restore_available and can_restore) %} disabled{% endif %}>{{ st.icon('reset') }}Restaurar respaldo seleccionado</button></div></div>
+  </section>
+  <section class="st-card st-backup-tips">
+    <div class="st-card-header"><h2>Consejos y recomendaciones</h2></div>
+    <div class="st-card-scroll-body" tabindex="0" role="region" aria-label="Consejos de respaldos">
+    <ul>
+      <li>{{ st.icon('check') }}<span>Programa respaldos automáticos y verifica que la tarea se ejecute.</span></li>
+      <li>{{ st.icon('check') }}<span>Conserva copias fuera del servidor (Google Drive u otra ubicación).</span></li>
+      <li>{{ st.icon('check') }}<span>Usa “Verificar” en el historial para comprobar la huella SHA-256.</span></li>
+      <li>{{ st.icon('check') }}<span>Prueba la restauración en una base de datos de ensayo antes de hacerlo en producción.</span></li>
+    </ul>
+    </div>
+    <div class="st-card-footer"><button type="button" class="st-backup-link" id="st-backup-guide">Ver guía completa de respaldos {{ st.icon('chevron') }}</button></div>
+  </section>
+</div>
+<section class="st-card st-backup-history" id="st-backup-history" hidden>
+  <h2>Respaldos registrados por esta aplicación</h2><p class="st-section-description">Solo los creados desde esta pantalla o por su tarea programada. Los respaldos hechos fuera de la aplicación (por ejemplo, durante un despliegue) no aparecen aquí ni se importan automáticamente.</p>
+  <div class="st-security-table-scroll" tabindex="0" role="region" aria-label="Historial de respaldos"><table class="st-security-table st-backup-table"><thead><tr><th scope="col">Fecha</th><th scope="col">Archivo</th><th scope="col">Tipo</th><th scope="col">Tamaño</th><th scope="col">Estado</th><th scope="col">Creado por</th><th scope="col"><span class="st-visually-hidden">Acciones</span></th></tr></thead><tbody id="st-backup-history-body">
+  {% for item in backup.history %}<tr data-backup-id="{{ item.id }}"><td data-iso="{{ item.created_at }}">{{ item.created_at }}</td><td class="st-backup-filename" title="{{ item.filename }}">{{ item.filename }}</td><td>{{ item.kind_label }}</td><td>{{ item.byte_size|filesizeformat }}</td><td><span class="st-security-status{{ '' if item.status == 'completed' else ' is-failed' }}">{{ status_labels.get(item.status, item.status) }}</span>{% if item.remote_status == 'uploaded' %} <span class="st-badge">Drive</span>{% endif %}</td><td title="{{ item.created_by }}">{{ item.created_by or '—' }}</td><td><button type="button" class="st-button st-more" id="st-backup-menu-{{ item.id }}" data-menu data-backup-menu="{{ item.id }}" aria-label="Acciones del respaldo {{ item.filename }}" aria-haspopup="menu">{{ st.icon('more') }}</button></td></tr>
+  {% else %}<tr class="st-security-empty"><td colspan="7">Esta aplicación no ha registrado respaldos.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <h3 class="st-backup-subtitle">Historial de restauraciones</h3>
+  <div class="st-security-table-scroll" tabindex="0" role="region" aria-label="Historial de restauraciones"><table class="st-security-table st-backup-table"><thead><tr><th scope="col">Fecha</th><th scope="col">Respaldo</th><th scope="col">Tipo</th><th scope="col">Base destino</th><th scope="col">Resultado</th><th scope="col">Ejecutado por</th></tr></thead><tbody id="st-restore-history-body">
+  {% for item in backup.restores %}<tr><td data-iso="{{ item.created_at }}">{{ item.created_at }}</td><td class="st-backup-filename" title="{{ item.backup_filename }}">{{ item.backup_filename }}</td><td>{{ item.kind_label }}</td><td>{{ item.target_database }}</td><td><span class="st-security-status{{ '' if item.status == 'completed' else ' is-failed' }}" title="{{ item.detail }}">{{ 'Completada' if item.status == 'completed' else 'Fallida' }}</span></td><td>{{ item.performed_by or '—' }}</td></tr>
+  {% else %}<tr class="st-security-empty"><td colspan="6">Sin restauraciones registradas.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{{ st.info('Los respaldos son esenciales para la protección y recuperación de la información de tu negocio.') }}

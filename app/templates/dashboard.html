@@ -1,0 +1,170 @@
+{% extends "ix_base.html" %}
+{# Pantalla Inicio: shell compartido (ix_base.html); composición propia en inicio.css.
+   Una sola geometría aprobada: ?ref=1 dibuja el fixture de dashboard_reference_data.js;
+   el modo normal consume /api/dashboard/summary (inventario y Sales Core reales). #}
+{% set active_page = "dashboard" %}
+{% set sidebar_variant = "inicio" %}
+{% import "inventory/_macros.html" as iv %}
+
+{% block title %}Inicio — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<style>
+.ix-pending-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 12px 12px}
+.ix-pending-actions .ix-action{padding:10px 12px;min-width:0}
+.ix-pending-actions .ix-row-title{white-space:normal}
+@media(max-width:640px){.ix-pending-actions{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block main %}
+        <header class="ix-header">
+            <div>
+                <h1 class="ix-title">Inicio</h1>
+                <p class="ix-subtitle">Resumen general del negocio</p>
+            </div>
+            <div class="ix-header-actions">
+                <button type="button" class="ix-menu-toggle" id="ix-menu-toggle"
+                        aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">
+                    <i class="ti ti-menu-2" aria-hidden="true"></i>
+                </button>
+                {# Cáscara compartida: maqueta estática con ?ref=1; búsqueda y campana reales en vivo. #}
+                {{ iv.shell_chrome(reference_mode, "Buscar productos, clientes, reportes...") }}
+            </div>
+        </header>
+
+        <div class="ix-stack">
+            {% if pending_proposals %}
+            <section class="ix-card" aria-label="Propuestas pendientes">
+                <div class="ix-card-head"><h2 class="ix-card-title">Propuestas pendientes</h2></div>
+                <nav class="ix-pending-actions" aria-label="Revisar propuestas pendientes">
+                    {% for item in pending_proposals %}
+                    <a class="ix-action" href="{{ item.href }}">
+                        <span class="ix-row-text"><span class="ix-row-title">{{ item.label }}</span></span>
+                        <strong>{{ item.count if item.count is not none else 'No disponible' }}</strong>
+                    </a>
+                    {% endfor %}
+                </nav>
+            </section>
+            {% endif %}
+            <!-- Mensajes globales (401 / 403 / errores de red) -->
+            <div id="global-alert" class="alert d-none" role="alert"></div>
+
+            <!-- Fila 1: cuatro KPI (contenido dibujado por dashboard.js) -->
+            <section class="ix-grid ix-kpis" id="kpi-row" aria-label="Indicadores" aria-busy="true"></section>
+
+            <!-- Fila 2: ventas de los últimos 7 días + inventario por categoría -->
+            <section class="ix-grid ix-main-row">
+                <div class="ix-card ix-chart-card" id="card-sales">
+                    <div class="ix-card-head">
+                        <h2 class="ix-card-title">Ventas de los últimos 7 días</h2>
+                        <button type="button" class="ix-diario" aria-haspopup="listbox" aria-expanded="false"
+                                {% if not reference_mode %}disabled title="Solo vista diaria (últimos 7 días)."{% endif %}>
+                            Diario<i class="ti ti-chevron-down" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <ul class="ix-chart-legend" id="chart-sales-legend"></ul>
+                    <div class="ix-chart">
+                        <canvas id="chart-sales" role="img" aria-label="Gráfico de ventas de los últimos 7 días"></canvas>
+                        <div class="ix-chart-tip" id="chart-sales-tip"></div>
+                    </div>
+                    <div id="chart-sales-msg" class="ix-msg d-none"></div>
+                </div>
+                <div class="ix-card ix-chart-card" id="card-category">
+                    <div class="ix-card-head">
+                        <h2 class="ix-card-title">Inventario por categoría</h2>
+                    </div>
+                    <div class="ix-category-body">
+                        <div class="ix-donut">
+                            <canvas id="chart-category" role="img" aria-label="Gráfico de dona por categoría"></canvas>
+                            <div class="ix-donut-center">
+                                <span class="ix-donut-value" id="chart-category-value"></span>
+                                <span class="ix-donut-label" id="chart-category-label"></span>
+                            </div>
+                        </div>
+                        <ul class="ix-legend" id="chart-category-legend"></ul>
+                    </div>
+                    <div id="chart-category-msg" class="ix-msg d-none"></div>
+                </div>
+            </section>
+
+            <!-- Fila 3: movimientos + bajo stock + acciones rápidas; tabla debajo -->
+            <section class="ix-grid ix-lower">
+                <div class="ix-card" id="card-activity">
+                    <div class="ix-card-head">
+                        <h2 class="ix-card-title">Movimientos recientes</h2>
+                        <a href="{{ '#' if reference_mode else url_for('pages.inventory') }}" class="ix-link-btn">Ver todos</a>
+                    </div>
+                    <div class="ix-list" id="table-adjustments"></div>
+                </div>
+                <div class="ix-card" id="card-lowstock">
+                    <div class="ix-card-head">
+                        <h2 class="ix-card-title">Productos con bajo stock</h2>
+                        <a href="{{ '#' if reference_mode else url_for('pages.products') }}" class="ix-link-btn">Ver todos</a>
+                    </div>
+                    <div class="ix-list" id="table-low-stock"></div>
+                </div>
+                <div class="ix-card" id="card-actions">
+                    <div class="ix-card-head">
+                        <h2 class="ix-card-title">Acciones rápidas</h2>
+                    </div>
+                    <nav class="ix-actions" aria-label="Acciones rápidas">
+                        {% set icons = {"new_product": ("ti-plus", "is-solid"), "new_sale": ("svg:cart", "tone-green"),
+                                        "new_purchase": ("svg:clipboard", "tone-purple"), "reports": ("svg:chart-bar", "tone-orange")} %}
+                        {% if reference_mode %}
+                        {% set actions = [{"id": "new_product", "href": "#", "enabled": True, "label": "Nuevo producto", "description": "Agregar un nuevo producto al inventario"},
+                                          {"id": "new_sale", "href": "#", "enabled": True, "label": "Registrar venta", "description": "Crear una nueva venta"},
+                                          {"id": "new_purchase", "href": url_for('purchases.page', new=1, ref=1), "enabled": has_permission('purchases:write'), "label": "Registrar compra", "description": "Crear una nueva orden de compra"},
+                                          {"id": "reports", "href": "#", "enabled": True, "label": "Ver reportes", "description": "Consultar reportes y estadísticas"}] %}
+                        {% else %}
+                        {% set actions = quick_actions %}
+                        {% endif %}
+                        {% for action in actions %}
+                        {% set icon, tone = icons[action.id] %}
+                        {% set enabled = action.enabled and action.href %}
+                        <a {% if enabled %}href="{{ action.href }}"{% else %}role="link" aria-disabled="true" tabindex="-1"{% endif %}
+                           class="ix-action{{ ' is-disabled' if not enabled }}" data-action="{{ action.id }}" title="{{ action.label }}: {{ action.description }}">
+                            {% if icon.startswith("svg:") %}
+                            <span class="ix-row-icon {{ tone }}" data-svg="{{ icon[4:] }}" aria-hidden="true"></span>
+                            {% else %}
+                            <span class="ix-row-icon {{ tone }}" aria-hidden="true"><i class="ti {{ icon }}"></i></span>
+                            {% endif %}
+                            <span class="ix-row-text">
+                                <span class="ix-row-title">{{ action.label }}</span>
+                                <span class="ix-row-desc">{{ action.description }}</span>
+                            </span>
+                            <i class="ti ti-chevron-right ix-nav-chevron" aria-hidden="true"></i>
+                        </a>
+                        {% endfor %}
+                    </nav>
+                </div>
+                <div class="ix-card" id="card-top">
+                    <div class="ix-card-head">
+                        <h2 class="ix-card-title">Productos más vendidos</h2>
+                        <a href="{{ '#' if reference_mode else url_for('pages.sales') }}" class="ix-link-btn">Ver todo</a>
+                    </div>
+                    <div class="ix-table-wrap">
+                        <table class="ix-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col">Categoría</th>
+                                    <th scope="col" class="is-center">Unidades</th>
+                                    <th scope="col" class="is-end">Ingresos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-top"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+{% endblock %}
+
+{% block scripts %}
+{% if reference_mode %}
+<script src="{{ url_for('static', filename='js/dashboard_reference_data.js') }}"></script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

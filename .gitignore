@@ -1,0 +1,103 @@
+# Entorno virtual
+venv/
+env/
+
+# Variables de entorno con credenciales
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Node.js (herramientas de desarrollo)
+node_modules/
+
+# Indice y estado local de CodeGraph
+.codegraph/
+
+# Indice local de zvec-grep
+.zvec-grep/
+
+# Salidas generadas por Repomix
+repomix-output.*
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema operativo
+Thumbs.db
+.DS_Store
+
+# Archivos subidos por usuarios (im·genes de productos y fotos de perfil)
+uploads/
+
+# Datos privados y temporales del importador
+/instance/historical_imports/
+/private_imports/
+/instance/import_tmp/
+/instance/import_staging/
+
+# Reportes generados
+/reports/generated/
+
+# Respaldos manuales de la base de datos (contienen datos privados)
+/instance/backups/
+
+# Archivos temporales de pruebas
+/tests/tmp/
+/tests/.tmp/
+# Local AI runtime state
+.atl/
+/.pi/
+
+# Entorno virtual local usado por este proyecto
+/.venv/
+
+# Capturas y evidencias temporales de validaciùn
+/.tmp/
+
+# Private derived empirical data (never package or index)
+/artifacts/empirical_2026/
+
+# Entorno virtual local Python 3.12
+/venv312/
+
+# Temporales locales de trabajo
+/tmp/
+
+# Estado runtime de Flask: cachÈ, uploads y respaldos de instancia
+/instance/
+
+# Respaldos SQL locales en la raÌz del repositorio
+/backups/
+
+# Metadatos locales de Codex
+/.codex/
+
+/%SystemDrive%/
+
+
+# Exclusiones de la publicacion publica; el material local se conserva aparte.
+/REFERENCIAS-TESIS/
+/docs/tesis/
+/docs/auditorias/
+/references/90_archivo_no_usar/
+/.claude/
+/.isolated/
+/.tmp-experimental-tests/
+*.env
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.log
+*.pem
+*.key
+~$*

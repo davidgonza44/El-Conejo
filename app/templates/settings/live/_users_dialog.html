@@ -1,0 +1,15 @@
+{# Diálogo de rol (crear / editar / ver detalles). Fuera de #st-live-form. #}
+<dialog class="st-dialog st-dialog-wide" id="st-role-dialog" aria-labelledby="st-role-title">
+<form method="dialog" id="st-role-form" novalidate><h2 id="st-role-title">Nuevo rol</h2>
+<div class="st-dialog-grid">
+<label><span>Nombre del rol</span><span class="st-control"><input name="name" maxlength="60" required autocomplete="off"></span></label>
+<label><span>Estado</span><span class="st-control"><select name="is_active" aria-label="Estado del rol"><option value="1">Activo</option><option value="0">Inactivo</option></select></span></label>
+</div>
+<label><span>Descripción</span><span class="st-control"><input name="description" maxlength="255" autocomplete="off"></span></label>
+<dl class="st-dialog-meta" id="st-role-meta" hidden></dl>
+<fieldset class="st-dialog-permissions"><legend>Permisos</legend>
+<div class="st-dialog-permission-groups" id="st-role-permissions">{% for g in live.permission_groups %}<div class="st-dialog-permission-group"><strong>{{ g.label }}</strong>{% for p in g.permissions %}<label><input type="checkbox" name="permissions" value="{{ p.code }}"><span>{{ p.label }}</span></label>{% endfor %}</div>{% endfor %}</div>
+</fieldset>
+<p class="st-dialog-error" role="alert" hidden></p>
+<div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cerrar</button><button type="submit" class="st-button st-primary" id="st-role-submit">Guardar rol</button></div>
+</form></dialog>

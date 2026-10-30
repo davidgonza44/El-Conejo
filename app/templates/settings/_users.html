@@ -1,0 +1,30 @@
+<div class="st-users-grid grid">
+<section class="st-card st-users-list">
+<h2>Usuarios</h2><p class="st-section-description">Gestiona los usuarios que tienen acceso al sistema.</p>
+<label class="st-user-search"><input aria-label="Buscar usuario" placeholder="Buscar usuario por nombre, correo o rol...">{{ st.icon('search') }}</label>
+<div class="st-user-filter">{{ st.control('Filtrar por rol','Todos los roles') }}{{ st.action('Nuevo usuario','plus',True) }}</div>
+<div class="st-user-rows">
+{% set tones = {'Administrador':'purple','Inventario':'blue','Vendedor':'green','Compras':'orange','Contabilidad':'pink'} %}
+{% for name,email,role,initials,tone,active in fixture.users %}
+<div class="st-user-row{{ ' is-selected' if loop.first }}" data-user-row data-user-role="{{ role }}">
+<span class="st-avatar st-avatar-{{ tone }}">{{ initials }}{% if loop.first %}<i></i>{% endif %}</span>
+<span class="st-user-copy"><strong>{{ name }}</strong><span>{{ email }}@ferreteriapro.com</span></span>
+<span class="st-role-badge st-tone-{{ tones[role] }}">{{ role }}</span><span class="st-user-status{{ ' is-inactive' if not active }}"><i></i>{{ 'Activo' if active else 'Inactivo' }}</span>
+</div>{% endfor %}
+</div>
+<div class="st-users-footer"><span data-user-count>Mostrando 1 a 7 de 7 usuarios</span><div><button type="button" class="st-button" disabled aria-label="Página anterior">‹</button><button type="button" class="st-button st-primary" aria-current="page">1</button><button type="button" class="st-button" disabled aria-label="Página siguiente">›</button></div></div>
+</section>
+<section class="st-card st-user-information">
+<div class="st-card-heading"><h2>Información del usuario</h2><span class="st-id">ID: {{ fixture.user_id }}</span>{{ st.action('Editar usuario','pencil') }}</div>
+<div class="st-user-profile"><span class="st-avatar st-avatar-blue">AD<i></i></span><div class="st-user-fields">{% for label,value in fixture.user_details %}<div><strong>{{ label }}</strong><span>{{ value }}{% if label == 'Teléfono' %}<button type="button" class="st-icon-action" aria-label="Editar teléfono" data-preview-action>{{ st.icon('pencil') }}</button>{% endif %}</span></div>{% endfor %}</div></div>
+<div class="st-user-meta"><label><strong>Rol asignado</strong>{{ st.control('Rol asignado','Administrador') }}</label><label><strong>Estado</strong>{{ st.control('Estado','Activo') }}</label><div><strong>Último acceso</strong><span>{{ st.icon('calendar') }}{{ fixture.user_last_access }}</span></div><div><strong>Fecha de creación</strong><span>{{ st.icon('calendar') }}{{ fixture.user_created }}</span></div></div>
+</section>
+<div class="st-users-lower grid">
+<section class="st-card st-roles"><div class="st-card-heading"><div><h2>Roles del sistema</h2><p class="st-section-description">Define los roles disponibles en el sistema.</p></div>{{ st.action('Nuevo rol','plus') }}</div>
+{% for name,desc,count,symbol,tone in fixture.roles %}<div class="st-role-row"><span class="st-notification-icon st-tone-{{ tone }}">{{ st.icon(symbol) }}</span><div class="st-role-copy"><strong>{{ name }}</strong><p>{{ desc }}</p></div><span class="st-id">{{ count }} {{ 'usuarios' if count > 1 else 'usuario' }}</span><button type="button" class="st-button st-more" aria-label="Opciones del rol {{ name }}" data-preview-action>{{ st.icon('more') }}</button></div>{% endfor %}
+</section>
+<section class="st-card st-permissions"><h2>Permisos del rol: Administrador</h2><p class="st-section-description">Permisos asignados a este rol.</p><label class="st-select-all">Seleccionar todo <input type="checkbox" checked data-permissions-all></label>
+{% for name,desc,symbol,tone in fixture.role_permissions %}<div class="st-permission-row"><span class="st-notification-icon st-tone-{{ tone }}">{{ st.icon(symbol) }}</span><div class="st-role-copy"><strong>{{ name }}</strong><p>{{ desc }}</p></div>{{ st.action('Ver detalles') }}<input type="checkbox" checked aria-label="Permiso {{ name }}" data-role-permission></div>{% endfor %}
+<div class="st-permission-footer" data-permission-count>5 de 5 permisos asignados</div>
+</section></div></div>
+{{ st.info('Los cambios en usuarios, roles y permisos se aplicarán inmediatamente en todo el sistema.') }}

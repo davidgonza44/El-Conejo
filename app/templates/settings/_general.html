@@ -1,0 +1,16 @@
+<div class="st-general-grid grid">
+<div class="st-column">
+<section class="st-card st-general-info"><h2>Información general</h2><div class="st-fields grid grid-cols-2">
+{% for label,value,select in fixture.general %}<label><span>{{ label }}</span>{{ st.control(label,value,'select' if select else '') }}</label>{% endfor %}
+</div><label class="st-logo-label">Logo de la empresa</label><div class="st-logo-row">{{ st.action('Subir logo','upload') }}<span>Formatos permitidos: PNG, JPG. Máx. 2MB</span><span class="st-logo-placeholder">{{ st.icon('image') }}</span></div></section>
+<section class="st-card st-general-parameters"><h2>Parámetros de análisis predictivo</h2>{% for label,desc,value,kind in fixture.general_parameters %}{{ st.row(label,desc,value,kind) }}{% endfor %}<a class="st-card-link" href="{{ url_for('pages.settings', tab='predictive', ref=1) }}">Configuración avanzada {{ st.icon('chevron') }}</a></section>
+</div>
+<div class="st-column">
+<section class="st-card st-preferences"><h2>Preferencias del sistema</h2>{% for symbol,label,desc,checked in fixture.preferences %}{{ st.toggle(label,desc,checked,symbol) }}{% endfor %}</section>
+<section class="st-card st-units"><h2>Unidades y conversiones</h2>{% for label,value in fixture.units %}<div class="st-row"><label>{{ label }}</label>{{ st.control(label,value) }}</div>{% endfor %}<button type="button" class="st-card-link" data-preview-action>Gestionar unidades de medida {{ st.icon('chevron') }}</button></section>
+</div>
+<div class="st-column">
+<section class="st-card st-system"><h2>Información del sistema</h2>{% for label,value in fixture.system %}<div class="st-meta"><span>{{ label }}</span><strong>{{ value }}</strong></div>{% endfor %}<div class="st-meta"><span>Base de datos</span><strong class="st-badge">Conectada</strong></div><div class="st-meta st-storage"><span>Almacenamiento usado</span><small>{{ fixture.storage }}</small></div><div class="st-progress-row"><progress aria-label="Almacenamiento usado" value="{{ fixture.storage_percent }}" max="100"></progress><small>{{ fixture.storage_percent }}%</small></div></section>
+<section class="st-card st-activity"><h2>Actividad reciente</h2>{% for symbol,label,date,time in fixture.activity %}<div class="st-activity-row"><span class="st-icon-block">{{ st.icon(symbol) }}</span><div><strong>{{ label }}</strong><small>Administrador</small></div><time>{{ date }}<span>{{ time }}</span></time></div>{% endfor %}<button type="button" class="st-card-link" data-preview-action>Ver historial completo {{ st.icon('chevron') }}</button></section>
+</div>
+</div>

@@ -1,0 +1,288 @@
+{% extends "base_app.html" %}
+{% set active_page = "inventory" %}
+
+{% block title %}Inventario — Ferretería El Conejo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inventory.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="page-header mb-3">
+    <div class="row align-items-center">
+        <div class="col">
+            <h1 class="page-title mb-1">
+                <i class="ti ti-arrows-exchange me-2 text-primary"></i>Inventario
+            </h1>
+            <div class="text-secondary">Movimientos de stock: entradas, salidas y ajustes</div>
+        </div>
+        {% if can_move %}
+        <div class="col-auto d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-success btn-sm" id="btn-new-entry">
+                <i class="ti ti-arrow-down-left me-1"></i>Nueva entrada
+            </button>
+            <button type="button" class="btn btn-warning btn-sm" id="btn-new-exit">
+                <i class="ti ti-arrow-up-right me-1"></i>Nueva salida
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-new-adjustment">
+                <i class="ti ti-adjustments me-1"></i>Nuevo ajuste
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="page-alert" class="alert d-none" role="alert"></div>
+
+<!-- KPIs -->
+<div class="row row-deck row-cards mb-3">
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-blue-lt text-blue"><i class="ti ti-list"></i></div>
+                <div class="kpi-value" id="kpi-total">—</div>
+                <div class="kpi-label">Total movimientos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-green-lt text-green"><i class="ti ti-arrow-down-left"></i></div>
+                <div class="kpi-value" id="kpi-entries">—</div>
+                <div class="kpi-label">Entradas</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-orange-lt text-orange"><i class="ti ti-arrow-up-right"></i></div>
+                <div class="kpi-value" id="kpi-exits">—</div>
+                <div class="kpi-label">Salidas</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="kpi-icon bg-azure-lt text-azure"><i class="ti ti-adjustments"></i></div>
+                <div class="kpi-value" id="kpi-adjustments">—</div>
+                <div class="kpi-label">Ajustes</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card kpi-card kpi-warning">
+            <div class="card-body">
+                <div class="kpi-icon bg-yellow-lt text-yellow"><i class="ti ti-alert-triangle"></i></div>
+                <div class="kpi-value" id="kpi-low-stock">—</div>
+                <div class="kpi-label">Bajo stock</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Productos bajo stock -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-alert-triangle me-2 text-yellow"></i>Productos bajo stock</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter table-sm card-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th class="text-end">Stock actual</th>
+                    <th class="text-end">Stock mínimo</th>
+                </tr>
+            </thead>
+            <tbody id="low-stock-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form id="filters-form" class="row g-2 align-items-end" autocomplete="off">
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="f-product">Producto</label>
+                <select id="f-product" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-type">Tipo</label>
+                <select id="f-type" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="entrada">Entrada</option>
+                    <option value="salida">Salida</option>
+                    <option value="ajuste">Ajuste</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-date-from">Desde</label>
+                <input type="date" id="f-date-from" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label mb-1" for="f-date-to">Hasta</label>
+                <input type="date" id="f-date-to" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="ti ti-filter me-1"></i>Aplicar
+                </button>
+                <button type="button" id="btn-clear-filters" class="btn btn-outline-secondary btn-sm flex-fill">
+                    Limpiar
+                </button>
+            </div>
+        </form>
+        <small class="form-hint mt-1 d-block">El filtro por fechas se aplica en el navegador; la API no expone rango de fechas.</small>
+    </div>
+</div>
+
+<!-- Tabla de movimientos -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Historial de movimientos</h3>
+        <div class="card-actions">
+            <span class="text-secondary small" id="movements-count">Cargando…</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter table-striped card-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Código</th>
+                    <th>Tipo</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">Stock anterior</th>
+                    <th class="text-end">Stock nuevo</th>
+                    <th>Motivo</th>
+                    <th>Usuario</th>
+                </tr>
+            </thead>
+            <tbody id="movements-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_move %}
+<!-- Modal: entrada -->
+<div class="modal" id="entry-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-arrow-down-left me-2 text-success"></i>Nueva entrada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="entry-form" autocomplete="off" novalidate>
+                <div class="modal-body">
+                    <div id="entry-form-error" class="alert alert-danger d-none" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="entry-product">Producto</label>
+                        <select id="entry-product" class="form-select"><option value="">Seleccione…</option></select>
+                        <small class="form-hint" id="entry-stock-hint"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="entry-quantity">Cantidad</label>
+                        <input type="number" id="entry-quantity" class="form-control" min="1" step="1" value="1">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label" for="entry-reason">Motivo (opcional)</label>
+                        <input type="text" id="entry-reason" class="form-control" maxlength="255"
+                               placeholder="Ej: Compra a proveedor">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registrar entrada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: salida -->
+<div class="modal" id="exit-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-arrow-up-right me-2 text-warning"></i>Nueva salida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="exit-form" autocomplete="off" novalidate>
+                <div class="modal-body">
+                    <div id="exit-form-error" class="alert alert-danger d-none" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="exit-product">Producto</label>
+                        <select id="exit-product" class="form-select"><option value="">Seleccione…</option></select>
+                        <small class="form-hint" id="exit-stock-hint"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="exit-quantity">Cantidad</label>
+                        <input type="number" id="exit-quantity" class="form-control" min="1" step="1" value="1">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label" for="exit-reason">Motivo (opcional)</label>
+                        <input type="text" id="exit-reason" class="form-control" maxlength="255"
+                               placeholder="Ej: Venta mostrador">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Registrar salida</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: ajuste -->
+<div class="modal" id="adjustment-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-adjustments me-2 text-primary"></i>Nuevo ajuste</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="adjustment-form" autocomplete="off" novalidate>
+                <div class="modal-body">
+                    <div id="adjustment-form-error" class="alert alert-danger d-none" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="adj-product">Producto</label>
+                        <select id="adj-product" class="form-select"><option value="">Seleccione…</option></select>
+                        <small class="form-hint" id="adj-stock-hint"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="adj-new-stock">Nuevo stock</label>
+                        <input type="number" id="adj-new-stock" class="form-control" min="0" step="1" value="0">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label required" for="adj-reason">Motivo</label>
+                        <input type="text" id="adj-reason" class="form-control" maxlength="255"
+                               placeholder="Obligatorio para ajustes">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar ajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>window.CAN_MOVE = {{ can_move | tojson }};</script>
+<script src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+{% endblock %}

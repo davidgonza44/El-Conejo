@@ -1,0 +1,56 @@
+{% extends "ix_base.html" %}
+{% import "settings/_macros.html" as st %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "settings" %}
+{% set sidebar_variant = "settings" %}
+{% set live_tabs = ('general', 'notifications', 'users', 'security', 'backup') %}
+{# Acciones de cabecera solo si el permiso efectivo permite ejecutarlas (el backend sigue siendo la autoridad). #}
+{% set can_write = has_permission('settings:write') %}
+{% set can_save = live and (has_permission('roles:manage') if tab == 'users' else tab in live_tabs and can_write) %}
+{% block title %}Configuración — El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_settings.css') }}">{% endblock %}
+{% block main_class %} st-page st-{{ tab }}{% endblock %}
+{% block main %}
+<header class="st-header">
+    <div class="st-heading"><h1>Configuración</h1><nav class="st-breadcrumb" aria-label="Ruta de navegación"><a href="{{ url_for('pages.dashboard', ref=1) if reference_mode else home_path() }}">Inicio</a>{{ st.icon('chevron') }}<a href="{{ url_for('pages.settings', tab='general', ref=1) if reference_mode else url_for('pages.settings') }}">Configuración</a>{% if tab in ('predictive', 'notifications', 'users', 'security', 'integrations', 'backup') %}{{ st.icon('chevron') }}<span>{{ dict(tabs)[tab] }}</span>{% endif %}</nav><p>{{ 'Gestiona los respaldos de la base de datos y la información del sistema.' if tab == 'backup' else 'Administra los usuarios del sistema, asigna roles y define permisos de acceso.' if tab == 'users' else 'Administra la seguridad de tu cuenta, accesos al sistema y políticas de protección de datos.' if tab == 'security' else 'Define qué eventos generan avisos y por qué canal. Estos ajustes son globales: aplican a todas las cuentas.' if tab == 'notifications' else 'Consulta los parámetros vigentes del análisis predictivo. Son de solo lectura: no se editan desde esta pantalla.' if tab == 'predictive' else 'Estado de los proveedores externos que la aplicación puede usar. Solo lectura: no se realizan conexiones desde aquí.' if tab == 'integrations' else 'Administra las preferencias del sistema y consulta la información de la aplicación.' }}</p></div>
+    <div class="st-header-side">
+        <div class="st-search-row">{% if reference_mode %}<label class="st-search">{{ st.icon('search') }}<input aria-label="Buscar en el sistema" placeholder="Buscar productos, clientes, reportes..." readonly></label><button type="button" class="st-bell" aria-label="Notificaciones: vista previa" data-preview-action>{{ st.icon('bell') }}<span>3</span></button>{% else %}{{ iv.shell_chrome(False, '', search_class='st-search') }}{% endif %}</div>
+        <div class="st-actions">
+        {% if reference_mode %}{{ st.action('Probar notificaciones','send') if tab == 'notifications' else st.action('Restablecer valores','reset') }}{{ st.action('Guardar cambios','save',True) }}
+        {% else %}
+            {% if tab == 'notifications' and has_permission('notifications:manage') %}<button type="button" class="st-button" id="st-test-notifications">{{ st.icon('send') }}Probar notificaciones</button>{% endif %}
+            {% if can_save %}
+            <button type="button" class="st-button" id="st-reset" title="{{ 'Descarta los permisos sin guardar del rol seleccionado.' if tab == 'users' else 'Vuelve a los valores por defecto de esta pestaña (no afecta usuarios, roles, credenciales ni respaldos).' }}">{{ st.icon('reset') }}Restablecer valores</button>
+            <button type="submit" form="st-live-form" class="st-button st-primary" id="st-save" title="{{ 'Guarda los permisos del rol seleccionado.' if tab == 'users' else 'Guarda los valores editables de esta pestaña.' }}">{{ st.icon('save') }}{{ 'Guardar permisos del rol' if tab == 'users' else 'Guardar cambios' }}</button>
+            {% elif tab in ('general', 'notifications', 'backup') %}<span class="st-badge is-muted" title="Su rol puede consultar estos ajustes, pero no modificarlos.">Ajustes de solo lectura</span>{% endif %}
+        {% endif %}
+        </div>
+    </div>
+    <button type="button" id="ix-menu-toggle" class="st-menu st-button" aria-expanded="false" aria-controls="ix-sidebar">Menú</button>
+</header>
+<nav class="st-tabs flex items-center" aria-label="Configuración">
+{% set tab_icons = {'general':'settings','predictive':'chart','notifications':'bell','users':'users','security':'shield','integrations':'integrations','backup':('clipboard' if tab == 'backup' else 'lock')} %}
+{% for key, label in tabs if settings_tab_allowed(key, reference_mode) %}<a href="{{ url_for('pages.settings', tab=key, ref=1) if reference_mode else url_for('pages.settings', tab=key) }}" class="{{ 'is-active' if key == tab }}" {% if key == tab %}aria-current="page"{% endif %}>{{ st.icon(tab_icons[key]) }}{{ label }}</a>{% endfor %}
+</nav>
+{% if fixture and tab in ('general', 'predictive', 'notifications', 'users', 'security', 'backup') %}
+<form class="st-form" aria-label="Vista previa de configuración" onsubmit="return false">
+{% include 'settings/_' ~ tab ~ '.html' %}
+</form>
+{% if tab == 'general' %}<footer class="st-footer">© 2024 Ferretería y Construcciones El Conejo C.A. - Sistema de Inventario. Todos los derechos reservados.</footer>{% endif %}
+{% elif live and tab in live_tabs %}
+<form class="st-form" id="st-live-form" aria-label="Configuración" data-csrf="{{ csrf_token() }}" data-tab="{{ tab }}" data-settings-available="{{ '1' if live.settings_available else '0' }}" data-can-write="{{ '1' if can_write else '0' }}" novalidate>
+{% include 'settings/live/_' ~ tab ~ '.html' %}
+</form>
+{# Diálogos fuera de #st-live-form: un <form> anidado sería descartado por el parser HTML. #}
+{% if tab == 'security' %}{% include 'settings/live/_security_dialog.html' %}{% endif %}
+{% if tab == 'users' %}{% include 'settings/live/_users_dialog.html' %}{% endif %}
+{% if tab == 'notifications' %}{% include 'settings/live/_notifications_dialog.html' %}{% endif %}
+{% if tab == 'backup' %}{% include 'settings/live/_backup_dialog.html' %}{% endif %}
+<dialog class="st-dialog" id="st-confirm" aria-labelledby="st-confirm-title"><form method="dialog" id="st-confirm-form"><h2 id="st-confirm-title"></h2><p class="st-dialog-hint" id="st-confirm-text"></p><p class="st-dialog-error" role="alert" hidden></p><div class="st-dialog-actions"><button type="button" class="st-button" data-dialog-close>Cancelar</button><button type="submit" class="st-button st-primary" id="st-confirm-accept">Confirmar</button></div></form></dialog>
+<div class="st-menu-popover" id="st-menu" role="menu" hidden></div>
+{% if tab == 'general' %}<footer class="st-footer">© {{ live.settings['company.name'] }} - Sistema de Inventario.</footer>{% endif %}
+{% elif live and tab in ('predictive', 'integrations') %}{% include 'settings/live/_' ~ tab ~ '.html' %}
+{% else %}<section class="st-card st-unavailable"><h2>{{ dict(tabs)[tab] }}</h2><p>Esta sección no dispone de una interfaz de configuración conectada. No se muestran valores simulados ni se realizan cambios.</p></section>{% endif %}
+<div class="st-toast" role="status" hidden>{% if reference_mode %}Vista previa: esta acción no guarda datos ni ejecuta procesos.{% endif %}</div>
+{% endblock %}
+{% block scripts %}{% if reference_mode %}<script src="{{ url_for('static', filename='js/ix_settings.js') }}"></script>{% else %}<script src="{{ url_for('static', filename='js/ix_settings_live.js') }}"></script>{% if live and tab in ('general', 'users', 'security', 'notifications', 'backup') %}<script src="{{ url_for('static', filename='js/ix_settings_' ~ tab ~ '.js') }}"></script>{% endif %}{% endif %}{% endblock %}

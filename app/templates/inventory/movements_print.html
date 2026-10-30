@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Movimientos de Inventario — Versión para impresión</title>
+<style>
+    body { margin: 24px; font: 12px/1.45 Inter, 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #fff; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+    h1 { margin: 0 0 4px; font-size: 20px; }
+    .brand { margin: 0; font-weight: 700; color: #1a73e8; }
+    .meta { margin: 0; color: #4b5563; }
+    .actions button { padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+    th { background: #f3f6fb; font-weight: 600; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    tbody tr:nth-child(even) { background: #fafbfd; }
+    .empty { padding: 24px; text-align: center; color: #6b7280; }
+    @media print { body { margin: 0; } .actions { display: none; } thead { display: table-header-group; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header>
+    <div>
+        <p class="brand">Ferretería y Construcciones El Conejo C.A.</p>
+        <h1>Movimientos de Inventario</h1>
+        <p class="meta">Fecha de generación: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+        <p class="meta">{{ filters }}</p>
+        <p class="meta">Movimientos: {{ rows | length }}</p>
+    </div>
+    <div class="actions"><button type="button" onclick="window.print()">Imprimir</button></div>
+</header>
+<main>
+{% if rows %}
+<table>
+    <thead><tr>{% for key, label, _ in columns %}<th scope="col"{% if key in ('quantity', 'previous_stock', 'new_stock') %} class="num"{% endif %}>{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr>{% for key, _, _ in columns %}<td{% if key in ('quantity', 'previous_stock', 'new_stock') %} class="num"{% endif %}>{% if key == 'created_at' %}{{ row[key].strftime('%d/%m/%Y %H:%M') }}{% elif key == 'quantity' and row[key] > 0 %}+{{ row[key] }}{% else %}{{ row[key] }}{% endif %}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">No hay movimientos con estos filtros.</p>
+{% endif %}
+</main>
+<script>window.addEventListener('load', function () { window.print(); });</script>
+</body>
+</html>

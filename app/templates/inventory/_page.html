@@ -1,0 +1,19 @@
+{% extends "ix_base.html" %}
+{# Base de las pantallas de Inventario con shell "ix": reutiliza los componentes de
+   predictive.css (tablas, insignias, paginación, filtros) y añade ix_inventory.css/js.
+   `fixture` solo existe en modo referencia (debug, ?ref=1); en modo normal es None. #}
+{% import "predictive/_macros.html" as px %}
+{% import "inventory/_macros.html" as iv %}
+{% set sidebar_variant = "inventory" %}
+{% set ref_qs = "?ref=1" if reference_mode else "" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_inventory.css') }}">
+{% endblock %}
+
+{% block main_class %} iv-page{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ix_inventory.js') }}"></script>
+{% endblock %}

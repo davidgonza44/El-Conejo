@@ -1,0 +1,229 @@
+{% extends "sales/_page.html" %}
+{# Nueva venta (panel "3. Nueva Venta"). En modo referencia los controles son de presentación:
+   no existe formulario ni envío; no se crea ninguna venta ni se altera el stock.
+   En modo normal la misma geometría se conecta a /api/sales (ix_sales_live.js): el cliente y
+   los productos se buscan en la API, el servidor fija fecha, vendedor, precios y totales. #}
+{% set active_page = "sales_new" %}
+
+{% block title %}Nueva venta — Ventas{% endblock %}
+
+{% block main_class %} iv-page sa-page sa-new-page{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_sale_product_layers.css') }}">
+{% if reference_mode and fixture %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_sale_controls.css') }}">{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if reference_mode and fixture %}<script src="{{ url_for('static', filename='js/ix_sale_product_layers.js') }}"></script>{% endif %}
+{% if reference_mode and fixture %}<script src="{{ url_for('static', filename='js/ix_sale_controls.js') }}"></script>{% endif %}
+{% if not reference_mode %}<script src="{{ url_for('static', filename='js/ix_sales_shared.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ix_sales_live.js') }}"></script>{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ sa.header("Nueva venta", "Registra una nueva venta en el sistema.",
+             fixture.search_placeholder if fixture else "", reference_mode=reference_mode) }}
+
+{% if not fixture %}
+{# ---------------- Modo normal: venta real ---------------- #}
+<form id="sv-form" class="sv-live" data-can-sell="{{ '1' if can_sell else '0' }}" novalidate>
+<div class="sa-actionbar">
+    <a href="{{ url_for('pages.sales_list') }}" class="sa-back"><i class="ti ti-arrow-left" aria-hidden="true"></i>Nueva venta</a>
+    <div class="px-actions sa-actionbar-actions">
+        <button type="button" class="px-btn sa-btn is-ghost" id="sv-cancel">Cancelar</button>
+        <button type="submit" class="px-btn sa-btn is-primary" id="sv-save"{% if not can_sell %} disabled title="Su rol no puede registrar ventas."{% endif %}>Guardar</button>
+        <button type="button" class="px-btn sa-btn sa-icon-btn is-primary" aria-label="Más opciones de guardado" disabled title="Guardar y cotizar / pedido: no disponible en esta versión."><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+    </div>
+</div>
+<p class="sv-feedback" id="sv-feedback" role="status" hidden></p>
+
+<section class="sa-new-top" aria-label="Cliente e información de la venta">
+    <article class="ix-card sa-form-card">
+        <h2 class="sa-form-title">Información del cliente</h2>
+        <label class="px-search sa-field-search sv-combo">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="search" id="sv-customer-search" placeholder="Buscar cliente por nombre, RIF o teléfono..." aria-label="Buscar cliente"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sv-customer-list" autocomplete="off">
+            <ul class="sv-list" id="sv-customer-list" role="listbox" aria-label="Clientes encontrados" hidden></ul>
+        </label>
+        <input type="hidden" name="customer_id" id="sv-customer-id" value="">
+        <div class="sa-customer" id="sv-customer" hidden>
+            <span class="sa-customer-icon" aria-hidden="true">{{ iv.icon("svg:user") }}</span>
+            <span class="ix-row-text">
+                <span class="ix-row-title" id="sv-customer-name"></span>
+                <span class="ix-row-desc" id="sv-customer-line1"></span>
+                <span class="ix-row-desc" id="sv-customer-line2"></span>
+            </span>
+            <button type="button" class="sa-customer-remove" id="sv-customer-remove" aria-label="Quitar cliente"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+        <p class="sa-customer sv-customer-empty" id="sv-customer-empty">Seleccione un cliente para continuar.</p>
+    </article>
+
+    <article class="ix-card sa-form-card">
+        <h2 class="sa-form-title">Información de la venta</h2>
+        <div class="sa-fields">
+            <div class="sa-field">
+                <span class="sa-field-label" id="sv-date-label">Fecha de venta</span>
+                <span class="sa-field-box" role="textbox" aria-labelledby="sv-date-label" aria-readonly="true">{{ sale_date }}</span>
+            </div>
+            <div class="sa-field">
+                <span class="sa-field-label" id="sv-seller-label">Vendedor</span>
+                <span class="sa-field-box" role="textbox" aria-labelledby="sv-seller-label" aria-readonly="true" title="{{ current_user.name }}">{{ current_user.name }}</span>
+            </div>
+            <label class="sa-field">
+                <span class="sa-field-label">Método de pago</span>
+                <select class="sa-field-box sv-select" name="payment_method" id="sv-payment-method">
+                    {% for value, label in payment_methods.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="sa-field">
+                <span class="sa-field-label">Condición de pago</span>
+                <select class="sa-field-box sv-select" name="payment_condition" id="sv-payment-condition">
+                    {% for value, label in payment_conditions.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="sa-field" id="sv-cash-field" hidden>
+                <span class="sa-field-label">Efectivo recibido</span>
+                <input class="sa-field-box" id="sv-cash-received" name="cash_received" type="text"
+                       inputmode="decimal" autocomplete="off" aria-describedby="sv-cash-help" disabled>
+                <small id="sv-cash-help">Importe con hasta dos decimales. El servidor confirma el vuelto.</small>
+            </label>
+            <div class="sa-field" id="sv-change-field" hidden>
+                <span class="sa-field-label" id="sv-change-label">Vuelto estimado</span>
+                <output class="sa-field-box" id="sv-change-due" aria-labelledby="sv-change-label" aria-live="polite">—</output>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="ix-card sa-products-card" aria-label="Productos de la venta">
+    <h2 class="sa-form-title">Productos</h2>
+    <div class="sa-products-bar">
+        <label class="px-search sa-product-search sv-combo">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="search" id="sv-product-search" placeholder="Buscar producto por nombre o código..." aria-label="Buscar producto"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sv-product-list" autocomplete="off">
+            <ul class="sv-list" id="sv-product-list" role="listbox" aria-label="Productos encontrados" hidden></ul>
+        </label>
+        <div class="px-actions sa-products-actions">
+            <button type="button" class="px-btn sa-btn" disabled title="Escáner de códigos: no disponible en esta versión."><i class="ti ti-scan" aria-hidden="true"></i>Escanear</button>
+            <button type="button" class="px-btn sa-btn is-primary" id="sv-add-product"><i class="ti ti-plus" aria-hidden="true"></i>Agregar producto</button>
+        </div>
+    </div>
+
+    <div class="sa-lines">
+        <table class="px-table sa-table sa-lines-table">
+            <colgroup><col style="width: 44px"><col><col style="width: 90px"><col style="width: 96px"><col style="width: 100px"><col style="width: 111px"><col style="width: 44px"></colgroup>
+            <thead>
+                <tr>{% for c in ["#", "Producto", "Precio Unit.", "Cantidad", "Descuento", "Total", ""] %}<th scope="col"{% if loop.index == 3 %} class="is-end"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody id="sv-lines"></tbody>
+        </table>
+        <p class="sv-empty" id="sv-empty">Aún no hay productos en la venta. Busque un producto para agregarlo.</p>
+    </div>
+
+    <footer class="sa-totals-bar">
+        <span class="sa-count" id="sv-count">0 productos agregados</span>
+        <dl class="sa-totals">
+            <div class="sa-total-row"><dt>Subtotal</dt><dd id="sv-subtotal">$ 0.00</dd></div>
+            <div class="sa-total-row"><dt>Descuento</dt><dd id="sv-discount">$ 0.00</dd></div>
+            <div class="sa-total-row is-total"><dt>Total</dt><dd id="sv-total">$ 0.00</dd></div>
+        </dl>
+    </footer>
+</section>
+</form>
+{% include "sales/_sale_product_layers.html" %}
+{% else %}
+{# ---------------- Modo referencia: fixture determinista, cero escrituras ---------------- #}
+<div class="sa-actionbar">
+    <a href="{{ url_for('pages.sales_list') }}{{ ref_qs }}" class="sa-back"><i class="ti ti-arrow-left" aria-hidden="true"></i>{{ fixture.back }}</a>
+    <div class="px-actions sa-actionbar-actions">
+        {{ sa.btn("Cancelar", extra_class="is-ghost") }}
+        {{ sa.btn("Guardar", primary=True) }}
+        {{ sa.icon_btn("ti-chevron-down", "Más opciones de guardado", primary=True) }}
+    </div>
+</div>
+
+<section class="sa-new-top" aria-label="Cliente e información de la venta">
+    {% set c = fixture.customer %}
+    <article class="ix-card sa-form-card">
+        <h2 class="sa-form-title">{{ c.title }}</h2>
+        <label class="px-search sa-field-search">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="search" placeholder="{{ c.search }}" aria-label="{{ c.search }}">
+        </label>
+        <div class="sa-customer">
+            <span class="sa-customer-icon" aria-hidden="true">{{ iv.icon("svg:user") }}</span>
+            <span class="ix-row-text">
+                <span class="ix-row-title">{{ c.name }}</span>
+                <span class="ix-row-desc">{{ c.line1 }}</span>
+                <span class="ix-row-desc">{{ c.line2 }}</span>
+            </span>
+            <button type="button" class="sa-customer-remove" aria-label="Quitar cliente"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+    </article>
+
+    <article class="ix-card sa-form-card">
+        <h2 class="sa-form-title">{{ fixture.sale.title }}</h2>
+        <div class="sa-fields">
+            {% for label, value, select in fixture.sale.fields %}
+            <div class="sa-field">
+                <span class="sa-field-label">{{ label }}</span>
+                <span class="sa-field-box{{ ' is-select' if select }}" role="{{ 'button' if select else 'textbox' }}" aria-label="{{ label }}" aria-readonly="true">{{ value }}{% if select %}<i class="ti ti-chevron-down" aria-hidden="true"></i>{% endif %}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+{% set p = fixture.products %}
+<section class="ix-card sa-products-card" aria-label="Productos de la venta">
+    <h2 class="sa-form-title">{{ p.title }}</h2>
+    <div class="sa-products-bar">
+        <label class="px-search sa-product-search">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="search" placeholder="{{ p.search }}" aria-label="{{ p.search }}">
+            <i class="ti ti-chevron-down sa-search-chevron" aria-hidden="true"></i>
+        </label>
+        <div class="px-actions sa-products-actions">
+            {% for label, ico, primary in p.actions %}{{ sa.btn(label, ico, primary) }}{% endfor %}
+        </div>
+    </div>
+
+    <div class="sa-lines">
+        <table class="px-table sa-table sa-lines-table">
+            <colgroup><col style="width: 44px"><col><col style="width: 90px"><col style="width: 96px"><col style="width: 100px"><col style="width: 111px"><col style="width: 44px"></colgroup>
+            <thead>
+                <tr>{% for c in p.columns %}<th scope="col"{% if loop.index == 3 %} class="is-end"{% endif %}>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for prod, code, price, qty, disc, total in p.rows %}
+                <tr>
+                    <td class="sa-muted">{{ loop.index }}</td>
+                    <td>{{ sa.product(prod, code) }}</td>
+                    <td class="is-end">{{ price }}</td>
+                    <td><span class="sa-qty" role="spinbutton" aria-label="Cantidad" aria-valuenow="{{ qty }}" aria-readonly="true">{{ qty }}<i class="ti ti-selector" aria-hidden="true"></i></span></td>
+                    <td><span class="sa-disc" role="button" aria-label="Descuento">{{ disc }}<i class="ti ti-chevron-down" aria-hidden="true"></i></span></td>
+                    <td><strong>{{ total }}</strong></td>
+                    <td><button type="button" class="sa-remove" aria-label="Quitar {{ prod.name }}"><i class="ti ti-trash" aria-hidden="true"></i></button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <footer class="sa-totals-bar">
+        <span class="sa-count">{{ p.count }}</span>
+        <dl class="sa-totals">
+            {% for label, value, strong in p.totals %}
+            <div class="sa-total-row{{ ' is-total' if strong }}"><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+            {% endfor %}
+        </dl>
+    </footer>
+</section>
+{% if reference_mode %}{% include "sales/_sale_product_layers.html" %}{% endif %}
+{% endif %}
+{% endblock %}

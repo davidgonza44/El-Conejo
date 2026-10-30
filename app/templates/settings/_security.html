@@ -1,0 +1,30 @@
+<div class="st-security-top grid">
+<section class="st-card st-security-access"><h2>Autenticación y acceso</h2><p class="st-section-description">Configura las opciones de inicio de sesión y protección de cuenta.</p>
+{% for symbol,title,desc,action in fixture.security_access %}<div class="st-access-row"><span class="st-notification-icon st-tone-blue">{{ st.icon(symbol) }}</span><div><strong>{{ title }}</strong><p>{{ desc }}</p></div>{% if action %}{{ st.action(action) }}{% else %}<button type="button" class="st-mfa-action" aria-label="Autenticación en dos pasos: Activado" data-preview-action><span class="st-badge">Activado</span>{{ st.icon('chevron') }}</button>{% endif %}</div>{% endfor %}
+</section>
+<section class="st-card st-password-policy"><h2>Política de contraseñas</h2><p class="st-section-description">Define las reglas para contraseñas de usuarios.</p>
+<div class="st-policy-list">{% for label,value in fixture.password_policy %}<div>{{ st.icon('check') }}<strong>{{ label }}</strong><span>{{ value }}</span></div>{% endfor %}</div><div class="st-policy-action">{{ st.action('Editar política') }}</div>
+</section>
+<section class="st-card st-security-mfa"><h2>Autenticación en dos pasos (2FA)</h2><p class="st-section-description">Protege tu cuenta con verificación en dos pasos.</p>
+<div class="st-success">{{ st.icon('shield') }}<div><strong>2FA activado</strong><span>Tu cuenta está protegida con autenticación en dos pasos.</span></div></div>
+<div class="st-mfa-method"><strong>Método de verificación</strong><div><span>{{ fixture.mfa_method }}</span>{{ st.action('Cambiar') }}</div></div>
+<div class="st-mfa-codes"><strong>Códigos de respaldo</strong><div><span>{{ fixture.backup_code_summary }}</span>{{ st.action('Ver códigos') }}</div></div>
+{{ st.info('Usa los códigos de respaldo si no tienes acceso a tu dispositivo.') }}
+</section></div>
+<div class="st-security-bottom grid">
+<section class="st-card st-security-sessions"><h2>Sesiones activas</h2><p class="st-section-description">Dispositivos y navegadores con acceso actual al sistema.</p>
+<div class="st-security-table-scroll" tabindex="0" role="region" aria-label="Sesiones activas"><table class="st-security-table"><thead><tr><th scope="col">Dispositivo / Navegador</th><th scope="col">Ubicación</th><th scope="col">IP</th><th scope="col">Inicio de sesión</th><th scope="col">Estado</th></tr></thead><tbody>
+{% for symbol,device,current,location,ip,date,active in fixture.security_sessions %}<tr><td><div class="st-device">{{ st.icon(symbol) }}<span>{{ device }}{% if current %}<small>Este dispositivo</small>{% endif %}</span></div></td><td>{{ location }}<span class="st-country">Venezuela</span></td><td>{{ ip }}</td><td>{{ date }}</td><td><span class="st-security-status{{ ' is-inactive' if not active }}">{{ 'Activa' if active else 'Inactiva' }}</span></td></tr>{% endfor %}
+</tbody></table></div><div class="st-security-card-footer"><button type="button" class="st-security-link" data-preview-action>Ver todas las sesiones {{ st.icon('chevron') }}</button>{{ st.action('Cerrar sesiones inactivas') }}</div>
+</section>
+<section class="st-card st-security-history"><h2>Historial de inicios de sesión</h2><p class="st-section-description">Últimos intentos de inicio de sesión en tu cuenta.</p>
+<div class="st-security-table-scroll" tabindex="0" role="region" aria-label="Historial de inicios de sesión"><table class="st-security-table"><thead><tr><th scope="col">Fecha y hora</th><th scope="col">IP</th><th scope="col">Ubicación</th><th scope="col">Resultado</th></tr></thead><tbody>
+{% for date,ip,location,success in fixture.login_history %}<tr><td>{{ date }}</td><td>{{ ip }}</td><td>{{ location }}</td><td><span class="st-security-status{{ ' is-failed' if not success }}">{{ 'Exitoso' if success else 'Fallido' }}</span></td></tr>{% endfor %}
+</tbody></table></div><div class="st-security-card-footer"><button type="button" class="st-security-link" data-preview-action>Ver historial completo {{ st.icon('chevron') }}</button></div>
+</section>
+<section class="st-card st-trusted-devices"><h2>Dispositivos confiables</h2><p class="st-section-description">Gestiona los dispositivos que puedes omitir 2FA.</p>
+<div class="st-trusted-empty"><svg class="st-trusted-art" viewBox="0 0 100 100" fill="none" aria-hidden="true"><defs><linearGradient id="st-device-blue" x1="25" y1="25" x2="70" y2="85" gradientUnits="userSpaceOnUse"><stop stop-color="#009cff"/><stop offset="1" stop-color="#003de1"/></linearGradient></defs><circle cx="50" cy="48" r="40" fill="#f0f5ff"/><ellipse cx="52" cy="81" rx="36" ry="5" fill="#e1ebff"/><rect x="23" y="35" width="42" height="42" rx="5" fill="#b3d5ff"/><path d="M29 73V34l18-8 19 8v18c0 13-19 22-19 22S29 66 29 53" fill="url(#st-device-blue)"/><path d="m46 37 3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z" fill="white"/><path d="M20 78h44" stroke="#005dff" stroke-width="5" stroke-linecap="round"/><rect x="57" y="57" width="29" height="24" rx="4" fill="#0060f9" stroke="#eef5ff" stroke-width="3"/><rect x="62" y="62" width="19" height="11" rx="1" fill="white"/><circle cx="72" cy="77" r="1.5" fill="white"/><path d="M23 24v4m-2-2h4m47-1v4m-2-2h4" stroke="#bdd5ff" stroke-width="2"/></svg>
+<strong>No hay dispositivos confiables</strong><p>Aún no has registrado dispositivos confiables.</p></div>
+<div class="st-security-card-footer"><button type="button" class="st-security-link" data-preview-action>Agregar dispositivo confiable {{ st.icon('chevron') }}</button></div>
+</section></div>
+{{ st.info('Mantén tu información de seguridad actualizada para proteger tu cuenta y los datos de tu negocio.') }}
