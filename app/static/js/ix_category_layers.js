@@ -9,7 +9,7 @@
     const submenu = document.getElementById('cl-submenu');
     const feedback = document.getElementById('cl-feedback');
     const rows = JSON.parse(document.getElementById('cl-fixture').textContent);
-    const colors = {blue:'#1477f5',green:'#20aa58',orange:'#ff941c',purple:'#8658d4',teal:'#13b9b1',gray:'#87929f'};
+    const colors = {blue:'#2f7fc1',green:'#20aa58',orange:'#c98c00',purple:'#8658d4',teal:'#13b9b1',gray:'#626a65'};
     let index = 0, opener = null, menuOpener = null, fromDetail = false, timer;
     let previousOverflow = '', previousPadding = '';
     const $ = selector => content.querySelector(selector);

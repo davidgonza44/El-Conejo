@@ -144,7 +144,7 @@
         ids: { rows: 'ov-rows', empty: 'ov-empty', summary: 'ov-summary', pages: 'ov-pages', feedback: 'ov-feedback' },
         statusKey: 'statuses',
         statusOrder: ['pending', 'processing', 'completed', 'cancelled'],
-        statusColors: { '': '#2473ee', pending: '#f5b34b', processing: '#f29927', completed: '#32af58', cancelled: '#eb4b55' },
+        statusColors: { '': '#e07b10', pending: '#c98c00', processing: '#c98c00', completed: '#32af58', cancelled: '#eb4b55' },
         cells: (o) => [ref(o.order_number), cell(dateOnly(o.ordered_at), 'sa-muted'), cell(o.customer ? o.customer.name : '—', 'sa-muted', o.customer && o.customer.name),
             cell(String(o.units), undefined, `${o.line_count} renglón${o.line_count === 1 ? '' : 'es'} · total ${money(toCents(o.total))}`), cell(dateOnly(o.estimated_delivery_date), 'sa-muted'),
             tone(o.priority_label, o.priority_tone), tone(o.payment_status_label, o.payment_status_tone), badge(o)],

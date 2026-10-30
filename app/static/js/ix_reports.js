@@ -6,14 +6,14 @@
 
     /* Paleta compartida con Inicio e Inventario. */
     const TONES = {
-        blue: "#1a73e8", green: "#3fae62", orange: "#fdb429", purple: "#8e73e4",
-        teal: "#20c2c5", gray: "#a6adb8", red: "#dc2626",
+        blue: "#2f7fc1", green: "#3fae62", orange: "#c98c00", purple: "#8e73e4",
+        teal: "#20c2c5", gray: "#626a65", red: "#dc2626",
     };
-    const BLUE_LIGHT = "#8ab4f8";
-    const BLUE_FILL = "rgba(26, 115, 232, 0.10)";
+    const BLUE_LIGHT = "#f1cfac";
+    const BLUE_FILL = "rgba(224, 123, 16, 0.10)";
     const FONT = { family: "Inter, 'Segoe UI', sans-serif", size: 10 };
-    const AXIS_COLOR = "#6b7280";
-    const GRID = "#eef0f3";
+    const AXIS_COLOR = "#626a65";
+    const GRID = "#f7f8f5";
     const BASE = {
         responsive: true, maintainAspectRatio: false, animation: false, events: [],
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
@@ -115,7 +115,7 @@
             const { ctx } = chart;
             ctx.save();
             ctx.font = `700 10.5px ${FONT.family}`;
-            ctx.fillStyle = "#1f2937";
+            ctx.fillStyle = "#191c1a";
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
             chart.getDatasetMeta(0).data.forEach((bar, i) => ctx.fillText(opts.labels[i], bar.x, bar.y - 5));

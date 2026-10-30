@@ -5,7 +5,7 @@
     white-space: normal;
     text-align: center;
     padding: 2.2rem 1rem;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
 }
 
 .cell-num {
@@ -14,22 +14,22 @@
 
 .badge-no-history {
     background-color: rgba(108, 117, 125, 0.15);
-    color: #5c636a;
+    color: var(--cj-ink-2);
 }
 
 .badge-insufficient {
     background-color: rgba(247, 103, 7, 0.15);
-    color: #b04e00;
+    color: var(--cj-warn-ink);
 }
 
 .badge-limited {
     background-color: rgba(217, 165, 33, 0.18);
-    color: #8a6d12;
+    color: var(--cj-warn-ink);
 }
 
 .badge-simple-ready {
     background-color: rgba(32, 107, 196, 0.15);
-    color: #1a5499;
+    color: var(--cj-accent-strong);
 }
 
 .badge-advanced-ready {
@@ -38,11 +38,11 @@
 }
 
 .inactive-row td {
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
 }
 
 .stat-tile {
-    border: 1px solid var(--tblr-border-color, #e6e7e9);
+    border: 1px solid var(--tblr-border-color, var(--cj-rule));
     border-radius: 0.5rem;
     padding: 0.65rem 0.75rem;
     height: 100%;
@@ -50,11 +50,11 @@
 
 .stat-tile .stat-label {
     font-size: 0.75rem;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
 }
 
 .stat-tile .stat-value {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--dash-dark-blue, #1d3d5f);
+    color: var(--dash-dark-blue, var(--cj-ink));
 }

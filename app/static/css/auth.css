@@ -2,8 +2,8 @@
 body.auth-brand {
     min-height: 100vh;
     background:
-        radial-gradient(circle at top, #ecf5fe 0%, rgba(236, 245, 254, 0) 42%),
-        linear-gradient(180deg, #f4f8fd 0%, #fdfdfd 55%, #eef3f8 100%);
+        radial-gradient(circle at top, var(--cj-accent-soft) 0%, rgba(236, 245, 254, 0) 42%),
+        linear-gradient(180deg, var(--cj-accent-soft) 0%, #fdfdfd 55%, var(--cj-tint) 100%);
 }
 
 .auth-logo {
@@ -14,8 +14,8 @@ body.auth-brand {
 }
 
 body.auth-brand .btn-primary {
-    background-color: #1570ef;
-    border-color: #1570ef;
+    background-color: var(--cj-accent);
+    border-color: var(--cj-accent);
 }
 
 /* Ajustes mínimos sobre Tabler para las páginas de autenticación. */
@@ -39,8 +39,8 @@ body.auth-brand .btn-primary {
 .auth-error-help {
     margin: 20px 0 0;
     padding-top: 16px;
-    border-top: 1px solid #e6ebf2;
-    color: #66768a;
+    border-top: 1px solid var(--cj-rule);
+    color: var(--cj-muted);
     font-size: 13px;
 }
 

@@ -8,6 +8,7 @@ const ALL = [A, I, S, V, T];
 // ruta, título visible (h1), roles autorizados
 const PAGES = [
     ['/dashboard', 'Inicio', [A, I, S]],
+    ['/reportes', 'Panorama', [A, I, S]],
     ['/inventory/summary', /Resumen de inventario|Resumen/, [A, I, S]],
     ['/products', 'Gestión de Productos', [A, I, S, V]],
     ['/categories', 'Categorías', [A, I, S, V]],

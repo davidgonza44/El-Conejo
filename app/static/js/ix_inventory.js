@@ -6,13 +6,13 @@
 
     /* Paleta de Inicio (dashboard.js) para que los gráficos compartan colores. */
     const TONES = {
-        blue: "#1a73e8", green: "#3fae62", orange: "#fdb429", purple: "#8e73e4",
-        teal: "#20c2c5", gray: "#a6adb8", red: "#dc2626", pink: "#e93d94", yellow: "#fbc21b",
-        brown: "#92400e", navy: "#1e3a8a",
+        blue: "#2f7fc1", green: "#3fae62", orange: "#c98c00", purple: "#8e73e4",
+        teal: "#20c2c5", gray: "#626a65", red: "#dc2626", pink: "#e93d94", yellow: "#c98c00",
+        brown: "#7a5600", navy: "#26406b",
     };
-    const BLUE_LIGHT = "#8ab4f8";
+    const BLUE_LIGHT = "#f1cfac";
     const AXIS_FONT = { family: "Inter, 'Segoe UI', sans-serif", size: 10.5 };
-    const AXIS_COLOR = "#6b7280";
+    const AXIS_COLOR = "#626a65";
 
     function parseJSON(el, attr, fallback) {
         const raw = el.getAttribute(attr);
@@ -81,7 +81,7 @@
                 borderWidth: 2.5, borderDash: s.dashed ? [5, 5] : [], tension: 0,
                 pointRadius: s.data.map((_, idx) => (i === 0 && idx === tipIndex ? 5 : 4)),
                 pointBorderWidth: s.data.map((_, idx) => (i === 0 && idx === tipIndex ? 4 : 0)),
-                pointBorderColor: "rgba(26, 115, 232, 0.25)",
+                pointBorderColor: "rgba(224, 123, 16, 0.25)",
                 pointBackgroundColor: color,
             };
         });
@@ -100,10 +100,10 @@
                             color: AXIS_COLOR, font: AXIS_FONT, padding: 8, stepSize: cfg.y_step,
                             callback: (v) => (v >= 1000 ? `${v / 1000}K` : String(v)),
                         },
-                        grid: { color: "#eef0f3" }, border: { display: false },
+                        grid: { color: "#f7f8f5" }, border: { display: false },
                     },
                     x: {
-                        grid: { color: "#eef0f3" }, border: { display: false },
+                        grid: { color: "#f7f8f5" }, border: { display: false },
                         ticks: { color: AXIS_COLOR, font: AXIS_FONT, padding: 10 },
                     },
                 },

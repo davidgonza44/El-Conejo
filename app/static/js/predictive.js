@@ -148,12 +148,12 @@
     });
     const TONES = {
         red: "#ef4444",
-        orange: "#f59e0b",
-        yellow: "#facc15",
+        orange: "#c98c00",
+        yellow: "#c98c00",
         green: "#22c55e",
-        blue: "#1570ef",
+        blue: "#2f7fc1",
         purple: "#a855f7",
-        gray: "#9ca3af",
+        gray: "#626a65",
     };
 
     /* Ruido determinista (LCG) para que las series de referencia sean estables entre capturas. */
@@ -183,7 +183,7 @@
             data: {
                 datasets: [{
                     data: values,
-                    backgroundColor: tones.map((t) => (t === "gray" ? "#e5e7eb" : TONES[t] || TONES.gray)),
+                    backgroundColor: tones.map((t) => (t === "gray" ? "#e2e4df" : TONES[t] || TONES.gray)),
                     borderWidth: 2,
                     borderColor: "#fff",
                     hoverOffset: 0,
@@ -297,18 +297,18 @@
                 scales: {
                     x: {
                         grid: { display: false },
-                        border: { color: "#e5e7eb" },
+                        border: { color: "#e2e4df" },
                         ticks: {
-                            autoSkip: false, maxRotation: 0, font: { size: 9 }, color: "#6b7280",
+                            autoSkip: false, maxRotation: 0, font: { size: 9 }, color: "#626a65",
                             callback: (v, i) => labels[i] || null, padding: 4,
                         },
                     },
                     y: {
                         min: 0, max: cfg.y_max,
-                        grid: { color: "#f1f3f6" },
+                        grid: { color: "#f7f8f5" },
                         border: { display: false, dash: [3, 3] },
                         ticks: {
-                            stepSize: cfg.y_step, font: { size: 9 }, color: "#6b7280", padding: 6,
+                            stepSize: cfg.y_step, font: { size: 9 }, color: "#626a65", padding: 6,
                             callback: (v) => v.toLocaleString("en-US"),
                         },
                     },
@@ -329,7 +329,7 @@
                 labels: cfg.labels,
                 datasets: [
                     {
-                        data: cfg.real, borderColor: "#1d5fd6", backgroundColor: "#1d5fd6",
+                        data: cfg.real, borderColor: "#e07b10", backgroundColor: "#e07b10",
                         borderWidth: 1.8, pointRadius: 2.4, pointHoverRadius: 2.4, tension: 0,
                     },
                     {
@@ -348,14 +348,14 @@
                 scales: {
                     x: {
                         grid: { display: false },
-                        border: { color: "#e5e7eb" },
-                        ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 }, color: "#4b5563", padding: 6 },
+                        border: { color: "#e2e4df" },
+                        ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 }, color: "#3a403c", padding: 6 },
                     },
                     y: {
                         min: 0, max: cfg.y_max,
-                        grid: { color: "#eef0f4" },
+                        grid: { color: "#f7f8f5" },
                         border: { display: false },
-                        ticks: { stepSize: cfg.y_step, font: { size: 10 }, color: "#4b5563", padding: 8 },
+                        ticks: { stepSize: cfg.y_step, font: { size: 10 }, color: "#3a403c", padding: 8 },
                     },
                 },
             },
@@ -373,7 +373,7 @@
             data: {
                 datasets: [{
                     data: [value, Math.max(0, 100 - value)],
-                    backgroundColor: [value >= 80 ? "#16a34a" : value >= 70 ? "#f59e0b" : "#ef4444", "#e5e7eb"],
+                    backgroundColor: [value >= 80 ? "#16a34a" : value >= 70 ? "#c98c00" : "#ef4444", "#e2e4df"],
                     borderWidth: 0,
                     borderRadius: 6,
                 }],

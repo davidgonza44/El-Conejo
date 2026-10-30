@@ -95,7 +95,8 @@ def nav_allowed(role: str, key: str, reference: bool = False) -> bool:
         return True
     if key in _DEMO_WITHDRAWN:
         return False
-    if key == "dashboard":
+    if key in ("dashboard", "analytics"):
+        # Inicio y Reportes › Panorama comparten /api/dashboard/summary y sus roles.
         return role in (ROLE_ADMIN, ROLE_INVENTARIO, ROLE_ASISTENTE)
     if key == "chatbot" and role == ROLE_SOPORTE_TI:
         return True

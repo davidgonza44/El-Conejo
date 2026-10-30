@@ -13,9 +13,9 @@ principal ahora son accesibles desde él.
 | Pruebas de extremo a extremo (E2E) | No existían como suite. Había scripts sueltos que dependían de MySQL o de servidores manuales. | Suite Playwright en `e2e/` con 12 archivos que recorren el sistema real en Chrome contra una base SQLite desechable. Comando: `npm run e2e`. |
 | Cobertura por rol | Sin verificación sistemática de permisos en pantalla. | Cada pantalla se prueba con los 5 roles (abre o bloquea con 403), y cada enlace del menú de cada rol abre una página autorizada. |
 | Flujos de negocio | Sin prueba integral. | Producto (propuesta → aprobación → stock inicial), movimientos, notas de entrega (emisión, cancelación, PDF), proveedores y categorías, ciclo completo de compra (solicitud → cotización → orden → aprobación → recepción), importación histórica, reportes, configuración, perfil, chatbot y catálogo. |
-| Análisis de calidad del código | Sin informe. | Lint (ruff), complejidad ciclomática (radon), código muerto (vulture), sintaxis de los 64+ archivos JS, búsqueda de XSS y SQL dinámico. Ver sección 6. |
+| Análisis de calidad del código | Sin informe. | Lint (ruff), complejidad ciclomática (radon), código muerto (vulture), sintaxis de los 64+ archivos JS, búsqueda de XSS y SQL dinámico. Ver sección 7. |
 
-Resultado de la última ejecución completa (base limpia): **244 pruebas aprobadas, 0 fallidas, 0 inestables** (7,9 minutos).
+Resultado de la última ejecución completa (base limpia, tras el rediseño): **250 pruebas; 249 aprobadas al primer intento y 1 inestable** (8,6 minutos). La inestable era una carrera de la propia prueba (pulsaba «Nuevo usuario» antes de que cargara el script); se corrigió y los archivos afectados pasaron 62/62 ejecutados dos veces seguidas.
 
 ## 2. Correcciones solicitadas (archivo «Correcciones El Conejo»)
 
@@ -102,7 +102,29 @@ El RIF se configura en **Configuración › General** (campo nuevo, formato `J-1
 - **Notas de entrega**: tarjeta de revisión con resumen legible y aviso de inventario.
 - **Reporte de ventas**: notas de calidad de datos visibles, filtro de categoría como etiqueta, cabecera adaptable.
 
-## 6. Análisis de calidad del código
+## 6. Rediseño visual: «carta de colores» y sección de Reportes y análisis
+
+Tras revisar las capturas, el diseño seguía demasiado parecido al anterior y varias pantallas estaban
+sobrecargadas. Se rediseñó todo el estilo con estas decisiones (acordadas con el usuario: uso mixto PC
+y celular, toda gráfica y KPI de análisis en una sección aparte, estilo claro y sobrio con el acento de
+la marca):
+
+| Aspecto | Antes | Ahora |
+| --- | --- | --- |
+| Gráficas | Inicio mezclaba tareas del día con gráficas de ventas, dona por categoría y tabla de más vendidos. | Nuevo grupo de menú **Reportes y análisis** con la página **Panorama** (`/reportes`): salud del inventario (disponible, bajo stock, agotado), productos por categoría, ventas de 7 días, dona de categorías, más vendidos e índice de reportes. Agrupa también Ventas, Inventario, pronósticos, importación histórica y diagnóstico. |
+| Inicio | Pantalla larga con gráficas. | Solo lo que requiere atención hoy: propuestas pendientes, indicadores del día, movimientos recientes, bajo stock y acciones rápidas. |
+| Pantallas operativas | Paneles laterales de historial, resúmenes y donas junto a cada listado. | Indicadores, filtros y tabla. El análisis se abre con un enlace discreto a Reportes y análisis. |
+| Color | Azul genérico de plantilla en todo. | Paleta propia en `app/static/css/cj_theme.css`: papel frío, tinta oscura, naranja de plantilla del logo para acción y selección, azul cielo del logo para enlaces de dato, verde/ámbar/rojo solo para estados. Las 57 hojas de estilo existentes usan ahora esas variables. |
+| Indicadores | Tarjetas separadas con iconos en círculos de color. | Una tira continua con divisores; cada indicador lleva una muestra de color cuadrada (el gesto de la carta de colores). En celular, 2 × 2. |
+| Tipografía | Fuente del sistema. | Hanken Grotesk para la interfaz y JetBrains Mono para códigos y referencias. |
+| Superficies | Sombras y tarjetas flotantes. | Planas, separadas por una regla de 1px; sombra solo en menús y diálogos. |
+
+El sistema visual queda documentado en `DESIGN.md` (raíz) y `.impeccable/design.json`. El modo referencia
+(`?ref=1` en desarrollo), que reproduce las maquetas aprobadas de `references/`, no se modificó.
+Ninguna pantalla se eliminó: lo que salió de Inicio está en Panorama y lo que salió de las pantallas
+operativas está en sus reportes.
+
+## 7. Análisis de calidad del código
 
 | Revisión | Resultado |
 | --- | --- |
@@ -114,7 +136,7 @@ El RIF se configura en **Configuración › General** (campo nuevo, formato `J-1
 | Complejidad ciclomática media | A (4,4) en 2 140 bloques. |
 | Funciones con complejidad > 20 (heredadas) | 22, la mayor `_rebuild_dynamic_issues` (105) en importación histórica. No se refactorizaron: `AGENTS.md` pide no reescribir código heredado solo por la métrica sin pruebas específicas. Se recomienda abordarlas con pruebas unitarias dedicadas. |
 
-## 7. Cómo verificar
+## 8. Cómo verificar
 
 ```powershell
 python -m venv .venv
@@ -123,12 +145,12 @@ npm ci
 npm run e2e
 ```
 
-Resultado E2E: 244/244 aprobadas.
+Resultado E2E: 250 pruebas, 0 fallidas (ver sección 1).
 
 Suites aisladas existentes ejecutadas: `test_delivery_note_pdf.py` (41/41) y `test_historical_imports.py` (OK).
 `test_prediction_readiness.py` necesita MySQL local; `test_report_sales_reference.py` falla antes y después de estos cambios porque su arnés antiguo no registra la base de datos que hoy consulta el control de permisos.
 
-## 8. Pendientes recomendados
+## 9. Pendientes recomendados
 
 1. Aplicar la migración `scripts/migrate_supplier_changes.py --apply` (o `migrations/versions/0009_supplier_changes.py`) en la base MySQL antes de usar propuestas de proveedores. Sin la tabla, el sistema rechaza la edición de un proveedor aprobado con un mensaje claro en lugar de sobrescribirlo.
 2. Guardar una copia de los datos del proveedor en cada orden de compra y la categoría en cada línea de venta.

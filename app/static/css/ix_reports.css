@@ -49,7 +49,7 @@
     border: 1px solid var(--ix-border);
     border-radius: 8px;
     background: #fff;
-    color: #1f2937;
+    color: var(--cj-ink);
     font: inherit;
     font-size: 11.5px;
     font-weight: 700;
@@ -58,13 +58,13 @@
 
 .rp-date .ti {
     font-size: 15px;
-    color: #4b5563;
+    color: var(--cj-ink-2);
 }
 
 .rp-date-chevron {
     margin-left: auto;
     font-size: 13px !important;
-    color: #6b7280 !important;
+    color: var(--cj-muted) !important;
 }
 
 .rp-compare {
@@ -75,9 +75,9 @@
     height: 32px;
     margin-left: 15px;
     border-radius: 8px;
-    background: #f3f4f6;
+    background: var(--cj-tint);
     font-size: 10.5px;
-    color: #6b7280;
+    color: var(--cj-muted);
     white-space: nowrap;
 }
 
@@ -205,13 +205,13 @@
 .rp-table {
     --px-row: 31.3px;
     font-size: 9.5px;
-    color: #1f2937;
+    color: var(--cj-ink);
 }
 
 .rp-table th {
     height: 19px;
     padding: 0 6px;
-    background: #f5f6f8;
+    background: var(--cj-tint);
     font-size: 9.5px;
     line-height: 12px;
     white-space: nowrap;
@@ -219,12 +219,12 @@
 
 .rp-table th:first-child,
 .rp-table td:first-child { padding-left: 8px; }
-.rp-table td { padding: 0 6px; border-bottom-color: #f0f1f4; }
+.rp-table td { padding: 0 6px; border-bottom-color: var(--cj-tint); }
 .rp-table td:not(:last-child),
-.rp-table th:not(:last-child) { border-right: 1px solid #f0f1f4; }
-.rp-table tr:last-child td { border-bottom-color: #f0f1f4; }
-.rp-rank { color: #4b5563; }
-.rp-table .px-cell-muted { color: #4b5563; }
+.rp-table th:not(:last-child) { border-right: 1px solid var(--cj-tint); }
+.rp-table tr:last-child td { border-bottom-color: var(--cj-tint); }
+.rp-rank { color: var(--cj-ink-2); }
+.rp-table .px-cell-muted { color: var(--cj-ink-2); }
 .rp-top-table .px-product { gap: 8px; }
 .rp-top-table td { white-space: nowrap; }
 .rp-top-table .px-cell-muted { font-size: 9px; }
@@ -236,12 +236,12 @@
     padding-bottom: 8px;
     text-align: center;
     font-size: 10.5px;
-    color: #6b7280;
+    color: var(--cj-muted);
 }
 
 /* Movimientos recientes */
 .rp-activity .iv-activity-list { padding: 0 16px 0 14px; }
-.rp-activity .iv-activity-list .ix-row { height: 37px; gap: 10px; border-bottom: 1px solid #f3f4f6; }
+.rp-activity .iv-activity-list .ix-row { height: 37px; gap: 10px; border-bottom: 1px solid var(--cj-tint); }
 .rp-activity .iv-activity-list .ix-row:last-child { border-bottom: 0; }
 .rp-activity .iv-activity-list .ix-row-icon { width: 30px; height: 30px; border-radius: 50%; }
 .rp-activity .iv-activity-list .ix-row-icon .ix-svg { width: 16px; height: 16px; }
@@ -266,14 +266,14 @@
     height: 30px;
     padding: 0 12px 0 14px;
     border-radius: 6px;
-    background: #fdf4ea;
+    background: var(--cj-warn-soft);
 }
 
 .rp-alert-list .iv-alert-icon { width: 17px; height: 17px; }
 .rp-alert-list .iv-alert-icon .ix-svg { width: 17px; height: 17px; }
 .rp-alert-list .ix-row-title { font-size: 10.5px; line-height: 13px; }
 .rp-alert-list .ix-row-desc { font-size: 10px; line-height: 12px; }
-.rp-alert-chevron { font-size: 13px; color: #6b7280; }
+.rp-alert-chevron { font-size: 13px; color: var(--cj-muted); }
 
 .rp-alerts-more {
     display: block;
@@ -337,7 +337,7 @@
 
 .rp-pkpi-icon .ix-svg { width: 22px; height: 22px; }
 .rp-pkpi-body { min-width: 0; }
-.rp-pkpi-label { font-size: 11px; font-weight: 600; line-height: 14px; color: #3f4652; white-space: nowrap; }
+.rp-pkpi-label { font-size: 11px; font-weight: 600; line-height: 14px; color: var(--cj-ink); white-space: nowrap; }
 .rp-pkpi-value { font-size: 17px; font-weight: 700; line-height: 20px; letter-spacing: -0.01em; color: var(--ix-ink); }
 .rp-pkpi-sub { font-size: 10px; line-height: 13px; color: var(--ix-muted); white-space: nowrap; }
 
@@ -392,7 +392,7 @@
 .rp-critical-table td:not(:last-child),
 .rp-critical-table th:not(:last-child) { border-right: 0; }
 .rp-pill { height: 14px; min-width: 0; padding: 0 9px; border-radius: 999px; font-size: 8.5px; }
-.rp-pill.is-orange { background: #fdf3d7; color: #d29a12; }
+.rp-pill.is-orange { background: var(--cj-warn-soft); color: var(--cj-warn); }
 
 /* ------------------------------------------------------------------ */
 /* Responsive                                                          */

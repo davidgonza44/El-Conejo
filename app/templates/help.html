@@ -12,14 +12,14 @@
 {# (id, título, icono, visible, resumen) #}
 {% set sections = [
     ('inicio', 'Primeros pasos', 'ti-rocket', true, 'Ingreso, menú, búsqueda y alertas.'),
-    ('panel', 'Inicio', 'ti-home', nav_allowed('dashboard'), 'Indicadores del negocio y propuestas pendientes.'),
+    ('panel', 'Inicio', 'ti-home', nav_allowed('dashboard'), 'Lo que requiere atención hoy: propuestas, alertas y movimientos.'),
     ('productos', 'Productos y categorías', 'ti-package', nav_allowed('products'), 'Catálogo, propuestas y aprobaciones.'),
     ('movimientos', 'Movimientos de inventario', 'ti-arrows-exchange', nav_allowed('inventory'), 'Entradas, salidas y ajustes.'),
     ('notas', 'Notas de entrega y clientes', 'ti-file-invoice', nav_allowed('delivery_notes') or nav_allowed('sales_customers'), 'Despachos que descuentan stock.'),
     ('compras', 'Compras', 'ti-shopping-bag', nav_allowed('purchases') or nav_allowed('suppliers'), 'Solicitud, cotización, orden y recepción.'),
     ('historico', 'Importación histórica', 'ti-file-upload', nav_allowed('historical_imports'), 'Carga auditable de ventas pasadas.'),
     ('prediccion', 'Análisis predictivo', 'ti-chart-line', nav_allowed('demand_forecast'), 'Pronóstico, reabastecimiento y precisión.'),
-    ('reportes', 'Reportes', 'ti-chart-bar', nav_allowed('reports'), 'Ventas por período y exportaciones.'),
+    ('reportes', 'Reportes y análisis', 'ti-chart-bar', nav_allowed('reports') or nav_allowed('analytics'), 'Panorama con gráficas, ventas por período y exportaciones.'),
     ('asistente', 'Chatbot', 'ti-message-chatbot', nav_allowed('chatbot'), 'Consultas rápidas en lenguaje natural.'),
     ('configuracion', 'Configuración', 'ti-settings', nav_allowed('settings'), 'Empresa, usuarios, seguridad y respaldos.'),
     ('documentos', 'Documentos e impresión', 'ti-printer', true, 'PDF, Excel y CSV con membrete.'),
@@ -86,7 +86,7 @@
         {% if nav_allowed('dashboard') %}
         <section class="hp-card" id="panel" data-hp-section>
             <h2><i class="ti ti-home" aria-hidden="true"></i>Inicio</h2>
-            <p>Resume el estado del negocio: productos en stock, alertas activas, movimientos recientes y productos por debajo del mínimo. El bloque <strong>Propuestas pendientes</strong> muestra cuántos productos, proveedores y categorías esperan revisión; un clic abre la lista filtrada.</p>
+            <p>Muestra lo que requiere atención hoy: ventas del día, productos en stock, alertas activas, movimientos recientes y productos por debajo del mínimo. Las gráficas están en <strong>Reportes y análisis › Panorama</strong>. El bloque <strong>Propuestas pendientes</strong> muestra cuántos productos, proveedores y categorías esperan revisión; un clic abre la lista filtrada.</p>
             {{ tip('Las cifras se calculan con los datos registrados; si un indicador muestra «Sin datos», todavía no hay operaciones en el período.') }}
         </section>
         {% endif %}
@@ -191,15 +191,16 @@
         </section>
         {% endif %}
 
-        {% if nav_allowed('reports') %}
+        {% if nav_allowed('reports') or nav_allowed('analytics') %}
         <section class="hp-card" id="reportes" data-hp-section>
-            <h2><i class="ti ti-chart-bar" aria-hidden="true"></i>Reportes</h2>
-            <p>El reporte de ventas tiene cinco pestañas: Resumen, por producto, por cliente, por categoría y métodos de pago.</p>
+            <h2><i class="ti ti-chart-bar" aria-hidden="true"></i>Reportes y análisis</h2>
+            {% if nav_allowed('analytics') %}<p>Todas las gráficas e indicadores de análisis están reunidos en el grupo «Reportes y análisis» del menú, para que Inicio muestre solo lo que hay que atender. <strong>Panorama</strong> resume la salud del inventario (disponible, bajo stock y agotado), los productos por categoría, las ventas de los últimos siete días y los más vendidos, con accesos a cada reporte.</p>{% endif %}
+            {% if nav_allowed('reports') %}<p>El reporte de ventas tiene cinco pestañas: Resumen, por producto, por cliente, por categoría y métodos de pago.</p>
             {{ steps(['Pulsa el botón del período para elegir las fechas «Desde» y «Hasta» y, si quieres, un filtro de texto.',
                       'Cambia de pestaña: el período se conserva.',
                       'Usa «Ver todo» o «Ver detalle» para abrir el histórico de operaciones.',
                       '«Exportar PDF» o «Exportar CSV» descargan la pestaña actual con el mismo período y filtro.']) }}
-            {{ tip('Las ventas no registran moneda de origen: los importes se muestran como unidades monetarias, sin convertir ni asumir USD.') }}
+            {{ tip('Las ventas no registran moneda de origen: los importes se muestran como unidades monetarias, sin convertir ni asumir USD.') }}{% endif %}
         </section>
         {% endif %}
 

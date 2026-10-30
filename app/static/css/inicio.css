@@ -7,17 +7,17 @@
 :root {
     --ix-bg: #fdfdfd;
     --ix-card: #ffffff;
-    --ix-border: #ebedf1;
-    --ix-border-soft: #f0f1f4;
-    --ix-ink: #0f172a;
-    --ix-ink-2: #374151;
-    --ix-muted: #7b8194;
-    --ix-blue: #1570ef;
-    --ix-blue-soft: #ecf5fe;
+    --ix-border: var(--cj-rule);
+    --ix-border-soft: var(--cj-tint);
+    --ix-ink: var(--cj-ink);
+    --ix-ink-2: var(--cj-ink);
+    --ix-muted: var(--cj-muted);
+    --ix-blue: var(--cj-accent);
+    --ix-blue-soft: var(--cj-accent-soft);
     --ix-green: #16a34a;
     --ix-green-soft: #e4f9e6;
-    --ix-orange: #f28c1e;
-    --ix-orange-soft: #fdf1e3;
+    --ix-orange: var(--cj-warn);
+    --ix-orange-soft: var(--cj-warn-soft);
     --ix-purple: #7c5cd6;
     --ix-purple-soft: #f1eef9;
     --ix-red: #dc2626;
@@ -83,7 +83,7 @@ body.ix-body {
     inset: 0 auto 0 0;
     width: var(--ix-sidebar);
     background: var(--ix-bg);
-    border-right: 1px solid #f0f1f3;
+    border-right: 1px solid var(--cj-tint);
     display: flex;
     flex-direction: column;
     z-index: 20;
@@ -107,7 +107,7 @@ body.ix-body {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(160deg, #0a8dfb 0%, #0b5ff5 100%);
+    background: linear-gradient(160deg, var(--cj-accent) 0%, var(--cj-accent) 100%);
     color: #fff;
     display: flex;
     align-items: center;
@@ -135,7 +135,7 @@ body.ix-body {
     font-size: 22px;
     font-weight: 700;
     line-height: 1.1;
-    color: #0C1230;
+    color: var(--cj-ink);
     white-space: nowrap;
 }
 
@@ -146,7 +146,7 @@ body.ix-body {
     font-size: 16px;
     font-weight: 400;
     line-height: 1.15;
-    color: #0C1230;
+    color: var(--cj-ink);
     white-space: nowrap;
 }
 
@@ -161,7 +161,7 @@ body.ix-body {
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #9aa1af;
+    color: var(--cj-muted);
 }
 
 .ix-nav a {
@@ -171,7 +171,7 @@ body.ix-body {
     margin-bottom: 5px;
     padding: 0 12px 0 15px;
     border-radius: 10px;
-    color: #3f4652;
+    color: var(--cj-ink);
     font-size: 12.5px;
     font-weight: 500;
     white-space: nowrap;
@@ -179,7 +179,7 @@ body.ix-body {
 
 .ix-nav a .ti {
     font-size: 18px;
-    color: #6b7280;
+    color: var(--cj-muted);
     margin-right: 15px;
 }
 
@@ -191,7 +191,7 @@ body.ix-body {
 }
 
 .ix-nav a:hover {
-    background: #f4f6f9;
+    background: var(--cj-tint);
 }
 
 .ix-nav a[aria-current="page"] {
@@ -223,7 +223,7 @@ body.ix-body {
     border: 0;
     border-radius: 10px;
     background: transparent;
-    color: #3f4652;
+    color: var(--cj-ink);
     font: inherit;
     font-size: 12.5px;
     font-weight: 500;
@@ -234,7 +234,7 @@ body.ix-body {
 
 .ix-nav-group > button .ti {
     font-size: 18px;
-    color: #6b7280;
+    color: var(--cj-muted);
     margin-right: 15px;
 }
 
@@ -246,7 +246,7 @@ body.ix-body {
 }
 
 .ix-nav-group > button:hover {
-    background: #f4f6f9;
+    background: var(--cj-tint);
 }
 
 .ix-nav-group > button.is-active {
@@ -277,7 +277,7 @@ body.ix-body {
     margin: 0 -2px 6px;
     padding: 0 2px;
     border-radius: 12px;
-    background: #f8f9fe;
+    background: var(--cj-accent-soft);
 }
 
 .ix-nav-group.is-tinted .ix-nav-children {
@@ -332,7 +332,7 @@ body.ix-body {
     left: 31px;
     top: 4px;
     bottom: 4px;
-    border-left: 1.5px solid #e3e6ec;
+    border-left: 1.5px solid var(--cj-rule);
 }
 
 .ix-nav-children a {
@@ -386,7 +386,7 @@ body.ix-body {
 
 .ix-branch .ti {
     font-size: 18px;
-    color: #6b7280;
+    color: var(--cj-muted);
     margin-right: 12px;
 }
 
@@ -534,7 +534,7 @@ body.ix-body {
 
 .ix-search .ti {
     font-size: 18px;
-    color: #8b909c;
+    color: var(--cj-muted);
 }
 
 .ix-search input {
@@ -549,7 +549,7 @@ body.ix-body {
 }
 
 .ix-search input::placeholder {
-    color: #9096a3;
+    color: var(--cj-muted);
 }
 
 .ix-bell {
@@ -558,7 +558,7 @@ body.ix-body {
     height: 32px;
     border: 0;
     background: transparent;
-    color: #4b5563;
+    color: var(--cj-ink-2);
     font-size: 22px;
     display: flex;
     align-items: center;
@@ -630,7 +630,7 @@ body.ix-body {
 
 .ix-search-option:hover,
 .ix-search-option[aria-selected="true"] {
-    background: #f1f5ff;
+    background: var(--cj-accent-soft);
     color: inherit;
 }
 
@@ -650,7 +650,7 @@ body.ix-body {
 .ix-search-title {
     font-size: 12px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--cj-ink);
 }
 
 .ix-search-sub {
@@ -680,7 +680,7 @@ body.ix-body {
     padding: 12px 14px 8px;
     font-size: 12.5px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--cj-ink);
     border-bottom: 1px solid var(--ix-border-soft);
 }
 
@@ -727,7 +727,7 @@ body.ix-body {
 }
 
 .ix-bell-footer:hover {
-    background: #f4f7fb;
+    background: var(--cj-tint);
 }
 
 /* Bandeja persistente: fila-botón (marca leída), no leídas resaltadas, "Marcar todas" como botón. */
@@ -748,7 +748,7 @@ body.ix-body {
 
 .ix-bell-row:hover,
 .ix-bell-row:focus-visible {
-    background: #f4f7fb;
+    background: var(--cj-tint);
     outline: none;
 }
 
@@ -806,7 +806,7 @@ body.ix-body {
     font-size: 13px;
     font-weight: 600;
     line-height: 20px;
-    color: #1f2937;
+    color: var(--cj-ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -827,7 +827,7 @@ body.ix-body {
 }
 
 .ix-link-btn:hover {
-    background: #f4f7fb;
+    background: var(--cj-tint);
 }
 
 .ix-count {
@@ -900,7 +900,7 @@ body.ix-body {
 }
 
 .ix-kpi-icon.is-solid {
-    background: #eef4ff;
+    background: var(--cj-accent-soft);
 }
 
 .ix-kpi-icon.is-solid .ti {
@@ -926,7 +926,7 @@ body.ix-body {
 .tone-orange { background: var(--ix-orange-soft); color: var(--ix-orange); }
 .tone-purple { background: var(--ix-purple-soft); color: var(--ix-purple); }
 .tone-red { background: var(--ix-red-soft); color: var(--ix-red); }
-.tone-gray { background: #f1f3f6; color: #8a909c; }
+.tone-gray { background: var(--cj-tint); color: var(--cj-muted); }
 
 .ix-kpi-body {
     min-width: 0;
@@ -937,7 +937,7 @@ body.ix-body {
     font-size: 12px;
     font-weight: 600;
     line-height: 17px;
-    color: #3f4652;
+    color: var(--cj-ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -995,7 +995,7 @@ body.ix-body {
     margin-top: 4px;
     font-size: 12px;
     line-height: 16px;
-    color: #8a90a0;
+    color: var(--cj-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1027,7 +1027,7 @@ body.ix-body {
 
 .ix-diario .ti {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--cj-muted);
 }
 
 .ix-body .ix-chart-legend {
@@ -1038,7 +1038,7 @@ body.ix-body {
     margin: 2px 0 6px;
     padding-left: 80px;
     font-size: 10.5px;
-    color: #6b7280;
+    color: var(--cj-muted);
 }
 
 .ix-chart-legend li {
@@ -1056,7 +1056,7 @@ body.ix-body {
 
 .ix-swatch.is-dashed {
     border-top-style: dashed;
-    border-color: #8ab4f8;
+    border-color: var(--cj-accent-line);
 }
 
 .ix-chart {
@@ -1139,7 +1139,7 @@ body.ix-body {
     width: 90px;
     font-size: 12px;
     line-height: 16px;
-    color: #4b5563;
+    color: var(--cj-ink-2);
 }
 
 /* La leyenda absorbe el ancho sobrante; la dona (flex-shrink: 0) nunca cede espacio. */
@@ -1175,7 +1175,7 @@ body.ix-body {
     display: block;
     font-size: 10.5px;
     font-weight: 500;
-    color: #1f2937;
+    color: var(--cj-ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1243,8 +1243,8 @@ body.ix-body {
     height: 40px;
     min-width: 0;
     border-radius: 8px;
-    background: #f1f3f6;
-    color: #98a0ad;
+    background: var(--cj-tint);
+    color: var(--cj-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1275,7 +1275,7 @@ body.ix-body {
     font-size: 12px;
     font-weight: 600;
     line-height: 15px;
-    color: #1f2937;
+    color: var(--cj-ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1369,7 +1369,7 @@ body.ix-body {
 }
 
 .ix-action:hover {
-    background: #f8fafc;
+    background: var(--cj-tint);
     border-color: var(--ix-border);
 }
 
@@ -1415,7 +1415,7 @@ body.ix-body {
     table-layout: fixed;
     border-collapse: collapse;
     font-size: 11px;
-    color: #1f2937;
+    color: var(--cj-ink);
 }
 
 .ix-table th:nth-child(3), .ix-table td:nth-child(3) { width: 30%; }
@@ -1580,15 +1580,15 @@ body.ix-body {
 }
 
 /* Current-user disclosure stays within the fixed sidebar at short viewports. */
-.ix-account-toggle{width:100%;border:0;text-align:left;cursor:pointer;font:inherit;background:#eff6ff;border-radius:9px}
+.ix-account-toggle{width:100%;border:0;text-align:left;cursor:pointer;font:inherit;background:var(--cj-accent-soft);border-radius:9px}
 .ix-account-toggle>.st-icon{width:17px;height:17px;margin-left:auto;flex:none;transform:rotate(90deg)}
 .ix-account-toggle[aria-expanded=true]>.st-icon{transform:rotate(-90deg)}
-.ix-account-menu{background:white;border:1px solid #edf0f5;border-radius:9px;padding:5px;box-shadow:0 2px 5px #192f4910}
+.ix-account-menu{background:white;border:1px solid var(--cj-tint);border-radius:9px;padding:5px;box-shadow:0 2px 5px color-mix(in srgb,var(--cj-ink) 6%,transparent)}
 .ix-account-menu[hidden]{display:none}
-.ix-account-menu a,.ix-account-menu button{display:flex;align-items:center;gap:12px;width:100%;padding:8px 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#344b70;text-decoration:none;text-align:left;cursor:pointer;border-radius:5px}
+.ix-account-menu a,.ix-account-menu button{display:flex;align-items:center;gap:12px;width:100%;padding:8px 12px;border:0;background:transparent;font:inherit;font-size:13px;color:var(--cj-ink-2);text-decoration:none;text-align:left;cursor:pointer;border-radius:5px}
 .ix-account-menu .st-icon{width:20px;height:20px;flex:none}
-.ix-account-menu a:hover,.ix-account-menu button:hover{background:#eff6ff}
-.ix-account-menu :focus-visible,.ix-account-toggle:focus-visible{outline:2px solid #06f;outline-offset:2px}
+.ix-account-menu a:hover,.ix-account-menu button:hover{background:var(--cj-accent-soft)}
+.ix-account-menu :focus-visible,.ix-account-toggle:focus-visible{outline:2px solid var(--cj-accent);outline-offset:2px}
 .ix-sidebar .ix-nav{min-height:0;overflow-y:auto;flex:1}
 .ix-sidebar .ix-sidebar-footer{flex:none;margin-top:auto}
 @media(max-height:800px){.ix-sidebar{overflow:hidden}.ix-sidebar>.ix-nav{flex-shrink:1}}

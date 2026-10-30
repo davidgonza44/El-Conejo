@@ -7,18 +7,18 @@
     white-space: normal;
     text-align: center;
     padding: 2.2rem 1rem;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
 }
 
 /* Nombre de producto con descripción secundaria debajo. */
 .cell-title {
     font-weight: 600;
-    color: var(--dash-dark-blue, #1d3d5f);
+    color: var(--dash-dark-blue, var(--cj-ink));
 }
 
 .cell-sub {
     font-size: 0.78rem;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
     max-width: 260px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -38,7 +38,7 @@
 /* Acento dorado suave para el badge de bajo stock. */
 .badge-low-stock {
     background-color: rgba(217, 165, 33, 0.15);
-    color: #8a6d1a;
+    color: var(--cj-warn-ink);
 }
 
 /* Miniatura de producto (tabla y modal). */
@@ -46,8 +46,8 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 0.4rem;
-    background-color: #eef1f5;
-    color: #8a97a6;
+    background-color: var(--cj-tint);
+    color: var(--cj-muted);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -65,5 +65,5 @@
     width: 5.5rem;
     height: 5.5rem;
     font-size: 1.6rem;
-    border: 1px dashed #c6ced6;
+    border: 1px dashed var(--cj-rule-strong);
 }

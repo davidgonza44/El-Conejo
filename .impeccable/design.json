@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T17:00:47+00:00",
+  "title": "Design System: El Conejo — Sistema de inventario",
+  "extensions": {
+    "colorMeta": {
+      "primer-orange": {
+        "role": "primary",
+        "displayName": "Naranja de plantilla",
+        "tonalRamp": [
+          "#3d1a03",
+          "#5e2905",
+          "#8f4207",
+          "#b45309",
+          "#e07b10",
+          "#ecd3b9",
+          "#fbf4ec",
+          "#fef8f1"
+        ]
+      },
+      "logo-sky": {
+        "role": "secondary",
+        "displayName": "Azul cielo del logo",
+        "tonalRamp": [
+          "#0b2a40",
+          "#134a72",
+          "#1f6fa8",
+          "#4fa0d6",
+          "#9cc8e8",
+          "#cfe4f3",
+          "#e8f2f9",
+          "#f5f9fc"
+        ]
+      },
+      "ground-paper": {
+        "role": "neutral",
+        "displayName": "Papel frío"
+      },
+      "rail-paper": {
+        "role": "neutral",
+        "displayName": "Riel"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Regla"
+      },
+      "state-ok": {
+        "role": "status",
+        "displayName": "Disponible"
+      },
+      "state-warn": {
+        "role": "status",
+        "displayName": "Advertencia"
+      },
+      "state-danger": {
+        "role": "status",
+        "displayName": "Crítico"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título de pantalla",
+        "purpose": "Uno por página."
+      },
+      "metric": {
+        "displayName": "Cifra",
+        "purpose": "Valor de indicador con cifras tabulares."
+      },
+      "code": {
+        "displayName": "Código",
+        "purpose": "Códigos de producto y referencias."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 12px 32px rgba(25,28,26,.14)",
+        "purpose": "Solo menús, diálogos y cajones superpuestos."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Hover y foco; respeta prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de la pantalla; una por vista.",
+      "html": "<button class=\"ds-btn-primary\">Nuevo movimiento</button>",
+      "css": ".ds-btn-primary { font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; background: #b45309; color: #fff; border: 1px solid #b45309; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; } .ds-btn-primary:hover { background: #8f4207; border-color: #8f4207; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(224,123,16,.28); }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Exportar, filtros y acciones de apoyo.",
+      "html": "<button class=\"ds-btn\">Exportar</button>",
+      "css": ".ds-btn { font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; background: #fff; color: #191c1a; border: 1px solid #e2e4df; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; } .ds-btn:hover { border-color: #cdd1ca; background: #f7f8f5; } .ds-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(224,123,16,.28); }"
+    },
+    {
+      "name": "Campo de búsqueda",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Filtro de texto de listados.",
+      "html": "<input class=\"ds-input\" placeholder=\"Buscar por producto, código o motivo…\">",
+      "css": ".ds-input { font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; width: 280px; background: #fff; color: #191c1a; border: 1px solid #e2e4df; border-radius: 8px; padding: 9px 12px; font-size: 13px; } .ds-input:focus { outline: none; border-color: #e07b10; box-shadow: 0 0 0 3px rgba(224,123,16,.28); }"
+    },
+    {
+      "name": "Menú lateral",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Riel con el elemento activo en superficie blanca y barra naranja.",
+      "html": "<nav class=\"ds-nav\"><a>Inicio</a><a class=\"is-active\" aria-current=\"page\">Inventario</a><a>Reportes y análisis</a></nav>",
+      "css": ".ds-nav { font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; display: grid; gap: 4px; width: 220px; padding: 12px; background: #eceee9; } .ds-nav a { position: relative; padding: 9px 12px; border-radius: 8px; color: #3a403c; font-size: 14px; border: 1px solid transparent; } .ds-nav a:hover { background: #f7f8f5; } .ds-nav a.is-active { background: #fff; border-color: #e2e4df; color: #191c1a; font-weight: 600; } .ds-nav a.is-active::after { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: #b45309; }"
+    },
+    {
+      "name": "Tira de indicadores",
+      "kind": "custom",
+      "refersTo": "kpi-swatch",
+      "description": "Indicadores en una sola tarjeta, marcados con muestra de color.",
+      "html": "<div class=\"ds-kpis\"><div><i style=\"background:#b45309\"></i><p>Entradas del día</p><strong>8</strong></div><div><i style=\"background:#c98c00\"></i><p>Salidas del día</p><strong>2</strong></div><div><i style=\"background:#1e7a45\"></i><p>Productos en stock</p><strong>7</strong></div></div>",
+      "css": ".ds-kpis { font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #e2e4df; border-radius: 10px; } .ds-kpis > div { display: grid; grid-template-columns: 12px 1fr; column-gap: 10px; padding: 14px 18px; } .ds-kpis > div + div { border-left: 1px solid #e2e4df; } .ds-kpis i { width: 12px; height: 12px; border-radius: 3px; margin-top: 3px; } .ds-kpis p { margin: 0; font-size: 12px; font-weight: 600; color: #3a403c; } .ds-kpis strong { grid-column: 2; font-size: 22px; letter-spacing: -.02em; color: #191c1a; }"
+    },
+    {
+      "name": "Tira de salud",
+      "kind": "custom",
+      "refersTo": "health-strip",
+      "description": "Barra segmentada del inventario con leyenda de muestras.",
+      "html": "<div class=\"ds-strip\"><span style=\"flex:5;background:#1e7a45\"></span><span style=\"flex:2;background:#c98c00\"></span><span style=\"flex:1;background:#b42318\"></span></div>",
+      "css": ".ds-strip { display: flex; gap: 3px; width: 420px; height: 14px; } .ds-strip span { border-radius: 3px; }"
+    },
+    {
+      "name": "Etiqueta de estado",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Estado del inventario o del documento.",
+      "html": "<span class=\"ds-chip is-ok\">Disponible</span> <span class=\"ds-chip is-warn\">Bajo stock</span> <span class=\"ds-chip is-danger\">Agotado</span>",
+      "css": ".ds-chip { font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; } .ds-chip.is-ok { background: #e6f4eb; color: #1e7a45; } .ds-chip.is-warn { background: #fff5d6; color: #7a5600; } .ds-chip.is-danger { background: #fdeceb; color: #b42318; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La carta de colores",
+    "overview": "El sistema toma su gesto de la carta de muestras de pintura que cualquier ferretería tiene en el mostrador: cada estado, categoría, indicador y reporte se reconoce por una pequeña muestra cuadrada de color junto a su nombre y su cifra. Todo lo demás es papel frío, tinta oscura y reglas de 1px.",
+    "keyCharacteristics": [
+      "Superficies planas sobre fondo papel; profundidad por regla y tono, nunca por sombra.",
+      "Indicadores en tira continua con divisores, marcados por una muestra de 12px.",
+      "Un solo acento de acción (naranja de plantilla); estados en verde, ámbar y rojo.",
+      "Códigos de producto y referencias en monoespaciada.",
+      "Inicio operativo; análisis y gráficas en una sección propia."
+    ],
+    "rules": [
+      {
+        "name": "La regla de una voz",
+        "section": "colors",
+        "body": "El naranja de plantilla marca la acción principal y la selección; no decora. Si una pantalla tiene dos botones naranjas, uno sobra."
+      },
+      {
+        "name": "La regla del estado honesto",
+        "section": "colors",
+        "body": "Verde, ámbar y rojo significan estado del inventario o de un documento. No se usan como color de categoría ni de adorno."
+      },
+      {
+        "name": "La regla del papel plano",
+        "section": "elevation",
+        "body": "Si algo necesita sombra para distinguirse, falta una regla o sobra un contenedor."
+      }
+    ],
+    "dos": [
+      "Do usar una muestra de color para marcar cada estado, categoría o indicador.",
+      "Do mantener Inicio operativo: propuestas, alertas, movimientos y bajo stock.",
+      "Do escribir los códigos en JetBrains Mono."
+    ],
+    "donts": [
+      "Don't añadir gráficas a pantallas operativas; van en Reportes y análisis.",
+      "Don't usar sombras de tarjeta, degradados ni iconos dentro de círculos de color.",
+      "Don't usar el naranja de acción como color de advertencia: la advertencia es ámbar.",
+      "Don't tocar el modo referencia (html[data-reference-mode=\"1\"]), que reproduce las maquetas aprobadas de references/."
+    ]
+  }
+}

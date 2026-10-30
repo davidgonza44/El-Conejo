@@ -17,15 +17,15 @@
     const $ = (id) => document.getElementById(id);
     const REF = window.INICIO_REFERENCE || null;
 
-    const COLORS = { blue: "#1a73e8", blueLight: "#8ab4f8" };
+    const COLORS = { blue: "#e07b10", blueLight: "#f1cfac" };
     /* Fixture: orden fijo de la referencia. */
-    const DONUT = ["#1a73e8", "#3fae62", "#fdb429", "#8e73e4", "#20c2c5", "#a6adb8", "#1d3d5f", "#d9a521"];
+    const DONUT = ["#e07b10", "#3fae62", "#c98c00", "#8e73e4", "#20c2c5", "#626a65", "#191c1a", "#c98c00"];
     /* Live: paleta persistida de Category.color (misma que ix_category_layers). */
-    const TONES = { blue: "#1477f5", green: "#20aa58", orange: "#ff941c", purple: "#8658d4", teal: "#13b9b1",
-        gray: "#87929f", red: "#ee4a4e", pink: "#e93d94", yellow: "#fbc21b", brown: "#92400e", navy: "#1e3a8a" };
+    const TONES = { blue: "#2f7fc1", green: "#20aa58", orange: "#c98c00", purple: "#8658d4", teal: "#13b9b1",
+        gray: "#626a65", red: "#ee4a4e", pink: "#e93d94", yellow: "#c98c00", brown: "#7a5600", navy: "#26406b" };
     const AXIS_FONT = { family: "Inter, 'Segoe UI', sans-serif", size: 10.5 };
-    const AXIS_COLOR = "#6b7280";
-    const GRID = { color: "#eef0f3" };
+    const AXIS_COLOR = "#626a65";
+    const GRID = { color: "#f7f8f5" };
 
     const UNAVAILABLE = "No disponible.";
     const LOAD_ERROR = "No se pudo cargar.";
@@ -297,11 +297,11 @@
             const color = s.dashed ? COLORS.blueLight : COLORS.blue;
             return {
                 label: s.label, data: s.data, borderColor: color,
-                backgroundColor: s.dashed ? color : "rgba(26, 115, 232, 0.05)", fill: !s.dashed,
+                backgroundColor: s.dashed ? color : "rgba(224, 123, 16, 0.05)", fill: !s.dashed,
                 borderWidth: 2.5, borderDash: s.dashed ? [5, 5] : [], tension: 0,
                 pointRadius: s.data.map((_, idx) => (i === 0 && idx === tipIndex ? 5 : 4)),
                 pointBorderWidth: s.data.map((_, idx) => (i === 0 && idx === tipIndex ? 4 : 0)),
-                pointBorderColor: "rgba(26, 115, 232, 0.25)",
+                pointBorderColor: "rgba(224, 123, 16, 0.25)",
                 pointBackgroundColor: color,
             };
         });
@@ -505,36 +505,46 @@
     // ------------------------------------------------------------------
     // Carga
     // ------------------------------------------------------------------
+    // Inicio (tablero de trabajo) y Reportes › Panorama (gráficas) comparten este script y la
+    // misma API: cada pieza se dibuja solo si su contenedor existe en la página.
+    const has = (id) => Boolean($(id));
+
     function renderReference() {
-        renderKpis(REF.kpis);
-        renderSales(REF.sales);
-        renderCategory(REF.category);
-        renderList("table-adjustments", REF.activity, activityRow);
-        renderList("table-low-stock", REF.lowStock, lowStockRow);
-        renderTop(REF.top);
+        if (has("kpi-row")) renderKpis(REF.kpis);
+        if (has("chart-sales")) renderSales(REF.sales);
+        if (has("chart-category")) renderCategory(REF.category);
+        if (has("table-adjustments")) renderList("table-adjustments", REF.activity, activityRow);
+        if (has("table-low-stock")) renderList("table-low-stock", REF.lowStock, lowStockRow);
+        if (has("table-top")) renderTop(REF.top);
     }
 
     function renderLive(d) {
-        renderKpis(Object.keys(KPI_META).map((key) => liveKpi(key, d.kpis && d.kpis[key])));
-        liveSales(d.sales_chart);
-        liveCategory(d.inventory_distribution);
+        if (has("kpi-row")) renderKpis(Object.keys(KPI_META).map((key) => liveKpi(key, d.kpis && d.kpis[key])));
+        if (has("chart-sales")) liveSales(d.sales_chart);
+        if (has("chart-category")) liveCategory(d.inventory_distribution);
         const movements = d.recent_movements || {};
-        if (movements.available) renderList("table-adjustments", (movements.items || []).map((m) => liveActivity(m, d.today)), activityRow, "No hay movimientos recientes.");
-        else listMessage("table-adjustments", UNAVAILABLE);
+        if (has("table-adjustments")) {
+            if (movements.available) renderList("table-adjustments", (movements.items || []).map((m) => liveActivity(m, d.today)), activityRow, "No hay movimientos recientes.");
+            else listMessage("table-adjustments", UNAVAILABLE);
+        }
         const alerts = d.stock_alerts || {};
-        if (alerts.available) renderList("table-low-stock", (alerts.items || []).map(liveLowStock), lowStockRow, "No hay productos con bajo stock.");
-        else listMessage("table-low-stock", UNAVAILABLE);
-        if (d.top_products && d.top_products.available) renderTop((d.top_products.items || []).map(liveTop), NO_SALES); else topMessage(UNAVAILABLE);
+        if (has("table-low-stock")) {
+            if (alerts.available) renderList("table-low-stock", (alerts.items || []).map(liveLowStock), lowStockRow, "No hay productos con bajo stock.");
+            else listMessage("table-low-stock", UNAVAILABLE);
+        }
+        if (has("table-top")) {
+            if (d.top_products && d.top_products.available) renderTop((d.top_products.items || []).map(liveTop), NO_SALES); else topMessage(UNAVAILABLE);
+        }
     }
 
     function renderFailure(error) {
         reportError(error);
-        renderKpis(errorKpis());
-        showCardMessage("chart-sales", LOAD_ERROR, true);
-        showCardMessage("chart-category", LOAD_ERROR, true);
-        listMessage("table-adjustments", LOAD_ERROR, true);
-        listMessage("table-low-stock", LOAD_ERROR, true);
-        topMessage(LOAD_ERROR, true);
+        if (has("kpi-row")) renderKpis(errorKpis());
+        if (has("chart-sales")) showCardMessage("chart-sales", LOAD_ERROR, true);
+        if (has("chart-category")) showCardMessage("chart-category", LOAD_ERROR, true);
+        if (has("table-adjustments")) listMessage("table-adjustments", LOAD_ERROR, true);
+        if (has("table-low-stock")) listMessage("table-low-stock", LOAD_ERROR, true);
+        if (has("table-top")) topMessage(LOAD_ERROR, true);
     }
 
     async function loadLive() {

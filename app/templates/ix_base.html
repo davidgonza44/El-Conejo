@@ -11,11 +11,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1/dist/css/tabler.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inicio.css') }}">
     {% block head %}{% endblock %}
     {# Sistema de diseño: después de las hojas de cada pantalla para unificar sin duplicar reglas. #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ix_ui.css') }}">
+    {# Sistema visual «carta de colores»: tokens --cj-* y componentes; va al final para mandar. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cj_theme.css') }}">
 </head>
 <body class="ix-body">
 <div class="ix-shell" id="ix-shell">

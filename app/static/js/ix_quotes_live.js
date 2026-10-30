@@ -16,7 +16,7 @@
         ids: { rows: 'qv-rows', empty: 'qv-empty', summary: 'qv-summary', pages: 'qv-pages', feedback: 'qv-feedback' },
         statusKey: 'filter_statuses',
         statusOrder: ['sent', 'pending', 'accepted', 'expired', 'rejected'],
-        statusColors: { '': '#1675ff', sent: '#539cff', pending: '#ff9729', accepted: '#33b653', expired: '#fa858e', rejected: '#ee273e' },
+        statusColors: { '': '#e07b10', sent: '#f1cfac', pending: '#c98c00', accepted: '#33b653', expired: '#fa858e', rejected: '#ee273e' },
         cells: (q) => [ref(q.quote_number), cell(dateOnly(q.quoted_at), 'sa-muted'), cell(q.customer ? q.customer.name : '—', 'sa-muted', q.customer && q.customer.name),
             cell(q.validity_label, 'sa-muted', `Vence el ${S.display(q.valid_until)}`), strong(money(toCents(q.total))), badge(q)],
         moreFields: [

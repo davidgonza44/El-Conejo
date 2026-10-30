@@ -109,7 +109,7 @@
     function chartAxes(svg, layout, maximum, points, future) {
         for (let step = 0; step <= 4; step++) {
             const y = layout.bottom - step * (layout.bottom - layout.top) / 4;
-            svgNode('line', {x1: layout.left, x2: layout.right, y1: y, y2: y, stroke: '#e2e8f0', class: 'rh-chart-grid'}, undefined, svg);
+            svgNode('line', {x1: layout.left, x2: layout.right, y1: y, y2: y, stroke: '#e2e4df', class: 'rh-chart-grid'}, undefined, svg);
             const label = chartText(svg, layout, {x: layout.left - 10, y: y + 4, 'text-anchor': 'end'}, number(maximum * step / 4));
             svgNode('title', {}, String(maximum * step / 4), label);
         }
@@ -137,9 +137,9 @@
         const coordinates = points.map((point, index) =>
             `${layout.left + index * (layout.right - layout.left) / Math.max(1, points.length - 1)},` +
             `${layout.bottom - Number(point.quantity) / maximum * (layout.bottom - layout.top)}`);
-        const color = future ? '#16a34a' : '#2563eb';
+        const color = future ? '#16a34a' : '#e07b10';
         svgNode('polygon', {points: `${layout.left},${layout.bottom} ${coordinates.join(' ')} ${points.length > 1 ? layout.right : layout.left},${layout.bottom}`,
-            fill: future ? '#dcfce7' : '#dbeafe', opacity: '.65', class: 'rh-chart-area'}, undefined, svg);
+            fill: future ? '#dcfce7' : '#fcefe2', opacity: '.65', class: 'rh-chart-area'}, undefined, svg);
         svgNode('polyline', {points: coordinates.join(' '), fill: 'none', stroke: color, 'stroke-width': 2.5,
             'stroke-linejoin': 'round', 'stroke-linecap': 'round', class: 'rh-chart-line'}, undefined, svg);
         if (points.length <= 31) {

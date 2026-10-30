@@ -13,8 +13,8 @@
         ADVANCED_READY: "badge-advanced-ready",
     };
     const PALETTE = {
-        blue: "#206bc4",
-        darkBlue: "#1d3d5f",
+        blue: "#b45309",
+        darkBlue: "#191c1a",
         blueSoft: "rgba(32, 108, 196, 0.15)",
     };
 

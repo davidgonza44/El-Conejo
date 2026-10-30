@@ -100,7 +100,7 @@
                 const selected = state.status === s.value;
                 b.setAttribute('aria-selected', String(selected));
                 const dot = node('span', undefined, `${cfg.prefix}-dot`);
-                dot.style.setProperty('--dot', cfg.statusColors[s.value] || '#1675ff');
+                dot.style.setProperty('--dot', cfg.statusColors[s.value] || '#e07b10');
                 b.append(dot, document.createTextNode(s.label), node('span', selected ? '✓' : '', `${cfg.prefix}-check`));
                 return b;
             }));

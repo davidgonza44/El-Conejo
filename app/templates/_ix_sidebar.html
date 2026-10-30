@@ -57,6 +57,13 @@
 {% set pred_children = pred_children + [('real_2026', 'Histórico real 2026', url_for('real_2026.page'))] %}
 {% endif %}
 {% set pred_active = active_page in (pred_children | map(attribute=0) | list) %}
+{# Modo real: el análisis vive en un solo grupo «Reportes y análisis»; Inventario y los demás
+   módulos quedan como pantallas de trabajo. Cada enlace conserva el permiso de su ruta. #}
+{% set analytics_children = (visible_nav([('analytics', 'Panorama', url_for('pages.analytics')),
+                                          ('reports', 'Ventas', url_for('pages.report_sales')),
+                                          ('inventory_summary', 'Inventario', url_for('pages.inventory_summary'))])
+                             + pred_children) if not reference_mode else [] %}
+{% set analytics_active = active_page in (analytics_children | map(attribute=0) | list) %}
 {% set inv_children = visible_nav(inv_children, reference_mode) %}
 {% if not reference_mode %}{% set inv_children = inv_children + visible_nav([('catalog', 'Catálogo visual', url_for('pages.catalog'))]) %}{% endif %}
 {% set notification_sidebar = reference_mode and sidebar_variant == 'settings' and tab is defined and tab == 'notifications' %}
@@ -126,12 +133,13 @@
             {% if approved_shell %}
             {# Cáscara Ferretería Pro: árbol de la maqueta. ?ref=1 solo si reference_mode. #}
             {% if live_sidebar %}
-            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, active_page in (inv_children | map(attribute=0) | list), active_page) }}
+            {% set work_inv = inv_children | rejectattr(0, "equalto", "inventory_summary") | list %}
+            {{ nav_group("ix-nav-inv", "ti-package", "Inventario", work_inv, active_page in (work_inv | map(attribute=0) | list), active_page) }}
             {% set sales_active = active_page in (sales_children | map(attribute=0) | list) %}
             {{ nav_group("ix-nav-sales", "ti-shopping-cart", "Ventas", sales_children, active_page == 'sales' or sales_active, (active_page if sales_active else none), href=(sales_href if nav_allowed('sales') else none)) }}
             {{ nav_group("ix-nav-compras", "ti-shopping-bag", "Compras", purchase_children, active_page in (purchase_children | map(attribute=0) | list), active_page) }}
             {% if nav_allowed('chatbot') %}{{ nav_link(chatbot_href, "ti-message-chatbot", "Chatbot", current=(active_page == "chatbot"), chevron="right") }}{% endif %}
-            {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, pred_active, active_page) }}
+            {{ nav_group("ix-nav-analytics", "ti-chart-bar", "Reportes y análisis", analytics_children, analytics_active, active_page) }}
             {% elif sidebar_variant == "inventory" %}
             {{ nav_group("ix-nav-inv", "ti-package", "Inventario", inv_children, True, active_page, soft=True, tinted=True) }}
             {% if nav_allowed('sales', reference_mode) %}{{ nav_link(sales_href, "ti-shopping-cart", "Ventas", chevron="right") }}{% endif %}
@@ -168,7 +176,7 @@
             {{ nav_group("ix-nav-pred", "ti-chart-line", "Análisis predictivo", pred_children, False) }}
             {% endif %}
             {% endif %}
-            {% if nav_allowed('reports', reference_mode) %}{{ nav_link(url_for("pages.report_sales") ~ ref_qs, "ti-chart-bar", "Reportes", current=(active_page == "reports"),
+            {% if not live_sidebar and nav_allowed('reports', reference_mode) %}{{ nav_link(url_for("pages.report_sales") ~ ref_qs, "ti-chart-bar", "Reportes", current=(active_page == "reports"),
                         chevron=(None if active_page == "reports" else "right")) }}{% endif %}
             {% if nav_allowed('settings', reference_mode) %}
             {{ nav_link(url_for("pages.settings") ~ ref_qs, "ti-settings", "Configuración", current=(active_page == "settings"), chevron=("up" if active_page == "settings" else "right")) }}

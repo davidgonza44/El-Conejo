@@ -40,7 +40,7 @@ test.describe('Configuración (administrador)', () => {
 
     test('crea un usuario con rol de inventario', async ({ page }) => {
         await page.goto('/settings?tab=users');
-        await page.locator('#st-user-new').click();
+        await openNewUserForm(page);
         await page.locator('#st-user-name').fill(newcomer.name);
         await page.locator('#st-user-email').fill(newcomer.email);
         await page.locator('#st-user-username').fill(newcomer.username);
@@ -54,7 +54,7 @@ test.describe('Configuración (administrador)', () => {
 
     test('rechaza un usuario con contraseña débil', async ({ page }) => {
         await page.goto('/settings?tab=users');
-        await page.locator('#st-user-new').click();
+        await openNewUserForm(page);
         await page.locator('#st-user-name').fill('E2E Débil');
         await page.locator('#st-user-email').fill(`debil_${id}@example.invalid`);
         await page.locator('#st-user-username').fill(`e2e_debil_${id}`);
@@ -64,6 +64,15 @@ test.describe('Configuración (administrador)', () => {
         await expect(page.locator('.st-toast')).not.toContainText('creado');
     });
 });
+
+// El botón existe antes de que ix_settings_users.js registre su evento: se reintenta el clic
+// hasta que el formulario quede en modo creación (campos editables).
+async function openNewUserForm(page) {
+    await expect(async () => {
+        await page.locator('#st-user-new').click();
+        await expect(page.locator('#st-user-name')).toBeEditable({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+}
 
 test.describe('Soporte TI', () => {
     test.use(as('soporte_ti'));

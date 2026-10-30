@@ -308,6 +308,27 @@ def dashboard():
     )
 
 
+@pages_bp.get("/reportes", endpoint="analytics")
+@login_required
+def analytics():
+    """Reportes y análisis › Panorama: las gráficas que antes ocupaban Inicio, con la misma API."""
+    denied = require_page_roles(*_DASHBOARD_ROLES)
+    if denied is not None:
+        return denied
+    from app.services import product_service
+
+    summary = product_service.products_summary()
+    low, out = summary["low_stock"], summary["out_of_stock"]
+    health = [("Disponible", max(summary["total_active"] - low - out, 0), "ok"),
+              ("Bajo stock", low, "warn"), ("Agotado", out, "danger")]
+    from app.models import Category
+
+    colors = dict(Category.query.with_entities(Category.id, Category.color).all())
+    categories = [{**c, "color": colors.get(c["id"]) or "gray"} for c in summary["category_distribution"]]
+    return render_template("reports/overview.html", pro_shell=True, movements_live=True,
+                           health=health, health_total=summary["total_active"], categories=categories)
+
+
 @pages_bp.get("/reports")
 @login_required
 def reports():

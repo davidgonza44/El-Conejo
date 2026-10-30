@@ -25,7 +25,7 @@
     white-space: normal;
     text-align: center;
     padding: 2.2rem 1rem;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
 }
 
 .cell-num {
@@ -39,14 +39,14 @@
 
 .badge-cancelled {
     background-color: rgba(108, 117, 125, 0.15);
-    color: #5c636a;
+    color: var(--cj-ink-2);
 }
 
 #create-lines-tbody:empty::after {
     content: "Agregue al menos un producto.";
     display: block;
     text-align: center;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
     padding: 1rem;
     font-size: 0.875rem;
 }
@@ -55,16 +55,16 @@
 .dn-confirm {
     margin-top: 16px;
     padding: 16px 18px;
-    border: 1px solid #cfe0ff;
+    border: 1px solid var(--cj-accent-soft);
     border-radius: 12px;
-    background: #f5f9ff;
+    background: var(--cj-accent-soft);
 }
 
 .dn-confirm-title {
     margin: 0 0 12px;
     font-size: 15px;
     font-weight: 600;
-    color: #172b4d;
+    color: var(--cj-ink);
 }
 
 .dn-confirm-grid {
@@ -78,20 +78,20 @@
     justify-content: space-between;
     gap: 16px;
     padding-bottom: 6px;
-    border-bottom: 1px solid #e3ecfa;
+    border-bottom: 1px solid var(--cj-accent-soft);
     font-size: 13px;
 }
 
 .dn-confirm-grid dt {
     font-weight: 500;
-    color: #42526e;
+    color: var(--cj-ink-2);
 }
 
 .dn-confirm-grid dd {
     margin: 0;
     text-align: right;
     font-variant-numeric: tabular-nums;
-    color: #172b4d;
+    color: var(--cj-ink);
 }
 
 .dn-confirm-grid > div:last-child {
@@ -101,6 +101,6 @@
 
 .dn-confirm-warning {
     margin: 0;
-    color: #8a5a00;
+    color: var(--cj-warn-ink);
     font-size: 13px;
 }

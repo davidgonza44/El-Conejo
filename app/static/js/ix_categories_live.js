@@ -219,10 +219,10 @@
         });
         const chart = typeof Chart !== 'undefined' && els.donut ? Chart.getChart(els.donut) : null;
         if (!chart) return;
-        const palette = { blue: '#1a73e8', green: '#3fae62', orange: '#fdb429', purple: '#8e73e4', teal: '#20c2c5', gray: '#a6adb8', red: '#dc2626', pink: '#e93d94', yellow: '#fbc21b', brown: '#92400e', navy: '#1e3a8a' };
+        const palette = { blue: '#2f7fc1', green: '#3fae62', orange: '#c98c00', purple: '#8e73e4', teal: '#20c2c5', gray: '#626a65', red: '#dc2626', pink: '#e93d94', yellow: '#c98c00', brown: '#7a5600', navy: '#26406b' };
         const hasProducts = slices.some(item => item.count > 0);
         chart.data.datasets[0].data = hasProducts ? slices.map(item => item.count) : [1];
-        chart.data.datasets[0].backgroundColor = hasProducts ? slices.map(item => palette[item.tone]) : ['#e9eef6'];
+        chart.data.datasets[0].backgroundColor = hasProducts ? slices.map(item => palette[item.tone]) : ['#f7f8f5'];
         chart.update();
     }
     function listQuery() {

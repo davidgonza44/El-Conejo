@@ -3,10 +3,10 @@
 (() => {
     'use strict';
     const config = JSON.parse(document.getElementById('rs-config').textContent);
-    const COLORS = {1: '#0866f5', 2: '#25b65a', 3: '#ffbb22', 4: '#9561ef', 5: '#08b1c8', 6: '#aeb6c5', 7: '#45a9ef', 8: '#81b9f4'};
-    const AXIS = {color: '#657594', font: {family: 'Arial', size: 10}};
-    const GRID = {color: '#edf0f6'};
-    const BORDER = {color: '#e4e8f0'};
+    const COLORS = {1: '#e07b10', 2: '#25b65a', 3: '#c98c00', 4: '#9561ef', 5: '#08b1c8', 6: '#cdd1ca', 7: '#e07b10', 8: '#f1cfac'};
+    const AXIS = {color: '#626a65', font: {family: 'Arial', size: 10}};
+    const GRID = {color: '#f7f8f5'};
+    const BORDER = {color: '#e2e4df'};
     const money = value => value >= 1000 ? `${Math.round(value / 100) / 10}K` : value ? String(value) : '0';
     const summary = config.tab === 'summary';
 
@@ -23,11 +23,11 @@
             })},
             options: {
                 responsive: true, maintainAspectRatio: false, animation: false,
-                plugins: {legend: {position: 'top', align: summary ? 'start' : 'center', labels: {color: '#596a88', boxWidth: 18, boxHeight: 2, padding: summary ? 14 : 10, font: {family: 'Arial', size: summary ? 12 : 10}}},
+                plugins: {legend: {position: 'top', align: summary ? 'start' : 'center', labels: {color: '#626a65', boxWidth: 18, boxHeight: 2, padding: summary ? 14 : 10, font: {family: 'Arial', size: summary ? 12 : 10}}},
                     tooltip: {callbacks: {label: item => `${item.dataset.label}: ${chart.money ? item.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2}) : item.parsed.y}`}}},
                 scales: {
                     y: {min: 0, max: chart.y_max, ticks: {autoSkip: false, stepSize: chart.y_step, ...AXIS, font: {family: 'Arial', size: size}, callback: v => chart.money ? money(v) : v}, grid: GRID, border: BORDER},
-                    x: {ticks: {autoSkip: false, maxRotation: 0, padding: 8, ...AXIS, font: {family: 'Arial', size: size}}, grid: {color: '#f0f2f6'}, border: BORDER},
+                    x: {ticks: {autoSkip: false, maxRotation: 0, padding: 8, ...AXIS, font: {family: 'Arial', size: size}}, grid: {color: '#f7f8f5'}, border: BORDER},
                 },
             },
         });
@@ -43,10 +43,10 @@
             type: 'bar',
             data: {labels: bars.labels.map(split), datasets: [{data: bars.values, backgroundColor: context => {
                 const gradient = context.chart.ctx.createLinearGradient(0, 20, 0, 200);
-                gradient.addColorStop(0, '#4196ff'); gradient.addColorStop(1, '#0866f5'); return gradient;
+                gradient.addColorStop(0, '#e07b10'); gradient.addColorStop(1, '#e07b10'); return gradient;
             }, borderRadius: 3, barPercentage: .75, categoryPercentage: .9}]},
             plugins: [{id: 'categoryAmounts', afterDatasetsDraw(chart) {
-                const ctx = chart.ctx; ctx.save(); ctx.fillStyle = '#101832'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+                const ctx = chart.ctx; ctx.save(); ctx.fillStyle = '#191c1a'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
                 chart.getDatasetMeta(0).data.forEach((bar, i) => ctx.fillText(bars.value_labels[i], bar.x, bar.y - 8)); ctx.restore();
             }}],
             options: {responsive: true, maintainAspectRatio: false, animation: false, plugins: {legend: {display: false}}, scales: {

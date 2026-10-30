@@ -178,6 +178,8 @@
 </section>
 
 {{ iv.kpis(fixture.kpis if reference_mode else live_kpis) }}
+{% if not reference_mode and nav_allowed('analytics') %}<a class="cj-analysis-link" href="{{ url_for('pages.inventory_summary') }}"><span class="cj-swatch" aria-hidden="true"></span>Indicadores, distribución por categoría y alertas: Reportes y análisis › Inventario</a>{% endif %}
+
 
 <section class="iv-prod-body" aria-label="Catálogo, categorías y alertas">
     <article class="ix-card iv-catalog">

@@ -14,7 +14,7 @@
     const search = main.querySelector('.sa-toolbar-search input');
     const originalRows = body.innerHTML, originalPages = pages.innerHTML, originalSummary = summary.textContent;
     const statuses = ['Todos los estados', 'Pendiente', 'En proceso', 'Completado', 'Cancelado'];
-    const colors = ['#2473ee', '#f5b34b', '#f29927', '#32af58', '#eb4b55'];
+    const colors = ['#e07b10', '#c98c00', '#c98c00', '#32af58', '#eb4b55'];
     const fields = ['client', 'product', 'seller', 'priority', 'from', 'to', 'payment', 'min', 'max'];
     const catalog = [
         {name:'Cemento Gris 42.5 kg', sku:'CEM-001', cents:750, image:'cemento'},

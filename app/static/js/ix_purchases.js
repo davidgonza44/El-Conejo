@@ -186,7 +186,7 @@
   }
   // Same contract as the Recepciones form; the server re-checks both fields before any movement.
   // Inline styles keep the compiled stylesheet untouched; the dialog styles every input as a full-width field.
-  const PARTIAL_BOX = 'border:1px solid #f3c58b;border-radius:8px;background:#fff8ef;padding:12px 14px;margin:14px 0';
+  const PARTIAL_BOX = 'border:1px solid #ecd894;border-radius:8px;background:#fff5d6;padding:12px 14px;margin:14px 0';
   const PARTIAL_LEGEND = 'font-size:13px;font-weight:650;color:#9a3412;padding:0 6px;width:auto;margin:0';
   const PARTIAL_CHECK = 'display:flex;flex-direction:row;align-items:center;gap:8px;margin:8px 0';
   const PARTIAL_INPUT = 'width:16px;height:16px;flex:none;margin:0;padding:0';

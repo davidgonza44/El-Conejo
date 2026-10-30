@@ -43,7 +43,21 @@ test.describe('Navegación del administrador', () => {
     test('marca la página activa con aria-current', async ({ page }) => {
         await page.goto('/reports/sales');
         const nav = page.getByRole('complementary', { name: 'Navegación principal' });
-        await expect(nav.getByRole('link', { name: 'Reportes' })).toHaveAttribute('aria-current', 'page');
+        await expect(nav.getByRole('button', { name: 'Reportes y análisis' })).toHaveAttribute('aria-expanded', 'true');
+        await expect(nav.getByRole('link', { name: 'Ventas', exact: true })).toHaveAttribute('aria-current', 'page');
+    });
+
+    test('las gráficas viven en Reportes y análisis, no en Inicio', async ({ page }) => {
+        await page.goto('/dashboard');
+        await expect(page.locator('#chart-sales')).toHaveCount(0);
+        await page.goto('/reportes');
+        await expect(page.locator('main h1')).toHaveText('Panorama');
+        await expect(page.locator('#chart-sales')).toBeVisible();
+        await expect(page.locator('#chart-category')).toBeVisible();
+        await expect(page.locator('.cj-legend')).toContainText('Bajo stock');
+        await expect(page.locator('#table-top tr').first()).toBeVisible();
+        const index = page.getByRole('navigation', { name: 'Reportes' });
+        await expect(index.getByRole('link', { name: /Ventas/ })).toHaveAttribute('href', '/reports/sales');
     });
 
     test('la búsqueda global encuentra productos del catálogo', async ({ page }) => {

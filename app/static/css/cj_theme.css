@@ -1,0 +1,375 @@
+/* Sistema visual de El Conejo: «carta de colores».
+   Cada estado, categoría y módulo se reconoce por una muestra de color con su código; las
+   superficies son planas (regla de 1px, sin sombras de tarjeta) sobre un fondo papel frío.
+   Acento: naranja de plantilla del logo para acción y selección; azul cielo del logo para
+   enlaces de dato; verde, ámbar y rojo solo para estados. Se carga al final de cada base
+   (ix_base.html, base_auth.html) y define los tokens --cj-* que usan todas las hojas. */
+
+:root {
+    --cj-font: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --cj-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --cj-ground: #f3f4f1;
+    --cj-rail: #eceee9;
+    --cj-surface: #ffffff;
+    --cj-tint: #f7f8f5;
+    --cj-rule: #e2e4df;
+    --cj-rule-strong: #cdd1ca;
+    --cj-ink: #191c1a;
+    --cj-ink-2: #3a403c;
+    --cj-muted: #626a65;
+
+    --cj-accent: #b45309;
+    --cj-accent-strong: #8f4207;
+    --cj-accent-vivid: #e07b10;
+    --cj-accent-soft: #fbf4ec;
+    --cj-accent-line: #ecd3b9;
+    --cj-sky: #1f6fa8;
+    --cj-sky-vivid: #4fa0d6;
+    --cj-sky-soft: #e8f2f9;
+
+    --cj-ok: #1e7a45;
+    --cj-ok-soft: #e6f4eb;
+    --cj-warn: #c98c00;
+    --cj-warn-ink: #7a5600;
+    --cj-warn-soft: #fff5d6;
+    --cj-warn-line: #ecd894;
+    --cj-danger: #b42318;
+    --cj-danger-soft: #fdeceb;
+
+    --cj-radius: 10px;
+    --cj-radius-sm: 6px;
+    --cj-ring: 0 0 0 3px color-mix(in srgb, var(--cj-accent-vivid) 28%, transparent);
+
+    /* Tokens heredados de inicio.css / ix_ui.css, apuntando al sistema nuevo. */
+    --ix-font: var(--cj-font);
+    --ds-font: var(--cj-font);
+    --ix-bg: var(--cj-ground);
+    --ix-card: var(--cj-surface);
+    --ix-border: var(--cj-rule);
+    --ix-border-soft: var(--cj-tint);
+    --ix-ink: var(--cj-ink);
+    --ix-ink-2: var(--cj-ink-2);
+    --ix-muted: var(--cj-muted);
+    --ix-radius: var(--cj-radius);
+    --ix-orange: var(--cj-warn);
+    --ix-orange-soft: var(--cj-warn-soft);
+    --ix-green: var(--cj-ok);
+    --ix-green-soft: var(--cj-ok-soft);
+    --ix-red: var(--cj-danger);
+    --ix-red-soft: var(--cj-danger-soft);
+    --ds-ink: var(--cj-ink);
+    --ds-ink-2: var(--cj-ink-2);
+    --ds-muted: var(--cj-muted);
+    --ds-line: var(--cj-rule);
+    --ds-line-soft: var(--cj-tint);
+    --ds-line-strong: var(--cj-rule-strong);
+    --ds-surface-2: var(--cj-tint);
+    --ds-surface-3: var(--cj-rail);
+    --ds-ring: var(--cj-ring);
+    --ds-radius: 8px;
+    --ds-radius-lg: var(--cj-radius);
+    --ds-shadow-xs: none;
+    --ds-shadow-sm: none;
+    /* Tabler (formularios, alertas y modales heredados). */
+    --tblr-primary: #b45309;
+    --tblr-primary-rgb: 180, 83, 9;
+    --tblr-font-sans-serif: var(--cj-font);
+    --tblr-body-bg: var(--cj-ground);
+    --tblr-border-color: var(--cj-rule);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base: tipografía de trabajo, cifras tabulares, códigos en mono      */
+/* ------------------------------------------------------------------ */
+body, .ix-body { background: var(--cj-ground); color: var(--cj-ink); }
+body, .ix-body *:not(.ti):not([class^="ti-"]):not([class*=" ti-"]) { font-family: var(--cj-font); }
+.ix-body { font-size: 14px; -webkit-font-smoothing: antialiased; }
+.ix-body table, .ix-body [class*="kpi-value"], .ix-body [class*="-value"] { font-variant-numeric: tabular-nums; }
+.ix-body code, .cj-code,
+.ix-body :is(.sa-ref, .px-product-sku, .catalog-code, .iv-sku, .po-number, .rc-number, .mv-ref, .mv-number, [class*="-code"]) {
+    font-family: var(--cj-mono) !important;
+    font-size: .92em;
+    letter-spacing: -.01em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shell: riel claro con la muestra naranja en el módulo activo        */
+/* ------------------------------------------------------------------ */
+.ix-sidebar { background: var(--cj-rail); border-right: 1px solid var(--cj-rule); }
+.ix-brand-logo, .ix-brand-logo.is-image { background: var(--cj-surface); border: 1px solid var(--cj-rule); border-radius: 8px; box-shadow: none; }
+.ix-brand-name { color: var(--cj-ink); font-weight: 700; letter-spacing: -.02em; }
+.ix-brand-sub { color: var(--cj-muted); }
+.ix-nav { padding-top: 22px; }
+.ix-nav-section { color: var(--cj-muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; padding-top: 16px; }
+.ix-nav a, .ix-nav-group > button {
+    position: relative; height: 38px; margin-bottom: 2px; border-radius: 8px;
+    color: var(--cj-ink-2); font-size: 13.5px; font-weight: 500;
+}
+.ix-nav a .ti, .ix-nav-group > button .ti, .ix-nav .st-icon { color: var(--cj-muted); }
+.ix-nav a:hover, .ix-nav-group > button:hover { background: color-mix(in srgb, var(--cj-ink) 5%, transparent); }
+/* El módulo activo: superficie blanca y una muestra naranja a la izquierda, como el canto de una carta de colores. */
+.ix-nav a[aria-current="page"], .ix-nav-group > button.is-active, .ix-nav-group > .ix-nav-group-link.is-active {
+    background: var(--cj-surface); color: var(--cj-ink); font-weight: 650;
+    box-shadow: inset 0 0 0 1px var(--cj-rule);
+}
+.ix-nav a[aria-current="page"]::after, .ix-nav-group > button.is-active::after {
+    content: ""; position: absolute; left: -9px; top: 9px; bottom: 9px; width: 4px;
+    border-radius: 0 3px 3px 0; background: var(--cj-accent-vivid);
+}
+.ix-nav a[aria-current="page"] .ti, .ix-nav-group > button.is-active .ti,
+.ix-nav a[aria-current="page"] .st-icon, .ix-nav-group > button.is-active .st-icon { color: var(--cj-accent); }
+.ix-nav-children::before { border-left-color: var(--cj-rule-strong); }
+.ix-nav-children a { height: 32px; font-size: 13px; color: var(--cj-ink-2); }
+.ix-nav-children a[aria-current="page"] { background: transparent; box-shadow: none; color: var(--cj-ink); }
+.ix-nav-children a[aria-current="page"]::after { display: none; }
+/* Hijo activo: muestra cuadrada (chip de la carta), no punto. */
+.ix-nav-children a[aria-current="page"]::before {
+    width: 9px; height: 9px; margin-top: -4.5px; border-radius: 2px; background: var(--cj-accent-vivid);
+    box-shadow: 0 0 0 2px var(--cj-rail);
+}
+.ix-user { background: var(--cj-surface); border: 1px solid var(--cj-rule); border-radius: 10px; box-shadow: none; }
+.ix-user-avatar { background: var(--cj-ink); color: #fff; border-radius: 8px; font-weight: 700; }
+.ix-divider { background: var(--cj-rule); }
+
+/* Cabecera de pantalla: título firme, una línea de contexto. */
+.ix-main { background: var(--cj-ground); }
+.ix-body :is(.ix-title, .ix-main h1, .rs-header h1, .st-heading h1, .hp-header h1, .pr-header h1, .sp-header h1) {
+    color: var(--cj-ink); font-weight: 700; letter-spacing: -.025em;
+}
+.ix-body :is(.ix-subtitle, .rs-header > p, .st-heading > p, .hp-header p) { color: var(--cj-muted); }
+
+/* ------------------------------------------------------------------ */
+/* Superficies planas: una regla, sin sombra                           */
+/* ------------------------------------------------------------------ */
+.ix-body :is(.ix-card, .st-card, .po-card, .px-card, .rh-card, .rs-card, .hp-card, .iv-card, .sa-card, .pr-card,
+             .rl-card, .sp-card, .mv-card, .ds-card, .card, .rc-card, .kpi-card, .form-card) {
+    background: var(--cj-surface); border: 1px solid var(--cj-rule); border-radius: var(--cj-radius); box-shadow: none;
+}
+.ix-body :is(.ix-card-title, .rs-card h2, .st-card h2, .hp-card h2, .card-title) { color: var(--cj-ink); font-weight: 650; letter-spacing: -.01em; }
+
+/* Indicadores: muestra cuadrada en lugar de círculo de icono. */
+.ix-body :is(.ix-kpi-icon, .rs-circle, .kpi-icon, .po-kpi-icon, .sp-kpi-icon, .st-kpi-icon) { border-radius: 8px !important; }
+.ix-body .ix-kpi-value, .ix-body .rs-kpi-value strong { letter-spacing: -.02em; }
+
+/* ------------------------------------------------------------------ */
+/* Botones                                                             */
+/* ------------------------------------------------------------------ */
+.ix-body :is(.btn, .px-btn, .po-btn, .sa-btn, .sp-btn, .st-button, .rs-button, .rl-button, .ol-button, .ql-button,
+             .mv-button, .pr-btn, .cl-button, .hp-print, .ix-link-btn, .ds-btn) {
+    border-radius: 8px; font-weight: 600; box-shadow: none;
+}
+.ix-body :is(.btn-primary, .is-primary, .st-primary, .rs-primary, .rl-primary, .ol-primary, .ql-primary, .mv-primary,
+             .pr-primary, .cl-primary, .pl-primary, .ds-btn-primary, .po-btn.is-primary),
+.auth-brand .btn-primary {
+    background: var(--cj-accent) !important; border-color: var(--cj-accent) !important; color: #fff !important;
+}
+.ix-body :is(.btn-primary, .is-primary, .st-primary, .rs-primary, .rl-primary, .ol-primary, .ql-primary, .mv-primary,
+             .pr-primary, .cl-primary, .pl-primary, .ds-btn-primary):hover:not(:disabled),
+.auth-brand .btn-primary:hover { background: var(--cj-accent-strong) !important; border-color: var(--cj-accent-strong) !important; }
+.ix-body :is(.btn-primary, .is-primary, .st-primary, .rs-primary) :is(.ti, .st-icon) { color: #fff !important; }
+.ix-body .btn-outline-primary { color: var(--cj-accent); border-color: var(--cj-accent-line); }
+.ix-body .btn-outline-primary:hover { background: var(--cj-accent-soft); color: var(--cj-accent-strong); border-color: var(--cj-accent); }
+.ix-link-btn { color: var(--cj-accent) !important; border-color: var(--cj-rule) !important; background: var(--cj-surface) !important; }
+
+/* ------------------------------------------------------------------ */
+/* Formularios                                                          */
+/* ------------------------------------------------------------------ */
+.ix-body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea, .form-control, .form-select) {
+    border-color: var(--cj-rule-strong); border-radius: 8px; color: var(--cj-ink);
+}
+.ix-body :is(input, select, textarea, .form-control, .form-select):focus {
+    border-color: var(--cj-accent-vivid) !important; box-shadow: var(--cj-ring) !important; outline: none;
+}
+.ix-body :is(input, select, textarea)::placeholder { color: color-mix(in srgb, var(--cj-muted) 80%, transparent); }
+.ix-body input[type="checkbox"], .ix-body input[type="radio"] { accent-color: var(--cj-accent); }
+.form-check-input:checked { background-color: var(--cj-accent); border-color: var(--cj-accent); }
+
+/* ------------------------------------------------------------------ */
+/* Tablas: encabezado tenue, filas con regla, números alineados         */
+/* ------------------------------------------------------------------ */
+.ix-body table thead th {
+    background: var(--cj-tint); color: var(--cj-muted); font-weight: 600; letter-spacing: .01em;
+    border-color: var(--cj-rule);
+}
+.ix-body table td, .ix-body table th { border-color: var(--cj-rule); }
+.ix-body table tbody tr:hover { background: color-mix(in srgb, var(--cj-accent-soft) 45%, transparent); }
+
+/* ------------------------------------------------------------------ */
+/* Pestañas y selección: subrayado naranja de plantilla                */
+/* ------------------------------------------------------------------ */
+.ix-body :is(.rs-tabs, .st-tabs, .pr-tabs, .sp-detail-tabs) :is(a, button)[aria-current="page"],
+.ix-body :is(.rs-tabs, .st-tabs, .pr-tabs, .sp-detail-tabs) :is(a, button)[aria-selected="true"] {
+    color: var(--cj-ink) !important; border-color: var(--cj-accent-vivid) !important; font-weight: 650;
+}
+
+/* Insignias de estado: chip de esquina corta (muestra), tipografía firme. */
+.ix-body :is(.px-badge, .sa-badge, .rs-badge, .sp-badge, .badge, .product-approval-badge, .ds-badge, .po-status) {
+    border-radius: 5px; font-weight: 600; letter-spacing: 0;
+}
+
+/* Muestra reutilizable (carta de colores): cuadro sólido con su código al lado. */
+.cj-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--swatch, var(--cj-accent-vivid)); flex-shrink: 0; box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 12%, transparent); }
+
+/* Diálogos y menús */
+.ix-body dialog, .ix-body .modal-content { border: 1px solid var(--cj-rule); border-radius: 12px; box-shadow: 0 24px 60px -20px rgba(25, 28, 26, .35); }
+
+/* Alertas de la campana y búsqueda global */
+.ix-body .ix-search { border-color: var(--cj-rule-strong); border-radius: 8px; background: var(--cj-surface); }
+.ix-body .ix-bell-badge { background: var(--cj-accent-vivid); color: #fff; }
+
+/* Selección de texto y foco del sistema nuevo */
+.ix-body ::selection { background: var(--cj-accent-line); color: var(--cj-ink); }
+.ix-main :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+.ix-sidebar :is(a, button):focus-visible { outline: 2px solid var(--cj-accent-vivid); outline-offset: 2px; }
+
+/* Ingreso y páginas de error */
+body.auth-brand { background: var(--cj-ground); }
+body.auth-brand .card { border: 1px solid var(--cj-rule); border-radius: 14px; box-shadow: none; }
+body.auth-brand a:not(.btn) { color: var(--cj-sky); }
+body.auth-brand h1, body.auth-brand h2, body.auth-brand .card-title { color: var(--cj-ink); letter-spacing: -.02em; }
+
+/* ------------------------------------------------------------------ */
+/* Inicio sin gráficas: tablero de trabajo en una sola fila de listas   */
+/* ------------------------------------------------------------------ */
+.ix-lower:not(:has(#card-top)) { grid-template-areas: "activity lowstock actions"; grid-template-rows: minmax(300px, auto); }
+@media (max-width: 1100px) { .ix-lower:not(:has(#card-top)) { grid-template-areas: "activity lowstock" "actions actions"; grid-template-rows: auto; } }
+@media (max-width: 640px) { .ix-lower:not(:has(#card-top)) { grid-template-areas: "activity" "lowstock" "actions"; } }
+
+/* ------------------------------------------------------------------ */
+/* Reportes y análisis › Panorama                                      */
+/* ------------------------------------------------------------------ */
+.cj-overview { display: flex; flex-direction: column; gap: 14px; padding-bottom: 32px; }
+.cj-health { padding: 18px 20px 20px; }
+.cj-health-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.cj-health-total { color: var(--cj-muted); font-size: 13px; }
+.cj-health-total strong { color: var(--cj-ink); font-size: 20px; letter-spacing: -.02em; margin-right: 4px; font-variant-numeric: tabular-nums; }
+/* Tira de muestras: cada estado ocupa su proporción real, sin redondear en el medio. */
+.cj-strip { display: flex; gap: 3px; height: 34px; }
+.cj-strip-chip { min-width: 6px; border-radius: 3px; }
+.cj-strip-chip:first-child { border-radius: 8px 3px 3px 8px; }
+.cj-strip-chip:last-child { border-radius: 3px 8px 8px 3px; }
+.cj-strip-chip:only-child { border-radius: 8px; }
+.is-ok { --swatch: var(--cj-ok); background: var(--cj-ok); }
+.is-warn { --swatch: var(--cj-warn); background: var(--cj-warn); }
+.is-danger { --swatch: var(--cj-danger); background: var(--cj-danger); }
+.cj-legend { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.cj-legend li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--cj-ink-2); }
+.cj-legend strong { font-variant-numeric: tabular-nums; color: var(--cj-ink); }
+.cj-legend small { color: var(--cj-muted); font-variant-numeric: tabular-nums; }
+.cj-sub { margin: 22px 0 10px; font-size: 13px; font-weight: 650; color: var(--cj-ink-2); }
+.cj-category-strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 28px; }
+.cj-category-strip li { display: grid; grid-template-columns: 12px minmax(0, 1fr) 90px 28px; align-items: center; gap: 10px; font-size: 13px; }
+.cj-category-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cj-ink-2); }
+.cj-bar { height: 8px; background: var(--cj-tint); border-radius: 2px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--cj-rule); }
+.cj-bar i { display: block; height: 100%; background: var(--swatch); border-radius: 2px; }
+.cj-category-strip strong { text-align: right; font-variant-numeric: tabular-nums; }
+.cj-empty { margin: 0; color: var(--cj-muted); }
+.cj-overview .ix-main-row { grid-auto-rows: 280px; }
+.cj-lower { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.cj-report-index ul { list-style: none; margin: 0; padding: 4px 8px 10px; }
+.cj-report-index a { display: grid; grid-template-columns: 12px minmax(0, 1fr) 16px; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; color: var(--cj-ink); text-decoration: none; }
+.cj-report-index a:hover { background: var(--cj-tint); }
+.cj-report-index strong { display: block; font-size: 13.5px; font-weight: 650; }
+.cj-report-index small { display: block; color: var(--cj-muted); font-size: 12.5px; line-height: 1.4; }
+.cj-report-index .ti { color: var(--cj-muted); }
+@media (max-width: 1100px) { .cj-lower { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .cj-overview .ix-main-row { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; } .cj-category-strip li { grid-template-columns: 12px minmax(0, 1fr) 60px 28px; } }
+
+/* ------------------------------------------------------------------ */
+/* Pantallas operativas: lista y acciones. El análisis duplicado se    */
+/* oculta (sigue en el DOM con su JS) y vive en Reportes y análisis.   */
+/* Solo en modo real: las réplicas de referencia (?ref=1) no cambian.  */
+/* ------------------------------------------------------------------ */
+html[data-reference-mode="0"] :is(.iv-prod-history, .iv-prod-body > :not(.iv-catalog), .iv-mov-aside, .po-summary) { display: none !important; }
+html[data-reference-mode="0"] :is(.iv-prod-body, .iv-mov-body, .po-content) { grid-template-columns: minmax(0, 1fr) !important; }
+html[data-reference-mode="0"] .po-kpis { width: 100%; }
+
+/* Indicadores: una sola tira compacta con divisiones, no cuatro tarjetas grandes. */
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis) {
+    gap: 0 !important; background: var(--cj-surface); border: 1px solid var(--cj-rule); border-radius: var(--cj-radius); overflow: hidden;
+}
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis) > :is(.ix-kpi, .po-kpi, .ix-card) {
+    border: 0 !important; border-radius: 0 !important; box-shadow: none !important; height: auto !important; min-height: 76px; padding: 14px 18px !important;
+}
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis) > * + * { border-left: 1px solid var(--cj-rule) !important; }
+html[data-reference-mode="0"] :is(.ix-kpi-icon, .po-kpi-icon) { width: 34px !important; height: 34px !important; }
+html[data-reference-mode="0"] :is(.ix-kpi-icon, .po-kpi-icon) :is(.ti, .ix-svg, .st-icon) { width: 18px !important; height: 18px !important; font-size: 18px !important; }
+html[data-reference-mode="0"] .ix-kpi-value, html[data-reference-mode="0"] .po-kpi strong { font-size: 22px !important; }
+@media (max-width: 900px) { html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis) > * + * { border-left: 0 !important; border-top: 1px solid var(--cj-rule) !important; } }
+
+/* Enlace al análisis de cada pantalla operativa. */
+.cj-analysis-link { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--cj-rule); border-radius: 8px; background: var(--cj-surface); color: var(--cj-ink-2); font-size: 13px; text-decoration: none; width: fit-content; }
+.cj-analysis-link:hover { border-color: var(--cj-accent-line); color: var(--cj-ink); }
+.cj-analysis-link .cj-swatch { width: 10px; height: 10px; }
+
+/* Escala legible para el mostrador: las maquetas usaban 8–10 px en tablas. */
+html[data-reference-mode="0"] :is(.po-table, .px-table, .iv-table, .sa-table, .sp-table, .rc-table, .ix-table) { font-size: 13px !important; }
+html[data-reference-mode="0"] :is(.po-table, .px-table, .iv-table, .sa-table, .sp-table, .rc-table, .ix-table) th { font-size: 11.5px !important; }
+html[data-reference-mode="0"] :is(.po-supplier-text strong, .po-number, .px-product-name) { font-size: 13px !important; }
+html[data-reference-mode="0"] :is(.po-supplier-text small, .po-badge, .px-product-sku) { font-size: 11.5px !important; }
+html[data-reference-mode="0"] :is(.po-pagination, .po-filters label, .po-kpi h2, .po-kpi p) { font-size: 12px !important; }
+html[data-reference-mode="0"] .po-filters .po-search input { font-size: 13px !important; }
+.ix-body :is(.iv-sku, .px-product-sku, [class*="-code"]) { font-weight: 500 !important; }
+
+/* Propuestas pendientes en Inicio: una lista dentro de la tarjeta, no tarjetas dentro de tarjeta. */
+.ix-pending-actions .ix-action { border: 0 !important; background: var(--cj-tint) !important; border-radius: 8px; }
+.ix-pending-actions .ix-action strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+/* Fondos suaves del acento: cálidos y discretos, nunca un panel naranja. */
+.cj-lower > #card-top, .cj-lower > .cj-report-index { grid-area: auto; }
+.cj-health .cj-sub { margin: 22px 0 10px; }
+.cj-health .cj-legend { margin-top: 12px; }
+
+/* Color de identidad de categoría «azul»: azul de dato, distinto del naranja de acción. */
+.ix-body :is(.iv-dot-blue, .ix-legend-dot.blue) { background: #2f7fc1 !important; }
+.ix-body .cl-tone-blue, .ix-body .tone-blue[style*="--cl-color"] { --cl-color: #2f7fc1; }
+.ix-body .category-blue { color: #1f5f99 !important; background: #e8f1f9 !important; }
+
+/* Divisores de la tira de indicadores (selector con la misma fuerza que el que quita bordes). */
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis) > :is(.ix-kpi, .po-kpi, .ix-card) + :is(.ix-kpi, .po-kpi, .ix-card) { border-left: 1px solid var(--cj-rule) !important; }
+@media (max-width: 900px) { html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis) > :is(.ix-kpi, .po-kpi, .ix-card) + :is(.ix-kpi, .po-kpi, .ix-card) { border-left: 0 !important; border-top: 1px solid var(--cj-rule) !important; } }
+
+/* ------------------------------------------------------------------ */
+/* Gesto propio: cada indicador se marca con una muestra de color       */
+/* (como un chip de la carta), no con un icono dentro de un círculo.    */
+/* ------------------------------------------------------------------ */
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis, .sp-kpis) :is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon) {
+    width: 12px !important; height: 12px !important; min-width: 12px; flex: 0 0 12px; align-self: flex-start;
+    margin-top: 4px; border-radius: 3px !important; padding: 0 !important; font-size: 0 !important;
+    background: var(--cj-kpi-swatch, var(--cj-accent)) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 12%, transparent);
+}
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis, .sp-kpis) :is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon) > * { display: none !important; }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-blue, .is-blue) { --cj-kpi-swatch: var(--cj-accent); }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-green, .is-green) { --cj-kpi-swatch: var(--cj-ok); }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-orange, .is-orange, .tone-yellow, .is-yellow) { --cj-kpi-swatch: var(--cj-warn); }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-red, .is-red) { --cj-kpi-swatch: var(--cj-danger); }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-purple, .is-purple) { --cj-kpi-swatch: #7a5af0; }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-teal, .is-teal) { --cj-kpi-swatch: #0f8b8d; }
+:is(.ix-kpi-icon, .po-kpi-icon, .sp-kpi-icon):is(.tone-gray, .is-gray) { --cj-kpi-swatch: var(--cj-muted); }
+html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis, .sp-kpis) > * { gap: 12px !important; align-items: flex-start !important; }
+
+/* Proveedores: la misma tira compacta. */
+html[data-reference-mode="0"] .sp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 !important; background: var(--cj-surface); border: 1px solid var(--cj-rule); border-radius: var(--cj-radius); overflow: hidden; }
+html[data-reference-mode="0"] .sp-kpis > .sp-kpi { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; min-height: 76px; padding: 14px 18px !important; display: flex; }
+html[data-reference-mode="0"] .sp-kpis > .sp-kpi + .sp-kpi { border-left: 1px solid var(--cj-rule) !important; }
+
+/* Categorías: la dona de distribución vive en Reportes; la tira y los filtros ocupan el ancho. */
+html[data-reference-mode="0"] .iv-cat-top { grid-template-columns: minmax(0, 1fr) !important; }
+html[data-reference-mode="0"] .iv-cat-top > :not(.iv-cat-left) { display: none !important; }
+
+/* Encabezados de tabla pueden partirse: con texto legible no se montan unos sobre otros. */
+html[data-reference-mode="0"] :is(.iv-table, .px-table, .po-table) th { white-space: normal !important; line-height: 1.25 !important; vertical-align: bottom; }
+
+/* Celular: indicadores en 2 × 2, no cuatro filas altas. */
+@media (max-width: 640px) {
+    html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis, .sp-kpis) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis, .sp-kpis) > * { border-left: 0 !important; border-top: 0 !important; box-shadow: inset 0 -1px 0 var(--cj-rule) !important; }
+    html[data-reference-mode="0"] :is(.ix-kpis, .po-kpis, .sp-kpis) > :nth-child(odd) { box-shadow: inset 0 -1px 0 var(--cj-rule), inset -1px 0 0 var(--cj-rule) !important; }
+    html[data-reference-mode="0"] .ix-kpi-value, html[data-reference-mode="0"] .po-kpi strong { font-size: 19px !important; }
+}
+
+/* Categorías: anchos fijos de la maqueta dejaban la columna Acciones en ~20px. */
+html[data-reference-mode="0"] .iv-cat-table col:nth-child(2) { width: auto !important; }
+html[data-reference-mode="0"] .iv-cat-table col:nth-child(n+3) { width: 140px !important; }
+html[data-reference-mode="0"] .iv-cat-table col:last-child { width: 120px !important; }

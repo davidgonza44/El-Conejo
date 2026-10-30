@@ -5,7 +5,7 @@
     white-space: normal;
     text-align: center;
     padding: 2.2rem 1rem;
-    color: var(--tblr-secondary, #6c757d);
+    color: var(--tblr-secondary, var(--cj-muted));
 }
 
 .cell-num {
@@ -19,12 +19,12 @@
 
 .badge-salida {
     background-color: rgba(247, 103, 7, 0.15);
-    color: #b04e00;
+    color: var(--cj-warn-ink);
 }
 
 .badge-ajuste {
     background-color: rgba(32, 107, 196, 0.15);
-    color: #1a5499;
+    color: var(--cj-accent-strong);
 }
 
 .low-stock-row td {

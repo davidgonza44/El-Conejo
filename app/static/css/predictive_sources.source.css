@@ -2,18 +2,18 @@
 @import "tailwindcss/utilities" source(none);
 @source "../../templates/predictive/_source_selector.html";
 
-.px-sources { margin: 0 0 20px; color: #334155; }
-.px-sources-label { margin: 0 0 8px; color: #64748b; font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.px-sources { margin: 0 0 20px; color: var(--cj-ink); }
+.px-sources-label { margin: 0 0 8px; color: var(--cj-muted); font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
 .px-sources-options { @apply flex rounded-t-lg border-b border-slate-200 bg-white; gap: 8px; padding: 0 12px; }
-.px-sources .px-source { @apply relative grid items-center gap-x-2; grid-template-columns: 18px auto; padding: 13px 18px 14px; color: #64748b; text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; line-height: 1.4; }
+.px-sources .px-source { @apply relative grid items-center gap-x-2; grid-template-columns: 18px auto; padding: 13px 18px 14px; color: var(--cj-muted); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; line-height: 1.4; }
 .px-source>.st-icon { width: 17px; height: 17px; grid-row: 1/3; }
 .px-source>span { font-size: 12px; font-weight: 650; }
-.px-source>small { grid-column: 2; margin-top: 3px; font-size: 10px; color: #94a3b8; }
-.px-sources .px-source:hover { color: #1d4ed8; background: #f8fafc; }
-.px-sources .px-source[aria-current="page"] { color: #1d4ed8; background: #eff6ff; border-bottom-color: #2563eb; }
-.px-source[aria-current="page"]>small { color: #3b82f6; }
-.px-sources .px-source:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; z-index: 1; }
-.px-sources-note { margin: 8px 0 0; color: #64748b; font-size: 10px; line-height: 1.6; }
+.px-source>small { grid-column: 2; margin-top: 3px; font-size: 10px; color: var(--cj-muted); }
+.px-sources .px-source:hover { color: var(--cj-accent); background: var(--cj-tint); }
+.px-sources .px-source[aria-current="page"] { color: var(--cj-accent); background: var(--cj-accent-soft); border-bottom-color: var(--cj-accent); }
+.px-source[aria-current="page"]>small { color: var(--cj-accent); }
+.px-sources .px-source:focus-visible { outline: 3px solid var(--cj-warn); outline-offset: 2px; z-index: 1; }
+.px-sources-note { margin: 8px 0 0; color: var(--cj-muted); font-size: 10px; line-height: 1.6; }
 .rh-page .px-sources-note { display: none; }
 @media(max-width: 760px) {
     .px-sources-options { padding: 0 4px; gap: 0; }

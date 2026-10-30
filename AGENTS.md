@@ -231,7 +231,7 @@ required temporarily by preserved legacy markup.
 
 - **Never read, copy, package, or use anything in `references/90_archivo_no_usar/`.**
 - The official logo source is `references/00_marca/logo_oficial_el_conejo.png`. Preserve that source; copy it into `app/static/` only when the browser needs a static asset.
-- Use a light application background and sidebar, white cards, rounded surfaces, subtle borders/shadows, consistent spacing, and clear hierarchy. Use blue for navigation and primary actions, green for positive/available states, orange for warnings, and red for critical/destructive states.
+- Use a light application background and sidebar, white cards, rounded surfaces, subtle borders/shadows, consistent spacing, and clear hierarchy. Use the brand orange accent (`--cj-accent`, #b45309) for active navigation and primary actions, sky blue (`--cj-sky`) for data links, green for positive/available states, amber (`--cj-warn`) for warnings, and red for critical/destructive states. Tokens live in `app/static/css/cj_theme.css`; see `DESIGN.md`.
 - Keep layouts, tables, forms, modals, and navigation usable on desktop, tablet, mobile, and browser zoom.
 - Keyboard navigation must work. Provide visible focus, semantic landmarks, labels for form controls, accessible names for icon-only controls, meaningful table headers, and `aria-current` for active navigation where applicable.
 - Provide coherent loading, empty, insufficient-data, error, and success states. Do not present predictions when the backend reports that a model or sufficient data is unavailable.

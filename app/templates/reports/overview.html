@@ -1,0 +1,119 @@
+{% extends "ix_base.html" %}
+{# Reportes y análisis › Panorama. Reúne las gráficas que antes ocupaban Inicio (misma API
+   /api/dashboard/summary, dibujadas por dashboard.js) y la salud del inventario como tira de
+   muestras calculada en el servidor. Solo lectura. #}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "analytics" %}
+{% set reports = [
+    ('reports', 'Ventas', 'Ingresos, productos, clientes, categorías y métodos de pago por período.', url_for('pages.report_sales')),
+    ('inventory_summary', 'Inventario', 'Existencias, entradas y salidas, rotación y valor del inventario.', url_for('pages.inventory_summary')),
+    ('demand_forecast', 'Pronóstico de demanda', 'Demanda estimada por producto y riesgo de quiebre.', url_for('pages.demand_forecast')),
+    ('replenishment', 'Reabastecimiento', 'Cantidades sugeridas para reponer.', url_for('pages.replenishment')),
+    ('critical_products', 'Productos críticos', 'Lo que necesita atención primero.', url_for('pages.critical_products')),
+    ('trends', 'Tendencias', 'Cómo evoluciona la demanda de cada producto.', url_for('pages.trends')),
+    ('model_accuracy', 'Precisión del modelo', 'Error medido fuera de muestra.', url_for('pages.model_accuracy')),
+] %}
+{% set tones = ['#e07b10', '#2f7fc1', '#1e7a45', '#7a5af0', '#c98c00', '#b42318', '#0f8b8d', '#8a6d5b'] %}
+{# Mismo color de identidad que la categoría tiene en la dona y en Categorías. #}
+{% set category_hex = {'blue': '#2f7fc1', 'green': '#20aa58', 'orange': '#c98c00', 'purple': '#8658d4', 'teal': '#13b9b1', 'gray': '#626a65', 'red': '#ee4a4e', 'pink': '#e93d94', 'yellow': '#c98c00', 'brown': '#7a5600', 'navy': '#26406b'} %}
+
+{% block title %}Panorama — Reportes y análisis{% endblock %}
+{% block main_class %} cj-overview{% endblock %}
+
+{% block main %}
+<header class="ix-header cj-page-head">
+    <div>
+        <h1 class="ix-title">Panorama</h1>
+        <p class="ix-subtitle">Reportes y análisis del negocio en un solo lugar.</p>
+    </div>
+    <div class="ix-header-actions">
+        <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú"><i class="ti ti-menu-2" aria-hidden="true"></i></button>
+        {{ iv.shell_chrome(false, "") }}
+    </div>
+</header>
+
+<div id="global-alert" class="alert d-none" role="alert"></div>
+
+<section class="ix-card cj-health" aria-labelledby="cj-health-title">
+    <div class="cj-health-head">
+        <h2 class="ix-card-title" id="cj-health-title">Salud del inventario</h2>
+        <span class="cj-health-total"><strong>{{ health_total }}</strong> productos activos</span>
+    </div>
+    {% if health_total %}
+    <div class="cj-strip" role="img" aria-label="{% for label, count, _ in health %}{{ label }}: {{ count }}{{ ', ' if not loop.last }}{% endfor %}">
+        {% for label, count, tone in health if count %}<span class="cj-strip-chip is-{{ tone }}" style="flex-grow: {{ count }}"></span>{% endfor %}
+    </div>
+    <ul class="cj-legend">
+        {% for label, count, tone in health %}
+        <li><span class="cj-swatch is-{{ tone }}" aria-hidden="true"></span><span>{{ label }}</span><strong>{{ count }}</strong><small>{{ (count * 100 / health_total) | round(0) | int }}%</small></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="cj-empty">Todavía no hay productos activos en el catálogo.</p>
+    {% endif %}
+    {% if categories %}
+    <h3 class="cj-sub">Productos activos por categoría</h3>
+    <ul class="cj-category-strip">
+        {% for c in categories if c.count %}
+        {% set hex = category_hex.get(c.color, '#626a65') %}<li><span class="cj-swatch" style="--swatch: {{ hex }}" aria-hidden="true"></span><span class="cj-category-name">{{ c.name }}</span><span class="cj-bar"><i style="width: {{ c.percent }}%; --swatch: {{ hex }}"></i></span><strong>{{ c.count }}</strong></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+
+<section class="ix-grid ix-main-row cj-charts" aria-label="Gráficas">
+    <div class="ix-card ix-chart-card" id="card-sales">
+        <div class="ix-card-head">
+            <h2 class="ix-card-title">Ventas de los últimos 7 días</h2>
+        </div>
+        <ul class="ix-chart-legend" id="chart-sales-legend"></ul>
+        <div class="ix-chart">
+            <canvas id="chart-sales" role="img" aria-label="Gráfico de ventas de los últimos 7 días"></canvas>
+            <div class="ix-chart-tip" id="chart-sales-tip"></div>
+        </div>
+        <div id="chart-sales-msg" class="ix-msg d-none"></div>
+    </div>
+    <div class="ix-card ix-chart-card" id="card-category">
+        <div class="ix-card-head">
+            <h2 class="ix-card-title">Inventario por categoría</h2>
+        </div>
+        <div class="ix-category-body">
+            <div class="ix-donut">
+                <canvas id="chart-category" role="img" aria-label="Gráfico de dona por categoría"></canvas>
+                <div class="ix-donut-center">
+                    <span class="ix-donut-value" id="chart-category-value"></span>
+                    <span class="ix-donut-label" id="chart-category-label"></span>
+                </div>
+            </div>
+            <ul class="ix-legend" id="chart-category-legend"></ul>
+        </div>
+        <div id="chart-category-msg" class="ix-msg d-none"></div>
+    </div>
+</section>
+
+<section class="cj-lower">
+    <div class="ix-card" id="card-top">
+        <div class="ix-card-head">
+            <h2 class="ix-card-title">Productos más vendidos</h2>
+            {% if nav_allowed('reports') %}<a href="{{ url_for('pages.report_sales', tab='products') }}" class="ix-link-btn">Ver reporte</a>{% endif %}
+        </div>
+        <div class="ix-table-wrap">
+            <table class="ix-table">
+                <thead><tr><th scope="col">#</th><th scope="col">Producto</th><th scope="col">Categoría</th><th scope="col" class="is-center">Unidades</th><th scope="col" class="is-end">Ingresos</th></tr></thead>
+                <tbody id="table-top"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav class="ix-card cj-report-index" aria-labelledby="cj-index-title">
+        <div class="ix-card-head"><h2 class="ix-card-title" id="cj-index-title">Reportes</h2></div>
+        <ul>
+            {% for key, title, desc, href in reports if nav_allowed(key) %}
+            <li><a href="{{ href }}"><span class="cj-swatch" style="--swatch: {{ tones[loop.index0 % tones|length] }}" aria-hidden="true"></span><span><strong>{{ title }}</strong><small>{{ desc }}</small></span><i class="ti ti-chevron-right" aria-hidden="true"></i></a></li>
+            {% endfor %}
+        </ul>
+    </nav>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>{% endblock %}

@@ -81,8 +81,8 @@ test.describe('Pantallas del menú antiguo dentro del shell moderno', () => {
     test.use(as('admin'));
 
     for (const [path, group, link] of [['/catalog', 'Inventario', 'Catálogo visual'],
-        ['/historical-imports', 'Análisis predictivo', 'Importación histórica'],
-        ['/predictions', 'Análisis predictivo', 'Diagnóstico de historial']]) {
+        ['/historical-imports', 'Reportes y análisis', 'Importación histórica'],
+        ['/predictions', 'Reportes y análisis', 'Diagnóstico de historial']]) {
         test(`${path} usa el menú moderno y queda marcado como activo`, async ({ page }) => {
             await page.goto(path);
             const nav = page.getByRole('complementary', { name: 'Navegación principal' });

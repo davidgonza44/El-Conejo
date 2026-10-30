@@ -6,15 +6,15 @@
     "use strict";
 
     const TONES = {
-        blue: "#1a73e8", green: "#3fae62", orange: "#fdb429", purple: "#8e73e4",
-        teal: "#20c2c5", gray: "#a6adb8", red: "#dc2626",
+        blue: "#2f7fc1", green: "#3fae62", orange: "#c98c00", purple: "#8e73e4",
+        teal: "#20c2c5", gray: "#626a65", red: "#dc2626",
     };
     /* Tendencia de ventas: barras azul claro y línea azul grisácea con marcadores en cruz. */
-    const TREND_BAR = "#4f8ff7";
-    const TREND_LINE = "#4b6ea8";
+    const TREND_BAR = "#e07b10";
+    const TREND_LINE = "#626a65";
     const AXIS_FONT = { family: "Inter, 'Segoe UI', sans-serif", size: 8 };
-    const AXIS_COLOR = "#6b7280";
-    const GRID = "#eef0f3";
+    const AXIS_COLOR = "#626a65";
+    const GRID = "#f7f8f5";
 
     function parseJSON(el, attr) {
         const raw = el.getAttribute(attr);
@@ -31,7 +31,7 @@
             const ctx = chart.ctx;
             ctx.save();
             ctx.font = `600 ${opts.size || 7.5}px Inter, 'Segoe UI', sans-serif`;
-            ctx.fillStyle = "#374151";
+            ctx.fillStyle = "#191c1a";
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
             meta.data.forEach((bar, i) => {

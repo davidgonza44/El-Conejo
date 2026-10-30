@@ -279,8 +279,8 @@ def quick_actions(role) -> list[dict]:
          "href": "/sales/new", "enabled": role_has_permission(role, SALES_CREATE)},
         {"id": "new_purchase", "label": "Registrar compra", "description": "Crear una nueva orden de compra",
          "href": "/purchases?new=1", "enabled": role_has_permission(role, "purchases:write")},
-        {"id": "reports", "label": "Ver reportes", "description": "Consultar reportes y estadísticas",
-         "href": "/reports/sales", "enabled": role_has_permission(role, REPORTS_READ)},
+        {"id": "reports", "label": "Reportes y análisis", "description": "Gráficas, ventas, inventario y pronósticos",
+         "href": "/reportes", "enabled": role_has_permission(role, REPORTS_READ)},
     ]
 
 
