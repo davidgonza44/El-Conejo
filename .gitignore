@@ -101,3 +101,8 @@ uploads/
 *.pem
 *.key
 ~$*
+
+# Videos tutoriales: capturas, zonas y MP4 se regeneran (videos/README.md)
+/videos/out/
+/videos/public/
+/videos/src/capturas.json
