@@ -5,6 +5,7 @@ from app.models.passwordless_token import PasswordlessToken
 from app.models.password_reset_token import PasswordResetToken
 from app.models.category import Category
 from app.models.category_change import CategoryChange
+from app.models.supplier_change import SupplierChange
 from app.models.product import Product
 from app.models.product_change import ProductChange
 from app.models.product_state_history import ProductStateHistory
@@ -56,6 +57,7 @@ __all__ = [
     "PasswordResetToken",
     "Category",
     "CategoryChange",
+    "SupplierChange",
     "Product",
     "ProductChange",
     "ProductStateHistory",

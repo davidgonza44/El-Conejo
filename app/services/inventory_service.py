@@ -24,12 +24,16 @@ from app.services.exceptions import ConflictError, NotFoundError, ValidationErro
 from app.services.movement_traceability_service import creation_fields, movement_presentations
 
 
+# Límite de las columnas enteras de stock (INT con signo de MySQL/MariaDB).
+MAX_STOCK = 2_147_483_647
+
+
 def _get_active_product_locked(product_id, *, allow_inactive: bool = False) -> Product:
     """Obtiene el producto con bloqueo de fila para actualizar stock sin carreras."""
-    try:
-        product_id = int(product_id)
-    except (TypeError, ValueError):
-        raise ValidationError("El campo 'product_id' es obligatorio y debe ser un entero.")
+    # Solo enteros positivos: 15.5, true o "1e3" no identifican un producto.
+    product_id = _integer(product_id, "product_id") if product_id is not None else None
+    if product_id is None or not 1 <= product_id <= MAX_STOCK:
+        raise ValidationError("El campo 'product_id' es obligatorio y debe ser un entero positivo.")
 
     product = (
         db.session.query(Product)
@@ -68,10 +72,20 @@ def _positive_quantity(data: dict) -> int:
 def _integer(value, field: str) -> int:
     if isinstance(value, bool) or not (
         isinstance(value, int)
-        or isinstance(value, str) and re.fullmatch(r"[+-]?[0-9]+", value.strip())
+        or isinstance(value, str) and re.fullmatch(r"[+-]?[0-9]{1,12}", value.strip())
     ):
         raise ValidationError(f"El campo '{field}' debe ser un entero.")
-    return int(value)
+    number = int(value)
+    if abs(number) > MAX_STOCK:
+        raise ValidationError(f"El campo '{field}' supera el máximo permitido ({MAX_STOCK:,}).".replace(",", "."))
+    return number
+
+
+def _within_stock_limit(new_stock: int) -> int:
+    """El stock resultante debe caber en la columna; si no, error controlado y sin cambios."""
+    if new_stock > MAX_STOCK:
+        raise ValidationError("La operación dejaría un stock mayor al máximo permitido.")
+    return new_stock
 
 
 def _reason(data: dict, required: bool = False) -> str | None:
@@ -136,7 +150,7 @@ def register_entry(data: dict, commit: bool = True, *, creation_origin=None) -> 
         user_id = _current_user_id(data)
         reason = _reason(data)
 
-        new_stock = product.current_stock + quantity
+        new_stock = _within_stock_limit(product.current_stock + quantity)
         movement = _create_movement(
             product, MOVEMENT_ENTRADA, quantity, new_stock, reason, user_id, trace
         )

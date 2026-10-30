@@ -22,7 +22,7 @@ def page():
     context = _context(view)
     if reference():
         context['today'] = '2024-06-05'
-    return render_template('purchases/receptions.html', **context, sorts=queries.SORTS)
+    return render_template('purchases/receptions.html', **context, sorts=queries.sorts(), can_filter_amount=response_includes_cost())
 
 
 def listing():

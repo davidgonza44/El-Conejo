@@ -15,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 COMPANY_NAME = "company.name"                      # cabecera del PDF de nota de entrega
 COMPANY_LOGO = "company.logo"
+COMPANY_TAX_ID = "company.tax_id"                  # RIF impreso en el membrete de los documentos
 LOW_STOCK_ALERTS = "alerts.low_stock_enabled"      # campana del shell y evento "Stock bajo / agotado" (canal app)
 APP_NOTIFICATIONS = "notifications.app_enabled"    # canal "Notificaciones en la app" (campana)
 EMAIL_NOTIFICATIONS = "notifications.email_enabled"
@@ -56,6 +57,20 @@ def _text(value, *, max_length: int):
     if len(value.strip()) > max_length:
         raise ValidationError(f"El nombre de la empresa no puede exceder {max_length} caracteres.")
     return value.strip()
+
+
+_RIF_RE = re.compile(r"[JGVEPC]-?[0-9]{8}-?[0-9]")
+
+
+def _optional_rif(value):
+    """RIF venezolano opcional (J-12345678-9). Vacío: los documentos no muestran RIF."""
+    if value in (None, ""):
+        return ""
+    cleaned = value.strip().upper() if isinstance(value, str) else ""
+    if not _RIF_RE.fullmatch(cleaned):
+        raise ValidationError("El RIF debe tener el formato J-12345678-9.")
+    digits = re.sub(r"[^0-9]", "", cleaned)
+    return f"{cleaned[0]}-{digits[:8]}-{digits[8]}"
 
 
 def _bool(value):
@@ -122,6 +137,7 @@ def matrix_key(event: str, channel: str) -> str:
 SUPPORTED = {
     COMPANY_LOGO: ("", logos.validate_setting),
     COMPANY_NAME: ("Ferretería y Construcciones El Conejo C.A.", lambda v: _text(v, max_length=_COMPANY_NAME_MAX)),
+    COMPANY_TAX_ID: ("", _optional_rif),
     LOW_STOCK_ALERTS: (True, _bool),
     APP_NOTIFICATIONS: (True, _bool),
     EMAIL_NOTIFICATIONS: (False, _bool),
@@ -153,7 +169,7 @@ for _event in EVENTS:
 
 # Claves que "Restablecer valores" devuelve a su valor por defecto, por pestaña.
 TAB_KEYS = {
-    "general": (COMPANY_NAME, LOW_STOCK_ALERTS),
+    "general": (COMPANY_NAME, COMPANY_TAX_ID, LOW_STOCK_ALERTS),
     "security": (PASSWORD_MIN_LENGTH, PASSWORD_REQUIRE_UPPERCASE, PASSWORD_REQUIRE_LOWERCASE, PASSWORD_REQUIRE_NUMBER,
                  PASSWORD_REQUIRE_SPECIAL, PASSWORD_EXPIRATION_DAYS, PASSWORD_HISTORY_COUNT),
     "notifications": tuple(k for k in SUPPORTED if k.startswith(("notifications.", "notify.")) or k == LOW_STOCK_ALERTS),

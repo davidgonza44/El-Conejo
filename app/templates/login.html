@@ -61,6 +61,8 @@
                 </form>
             </div>
 
+            {# Sin credenciales de Google el botón llevaría a un error: solo se ofrece si está configurado. #}
+            {% if config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET and config.GOOGLE_REDIRECT_URI %}
             <div class="hr-text">o</div>
 
             <div class="card-body py-3">
@@ -69,6 +71,7 @@
                     <i class="ti ti-brand-google me-2"></i>Continuar con Google
                 </a>
             </div>
+            {% endif %}
 
             <div class="hr-text">acceso sin contraseña</div>
 

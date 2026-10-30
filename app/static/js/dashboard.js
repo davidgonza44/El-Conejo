@@ -89,15 +89,17 @@
         return data;
     }
 
-    function showGlobalAlert(kind, html) {
+    // Los mensajes del servidor se pintan como texto; solo el enlace fijo al login usa HTML.
+    function showGlobalAlert(kind, message, trustedHtml = false) {
         const box = $("global-alert");
         box.className = `alert alert-${kind}`;
-        box.innerHTML = html;
+        if (trustedHtml) box.innerHTML = message;
+        else box.textContent = message;
     }
 
     function reportError(error) {
         if (error.status === 401) {
-            showGlobalAlert("warning", 'Debe iniciar sesión para ver Inicio. <a href="/login" class="alert-link">Ir al login</a>');
+            showGlobalAlert("warning", 'Debe iniciar sesión para ver Inicio. <a href="/login" class="alert-link">Ir al login</a>', true);
         } else if (error.status === 403) {
             showGlobalAlert("danger", "No tiene permisos para ver Inicio.");
         } else {

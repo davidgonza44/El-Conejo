@@ -12,10 +12,10 @@
 <label>Proveedor<select name="supplier_id"><option value="">Todos</option>{% for s in view.suppliers %}<option value="{{ s.id }}" {{ 'selected' if f.supplier_id|string==s.id|string }}>{{ s.name }}</option>{% endfor %}</select></label>
 <label>Fecha desde<input type="date" name="start" value="{{ f.start }}"></label><label>Fecha hasta<input type="date" name="end" value="{{ f.end }}"></label>
 {% if advanced %}<label>Responsable<select name="responsible_id"><option value="">Todos los responsables</option>{% for u in view.responsibles %}<option value="{{ u.id }}" {{ 'selected' if f.responsible_id|string==u.id|string }}>{{ u.name }}</option>{% endfor %}</select></label>
-<label>Monto recibido mínimo<input type="number" min="0" step="0.01" name="min_amount" placeholder="0.00" value="{{ f.min_amount }}"></label>
-<label>Monto recibido máximo<input type="number" min="0" step="0.01" name="max_amount" placeholder="0.00" value="{{ f.max_amount }}"></label>
+{% if can_filter_amount %}<label>Monto recibido mínimo<input type="number" min="0" step="0.01" name="min_amount" placeholder="0.00" value="{{ f.min_amount }}"></label>
+<label>Monto recibido máximo<input type="number" min="0" step="0.01" name="max_amount" placeholder="0.00" value="{{ f.max_amount }}"></label>{% endif %}
 <label>Ordenar por<select name="sort">{% for key, label in sorts.items() %}<option value="{{ key }}" {{ 'selected' if f.sort==key }}>{{ label }}</option>{% endfor %}</select></label>
-{% else %}{% for key in ['responsible_id','min_amount','max_amount','sort'] %}<input type="hidden" name="{{ key }}" value="{{ f[key] }}">{% endfor %}{% endif %}
+{% else %}{% for key in (['responsible_id','min_amount','max_amount','sort'] if can_filter_amount else ['responsible_id','sort']) %}<input type="hidden" name="{{ key }}" value="{{ f[key] }}">{% endfor %}{% endif %}
 {% endmacro %}
 {% block title %}Recepciones de compra · El Conejo{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/ix_purchases.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/ix_receptions.css') }}">{% endblock %}

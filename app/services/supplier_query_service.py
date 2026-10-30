@@ -6,7 +6,7 @@ from decimal import Decimal
 from sqlalchemy import func, or_, case, inspect
 
 from app.extensions import db
-from app.models.purchase import Supplier, PurchaseOrder
+from app.models.purchase import COMPLETED_STATUSES, Supplier, PurchaseOrder
 from app.services.supplier_service import FIELDS, get_supplier
 from app.services.purchase_service import day, integer, money
 from app.services.inventory_service import COMMERCIAL_ZONE, _utc_boundary
@@ -65,7 +65,7 @@ def aggregated():
         func.max(case((included, po.ordered_at), else_=None)).label("last"),
         func.count(po.id).label("orders"),
         func.sum(case((po.status.in_(("pending_approval", "pending", "approved", "partial")), 1), else_=0)).label("pending"),
-        func.sum(case((po.status == "completed", 1), else_=0)).label("completed"),
+        func.sum(case((po.status.in_(COMPLETED_STATUSES), 1), else_=0)).label("completed"),
         func.sum(case((PurchaseOrder.currency.is_(None), 1), else_=0)).label("unknown_currency_orders")
     ).group_by(po.supplier_id).subquery()
     totals = {"USD": summary.c.total_usd, "VES": summary.c.total_ves}
@@ -176,7 +176,7 @@ def kpis():
             "totals_by_currency": totals if show_money else [],
             "unknown_currency_orders": unknown,
             "comparison": comparison,
-            "orders": sum(counts.values()), "pending": sum(counts.get(key, 0) for key in ("pending_approval", "pending", "approved", "partial")), "completed": counts.get("completed", 0)}
+            "orders": sum(counts.values()), "pending": sum(counts.get(key, 0) for key in ("pending_approval", "pending", "approved", "partial")), "completed": sum(counts.get(key, 0) for key in COMPLETED_STATUSES)}
 
 
 def listing(params):
@@ -196,9 +196,13 @@ def distinct(field):
 
 
 def detail(supplier_id):
+    from app.services import supplier_change_service
+
     get_supplier(supplier_id)
     result, _, _ = aggregated()
     data = serialize(result.filter(Supplier.id == supplier_id).one())
+    pending = supplier_change_service.pending_for(supplier_id)
+    data["pending_change"] = pending.to_dict() if pending else None
     all_orders = PurchaseOrder.query.filter_by(supplier_id=supplier_id)
     orders = all_orders.order_by(PurchaseOrder.ordered_at.desc(), PurchaseOrder.id.desc()).limit(10).all()
     show_money = response_includes_cost()

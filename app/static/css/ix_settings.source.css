@@ -754,3 +754,6 @@ html[data-reference-mode="1"] .ix-shell:has(.st-backup){--ix-sidebar:246px}
 /* Lista de roles: desplaza dentro de su tarjeta de altura fija, igual que la matriz de permisos. */
 .st-roles{display:flex;flex-direction:column;overflow:hidden}#st-role-rows{overflow-y:auto;min-height:0;flex:1}
 .st-users .st-actions .st-primary{width:auto;min-width:161px;padding:0 14px}
+
+/* El RIF agrega una fila a Información general: la tarjeta crece con su contenido (logo incluido). */
+.st-general-info{height:auto}

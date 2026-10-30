@@ -1,0 +1,188 @@
+{# Macros del reporte de ventas (ix_report_sales.css). Solo dibujan la vista que entrega
+   report_controller.sales_report_view (vivo) o report_sales_reference.reference_view (?ref=1).
+   Iconos: geometría Lucide en línea; reutiliza los glifos de Compras/Configuración. #}
+{% import "purchases/_icons.html" as shared %}
+
+{% macro icon(name) -%}
+{% if name in ['tag','layers','trophy','bars','card','cash','transfer','bank','bulb','drill','hammer','bricks','bolt','helmet','arrow-up','arrow-down','minus','package'] %}<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'tag' %}<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4Z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
+{% elif name == 'layers' %}<path d="m12.8 2.2 8.6 3.9a1 1 0 0 1 0 1.8l-8.6 3.9a2 2 0 0 1-1.6 0L2.6 7.9a1 1 0 0 1 0-1.8l8.6-3.9a2 2 0 0 1 1.6 0Z"/><path d="m2 12 9.2 4.2a2 2 0 0 0 1.6 0L22 12M2 17l9.2 4.2a2 2 0 0 0 1.6 0L22 17"/>
+{% elif name == 'trophy' %}<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.8 18.8 7 20.2 7 22m7-7.3V17c0 .6.5 1 1 1.2 1.2.6 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+{% elif name == 'bars' %}<path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/>
+{% elif name == 'card' %}<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+{% elif name == 'cash' %}<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>
+{% elif name == 'transfer' %}<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>
+{% elif name == 'bank' %}<path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4Z"/>
+{% elif name == 'bulb' %}<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/>
+{% elif name == 'drill' %}<path d="M10 18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H5a3 3 0 0 1-3-3 1 1 0 0 1 1-1zM13 10H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1zM8 10l-2 8M14 4h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2M18 6h4"/>
+{% elif name == 'hammer' %}<path d="m15 12-8.4 8.4a2.1 2.1 0 1 1-3-3L12 9M17.6 15 22 10.6M20.9 11.7l-1.3-1.2a2.4 2.4 0 0 1-.7-1.7v-.9l-2.3-2.2A6 6 0 0 0 12.4 4H9l.9.8a6.2 6.2 0 0 1 2.1 4.6V11l2 2h.9a2.4 2.4 0 0 1 1.7.7l1.2 1.2"/>
+{% elif name == 'bricks' %}<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9.3h18M3 14.6h18M9 4v5.3M15 9.3v5.3M9 14.6V20"/>
+{% elif name == 'bolt' %}<path d="M4 14a1 1 0 0 1-.8-1.6l9.9-10.2a.5.5 0 0 1 .9.5l-1.9 6A1 1 0 0 0 13 10h7a1 1 0 0 1 .8 1.6l-9.9 10.2a.5.5 0 0 1-.9-.5l1.9-6A1 1 0 0 0 11 14z"/>
+{% elif name == 'helmet' %}<path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2zM10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5M4 15v-3a6 6 0 0 1 6-6M14 6a6 6 0 0 1 6 6v3"/>
+{% elif name == 'arrow-up' %}<path d="m5 12 7-7 7 7M12 19V5"/>
+{% elif name == 'arrow-down' %}<path d="M12 5v14M19 12l-7 7-7-7"/>
+{% elif name == 'minus' %}<path d="M5 12h14"/>
+{% else %}<path d="m7.5 4.3 9 5.2M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>{% endif %}</svg>
+{% else %}{{ shared.icon(name) }}{% endif %}
+{%- endmacro %}
+
+{# Miniatura real (src), recorte de referencia (thumb) o marcador neutro. #}
+{% macro thumb(p) -%}
+{%- if p.src %}<img src="{{ p.src }}" alt="" loading="lazy">{% elif p.thumb %}<img src="{{ url_for('static', filename=p.thumb) }}" alt="">{% else %}<span class="rs-thumb-empty" aria-hidden="true">{{ icon('package') }}</span>{% endif -%}
+{%- endmacro %}
+
+{# Celda o nombre: texto simple o un diccionario con ``kind``. #}
+{% macro cell(c) -%}
+{%- if c is mapping -%}
+{%- if c.kind == 'product' -%}<span class="rs-product">{{ thumb(c) }}<span class="rs-clip" title="{{ c.name }}">{{ c.name }}</span></span>
+{%- elif c.kind == 'muted' -%}<span class="rs-muted" title="{{ c.text }}">{{ c.text }}</span>
+{%- elif c.kind == 'clip' -%}<span class="rs-clip" title="{{ c.text }}">{{ c.text }}</span>
+{%- elif c.kind == 'method' -%}<span class="rs-method"><span class="rs-{{ c.tone }}">{{ icon(c.icon) }}</span><span class="rs-clip" title="{{ c.text }}">{{ c.text }}</span></span>
+{%- elif c.kind == 'badge' -%}<span class="rs-badge{{ ' rs-inactive' if c.tone == 'red' }}">{{ c.text }}</span>
+{%- elif c.kind == 'delta' -%}<span class="rs-{{ c.tone }}">{% if c.arrow == 'up' %}&uarr; {% elif c.arrow == 'down' %}&darr; {% endif %}{{ c.text }}</span>
+{%- elif c.kind == 'customer' -%}<span class="rs-customer"><i style="background:var(--rs-color-{{ c.tone }})" aria-hidden="true">{{ c.text[:1] | upper }}</i><span class="rs-clip" title="{{ c.text }}">{{ c.text }}</span></span>
+{%- elif c.kind == 'action' -%}
+{%- if c.href %}<a class="rs-detail" href="{{ c.href }}">{{ c.text }}</a>{% else %}<button type="button" class="rs-detail" data-rs-detail data-rs-preview="{{ c.note }}">{{ c.text }}</button>{% endif -%}
+{%- else -%}{{ c.text }}
+{%- endif -%}
+{%- else -%}{{ c }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro card_head(title, link=None, href=None, subtitle=None) %}
+<div class="rs-card-head">
+    <div>
+        <h2>{{ title }}</h2>
+        {% if subtitle %}<p>{{ subtitle }}</p>{% endif %}
+    </div>
+    {% if link and href %}<a class="rs-button rs-small" href="{{ href }}">{{ link }}</a>
+    {% elif link %}<button type="button" class="rs-button rs-small" data-rs-preview>{{ link }}</button>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro kpis(items) %}
+<section class="rs-kpis" aria-label="Indicadores del período">
+    {% for k in items %}
+    <article class="rs-card rs-kpi">
+        <span class="rs-circle rs-{{ k.tone }}" aria-hidden="true">{{ icon(k.icon) }}</span>
+        <div>
+            <p>{{ k.label }}</p>
+            <div class="rs-kpi-value">
+                <strong title="{{ k.value }}">{{ k.value }}</strong>
+                {% if k.trend %}<span class="rs-{{ k.trend_tone }}">{% if k.arrow == 'up' %}&uarr; {% elif k.arrow == 'down' %}&darr; {% endif %}{{ k.trend }}</span>{% endif %}
+            </div>
+            <small title="{{ k.sub }}">{{ k.sub }}</small>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endmacro %}
+
+{% macro line_chart(chart, extra_class='') %}
+<article class="rs-card rs-chart-card{{ ' ' ~ extra_class if extra_class }}">
+    {{ card_head(chart.title, subtitle=chart.subtitle) }}
+    {% if chart.empty or not chart.series %}
+    <p class="rs-empty">{{ chart.empty or 'Sin ventas completadas en el período' }}</p>
+    {% else %}
+    <div class="rs-line" data-rs-line='{{ chart | tojson }}'><canvas role="img" aria-label="{{ chart.title }}"></canvas></div>
+    {% endif %}
+</article>
+{% endmacro %}
+
+{% macro donut(d, summary=False) %}
+<article class="rs-card rs-donut-card">
+    {{ card_head(d.title) }}
+    {% if d["items"] %}
+    <div class="rs-donut-body">
+        <div class="rs-donut" data-rs-donut='{{ d["values"] | tojson }}' data-rs-tones='{{ d.tones | tojson }}' data-summary="{{ '1' if summary else '0' }}">
+            <canvas role="img" aria-label="{{ d.title }}"></canvas>
+            <div><strong>{{ d.center_value }}</strong><span>{{ d.center_label }}</span></div>
+        </div>
+        <ul class="rs-donut-legend">
+            {% for item in d["items"] %}
+            <li><i style="background:var(--rs-color-{{ item.tone }})" aria-hidden="true"></i><span><span class="rs-clip" title="{{ item.name }}">{{ item.name }}</span>{{ item.sub }}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <p class="rs-empty">{{ d.empty }}</p>
+    {% endif %}
+</article>
+{% endmacro %}
+
+{% macro ranking(r) %}
+<article class="rs-card rs-ranking">
+    {{ card_head(r.title) }}
+    {% if r["items"] %}
+    <ol>
+        {% for item in r["items"] %}
+        <li>
+            <span>{{ loop.index }}</span>
+            <span class="rs-rank-name">{{ cell(item.name) }}</span>
+            <span class="rs-progress" aria-hidden="true"><i style="width:{{ item.width }}%"></i></span>
+            <strong>{{ item.amount }}</strong>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="rs-empty">{{ r.empty }}</p>
+    {% endif %}
+</article>
+{% endmacro %}
+
+{% macro details(items, title, circle_icon=None) %}
+<article class="rs-card rs-breakdown-summary">
+    {{ card_head(title) }}
+    {% if items %}
+    <div class="rs-summary-details">
+        {% if circle_icon %}<span class="rs-circle rs-orange" aria-hidden="true">{{ icon(circle_icon) }}</span>{% endif %}
+        <dl>
+            {% for ico, tone, label, value in items %}
+            <div>{% if not circle_icon %}<span class="rs-circle rs-{{ tone }}" aria-hidden="true">{{ icon(ico) }}</span>{% endif %}<dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+            {% endfor %}
+        </dl>
+    </div>
+    {% else %}
+    <p class="rs-empty">Sin ventas completadas en el período</p>
+    {% endif %}
+</article>
+{% endmacro %}
+
+{% macro pagination(pg) %}
+<div class="rs-pagination">
+    <span>{{ pg.summary }}</span>
+    <div>
+        {% if pg.prev %}<a class="rs-button" href="{{ pg.prev }}" aria-label="Página anterior">&lsaquo;</a>{% else %}<button type="button" disabled aria-label="Página anterior">&lsaquo;</button>{% endif %}
+        {% for item in pg["items"] %}
+        {% if item.gap %}<span aria-hidden="true">…</span>
+        {% elif item.active or item.page == pg.page %}<button type="button" aria-current="page">{{ item.text or item.page }}</button>
+        {% elif item.href %}<a class="rs-button" href="{{ item.href }}">{{ item.text or item.page }}</a>
+        {% else %}<button type="button" data-rs-preview>{{ item.text or item.page }}</button>{% endif %}
+        {% endfor %}
+        {% if pg.next %}<a class="rs-button" href="{{ pg.next }}" aria-label="Página siguiente">&rsaquo;</a>{% else %}<button type="button" disabled aria-label="Página siguiente">&rsaquo;</button>{% endif %}
+    </div>
+    <select data-rs-per-page aria-label="Filas por página">
+        {% for n in pg.choices %}<option value="{{ n }}"{% if n == pg.per_page %} selected{% endif %}>{{ n }} por página</option>{% endfor %}
+    </select>
+</div>
+{% endmacro %}
+
+{% macro table(t) %}
+<article class="rs-card rs-table-card">
+    {{ card_head(t.title, t.link, t.href) }}
+    <div class="rs-table-wrap">
+        <table>
+            {% if t.widths %}<colgroup>{% for w in t.widths %}<col style="width:{{ w }}%">{% endfor %}</colgroup>{% endif %}
+            <thead><tr>{% for c in t.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr></thead>
+            <tbody>
+                {% for row in t.rows %}
+                <tr>{% for c in row %}<td>{{ cell(c) }}</td>{% endfor %}</tr>
+                {% else %}
+                <tr><td class="rs-empty-cell" colspan="{{ t.columns | length }}">{{ t.empty }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if t.pagination %}{{ pagination(t.pagination) }}{% endif %}
+</article>
+{% endmacro %}

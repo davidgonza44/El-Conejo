@@ -3,6 +3,7 @@
 <div class="st-column">
 <section class="st-card st-general-info"><h2>Información general</h2><div class="st-fields grid grid-cols-2">
 <label><span>Nombre de la empresa</span><span class="st-control"><input name="company.name" aria-label="Nombre de la empresa" value="{{ s['company.name'] }}" maxlength="120" required title="{{ s['company.name'] }}"></span></label>
+<label><span>RIF</span><span class="st-control"><input name="company.tax_id" aria-label="RIF de la empresa" value="{{ s['company.tax_id'] }}" maxlength="14" placeholder="J-12345678-9" pattern="[JGVEPCjgvepc]-?[0-9]{8}-?[0-9]" title="Aparece en el membrete de PDF, Excel e impresiones."></span></label>
 <label><span>Ubicación</span>{{ st.ro('Ubicación', 'Acarigua, Portuguesa', 'Ubicación fija de la aplicación.') }}</label>
 <label><span>Zona horaria</span>{{ st.ro('Zona horaria', 'America/Caracas (GMT-04:00)', 'Zona horaria fija de la aplicación.') }}</label>
 <label><span>Moneda</span>{{ st.ro('Moneda', 'USD y VES (Bs.) por registro', 'Cada precio y compra indica su moneda (USD o VES); la aplicación no convierte entre monedas ni aplica tipo de cambio.') }}</label>

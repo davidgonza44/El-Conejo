@@ -1,0 +1,8 @@
+{
+  "_comment": "Credenciales SOLO de prueba para la base SQLite desechable del arnés E2E. Nunca usar fuera de e2e/.",
+  "admin": {"username": "e2e_admin", "email": "e2e_admin@example.invalid", "password": "E2e-Admin-Prueba-2026!", "name": "E2E Administración"},
+  "inventario": {"username": "e2e_inventario", "email": "e2e_inventario@example.invalid", "password": "E2e-Inventario-2026!", "name": "E2E Inventario"},
+  "asistente": {"username": "e2e_asistente", "email": "e2e_asistente@example.invalid", "password": "E2e-Asistente-2026!", "name": "E2E Asistente"},
+  "vendedor": {"username": "e2e_vendedor", "email": "e2e_vendedor@example.invalid", "password": "E2e-Vendedor-2026!", "name": "E2E Ventas"},
+  "soporte_ti": {"username": "e2e_soporte", "email": "e2e_soporte@example.invalid", "password": "E2e-Soporte-TI-2026!", "name": "E2E Soporte TI"}
+}

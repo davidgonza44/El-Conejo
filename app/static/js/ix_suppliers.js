@@ -9,7 +9,11 @@
   let editing = null, pending = null, menuTrigger = null, toastTimer, reviewing = null, deciding = false;
   let detailTrigger = null;
   const approvalLabel = row => ({pending:'Pendiente',approved:'Aprobado',rejected:'Rechazado'}[row.approval_status] || '—');
-  const canDecide = row => !context.reference && context.canApprove && row.approval_status === 'pending' && row.proposed_by_user_id !== context.currentUserId;
+  // Alta pendiente o modificación propuesta de un proveedor aprobado: decide quien no la propuso.
+  const canDecide = row => !context.reference && context.canApprove && (row.approval_status === 'pending' && row.proposed_by_user_id !== context.currentUserId
+    || row.pending_change && row.pending_change.proposed_by_user_id !== context.currentUserId);
+  const CHANGE_LABELS = {name:'Nombre / razón social',tax_id:'RIF',contact_name:'Contacto principal',contact_title:'Cargo',phone:'Teléfono',email:'Correo',address:'Dirección',city:'Ciudad',state_province:'Estado/Provincia',category:'Categoría',notes:'Notas'};
+  const changeSummary = change => `<section class="sp-change" aria-label="Modificación propuesta"><h3>Modificación propuesta por ${esc(change.proposed_by_name || 'Asistente')}</h3><p>Los datos oficiales no cambian hasta que un administrador apruebe la propuesta.</p>${fields(Object.keys(change.changes).map(key => [CHANGE_LABELS[key] || key, `${change.previous_values[key] || '—'} → ${change.changes[key] || '—'}`]))}</section>`;
   const canEdit = row => context.canWrite && (context.reference || row.approval_status !== 'pending' || row.proposed_by_user_id === context.currentUserId);
   function toast(message) {
     $('sp-message').textContent = message; $('sp-message').hidden = false;
@@ -107,6 +111,7 @@
     $('sp-detail-body').innerHTML = `<div class="sp-detail-tabs" role="tablist" aria-label="Información del proveedor">${[['information','Información'],['purchases','Compras'],['contacts','Contactos'],['history','Historial']].map(([key,label],i)=>`<button type="button" role="tab" id="sp-tab-${key}" data-tab="${key}" aria-controls="sp-panel-${key}" aria-selected="${i===0}" tabindex="${i===0?0:-1}">${label}</button>`).join('')}</div>${Object.entries(sections).map(([key,html],i)=>`<section id="sp-panel-${key}" role="tabpanel" tabindex="0" aria-labelledby="sp-tab-${key}"${i?' hidden':''}>${html}</section>`).join('')}`;
     if (!context.reference) {
       $('sp-detail-body').querySelector('#sp-panel-information').insertAdjacentHTML('afterbegin', fields([['Estado de aprobación',approvalLabel(row)],['Fecha de decisión',row.approved_at],['Motivo de rechazo',row.rejection_reason]]));
+      if (row.pending_change) $('sp-detail-body').querySelector('#sp-panel-information').insertAdjacentHTML('afterbegin', changeSummary(row.pending_change));
       $('sp-review').hidden = !canDecide(row);
       $('sp-review-reason').value = '';
       $('sp-review-error').textContent = '';

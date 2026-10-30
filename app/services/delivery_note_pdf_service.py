@@ -136,21 +136,32 @@ class DeliveryNotePDF(FPDF):
 
 
 def _draw_letterhead(pdf: DeliveryNotePDF, note: dict) -> None:
-    band_h = 18
+    from app.services import document_branding
+
+    brand = document_branding.company()
+    band_h = 26
     y = pdf.get_y()
     pdf.set_fill_color(25, 55, 95)
     pdf.rect(pdf.l_margin, y, pdf.epw, band_h, style="F")
-    pdf.set_xy(pdf.l_margin, y + 1.5)
+    if brand["logo"] is not None:
+        # Recuadro blanco: el logo conserva sus colores sobre la banda azul.
+        pdf.set_fill_color(255, 255, 255)
+        pdf.rect(pdf.l_margin + 3, y + 3, 20, 20, style="F")
+        pdf.image(brand["logo"], x=pdf.l_margin + 4, y=y + 4, w=18, h=18, keep_aspect_ratio=True)
+    pdf.set_xy(pdf.l_margin, y + 2)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(
         pdf.epw,
-        7,
+        6,
         _to_pdf(_company_name()),
         new_x=XPos.LMARGIN,
         new_y=YPos.NEXT,
         align="C",
     )
+    pdf.set_font("Helvetica", "", 9)
+    pdf.cell(pdf.epw, 5, _to_pdf(f"RIF: {brand['tax_id']}" if brand["tax_id"] else ""),
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
     pdf.set_font("Helvetica", "B", 14)
     pdf.cell(
         pdf.epw,
@@ -160,6 +171,7 @@ def _draw_letterhead(pdf: DeliveryNotePDF, note: dict) -> None:
         new_y=YPos.NEXT,
         align="C",
     )
+    pdf.set_xy(pdf.l_margin, y + band_h)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(3)
 
@@ -252,7 +264,8 @@ def _draw_client_block(pdf: DeliveryNotePDF, note: dict) -> None:
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(32, 5, _to_pdf(label), new_x=XPos.END, new_y=YPos.TOP)
         pdf.set_font("Helvetica", "", 9)
-        pdf.multi_cell(pdf.epw - 32, 5, _to_pdf(value))
+        # Vuelve al margen izquierdo: cada dato del cliente en su propia línea.
+        pdf.multi_cell(pdf.epw - 32, 5, _to_pdf(value), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     _row("Nombre:", note["customer_name"] or "No registrado")
     if note["customer_document"]:

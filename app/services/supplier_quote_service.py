@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 from flask_login import current_user
 
 from app.extensions import db
-from app.models import Product
 from app.models.purchase import Supplier
 from app.models.supplier_quote import SupplierQuote, SupplierQuoteLine
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError

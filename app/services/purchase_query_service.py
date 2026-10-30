@@ -1,5 +1,5 @@
 """Read-only purchase filtering, period aggregates and export share one query contract."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, or_
@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import db
 from app.models import Product
-from app.models.purchase import ProductSupplier, Supplier, PurchaseOrder, PurchaseOrderLine, STATUS_LABELS
+from app.models.purchase import COMPLETED_STATUSES, ProductSupplier, Supplier, PurchaseOrder, PurchaseOrderLine, STATUS_LABELS
 from app.models.purchase_closure import PurchaseClosureRequest
 from app.services.inventory_service import COMMERCIAL_ZONE, _utc_boundary
 from app.services.purchase_service import day, integer
@@ -135,7 +135,8 @@ def aggregates(result, values):
     counts = dict(result.with_entities(PurchaseOrder.status, func.count(PurchaseOrder.id)).group_by(PurchaseOrder.status).all())
     non_cancelled = result.filter(PurchaseOrder.status.notin_(("cancelled", "rejected")))
     totals = currency_totals(non_cancelled)
-    relevant = sum(counts.get(key, 0) for key in ("pending_approval", "pending", "approved", "partial", "completed"))
+    completed = sum(counts.get(key, 0) for key in COMPLETED_STATUSES)
+    relevant = sum(counts.get(key, 0) for key in ("pending_approval", "pending", "approved", "partial")) + completed
     comparison, comparison_by_currency = None, []
     if values["start"] and values["end"]:
         start, end = day(values["start"], "Inicio"), day(values["end"], "Fin")
@@ -149,8 +150,8 @@ def aggregates(result, values):
     top = _supplier_amounts(non_cancelled)
     payload = {"count": sum(counts.values()), "total": None, "totals_by_currency": totals,
             "pending": counts.get("pending_approval", 0),
-            "completed": counts.get("completed", 0) + counts.get("closed_complete", 0),
-            "completed_percent": f"{counts.get('completed', 0) * 100 / relevant:.1f}%" if relevant else "Sin órdenes",
+            "completed": completed,
+            "completed_percent": f"{completed * 100 / relevant:.1f}%" if relevant else "Sin órdenes",
             "comparison": comparison, "comparison_by_currency": comparison_by_currency,
             "counts": {key: counts.get(key, 0) for key in STATUS_LABELS}, "relevant": relevant, "top_suppliers": top}
     from app.utils.permissions import response_includes_cost

@@ -4,9 +4,11 @@
 class ApiError(Exception):
     status_code = 400
 
-    def __init__(self, message: str, status_code: int | None = None):
+    def __init__(self, message: str, status_code: int | None = None, payload: dict | None = None):
         super().__init__(message)
         self.message = message
+        # Datos estructurados opcionales que acompañan a "error" (p. ej. precios cambiados).
+        self.payload = payload or {}
         if status_code is not None:
             self.status_code = status_code
 

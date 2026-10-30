@@ -10,6 +10,7 @@ from app.models.purchase import PurchaseOrder as PO, PurchaseOrderLine as POL, P
 from app.services.purchase_service import day, integer, money
 from app.services.inventory_service import COMMERCIAL_ZONE
 from app.services.exceptions import ValidationError, NotFoundError
+from app.utils.permissions import response_includes_cost
 
 SORTS = {'date_desc': 'Fecha de recepción (más reciente)', 'date_asc': 'Fecha de recepción (más antigua)',
          'amount_desc': 'Mayor monto recibido', 'amount_asc': 'Menor monto recibido',
@@ -35,7 +36,15 @@ def filters(params):
         raise ValidationError('La fecha inicial supera la final.')
     if values['min_amount'] and values['max_amount'] and money(values['min_amount']) > money(values['max_amount']):
         raise ValidationError('El monto mínimo supera el máximo.')
+    # Sin permiso de costos, filtrar u ordenar por monto permitiría deducir precios de compra.
+    if not response_includes_cost() and (values['min_amount'] or values['max_amount'] or values['sort'].startswith('amount')):
+        raise ValidationError('Su rol no puede filtrar ni ordenar recepciones por monto.', status_code=403)
     return values
+
+
+def sorts():
+    """Ordenaciones visibles para el rol: sin costos no se ofrece ordenar por monto."""
+    return SORTS if response_includes_cost() else {k: v for k, v in SORTS.items() if not k.startswith('amount')}
 
 
 def projection():

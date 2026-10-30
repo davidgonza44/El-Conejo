@@ -367,61 +367,20 @@ def _limited_candidates(products: list[Product]) -> tuple[Product, ...]:
     return tuple(ordered[:MAX_AMBIGUOUS_CANDIDATES])
 
 
-def find_product(query: str, *, by_code: bool = False) -> ProductLookup:
-    """Busca solo productos activos; los códigos nunca usan fuzzy matching."""
-    query = (query or "").strip()
-    if not query:
-        return ProductLookup()
+def _single_or_candidates(matches) -> ProductLookup | None:
+    """Un resultado: el producto. Varios: candidatos ordenados. Ninguno: None."""
+    if len(matches) == 1:
+        return ProductLookup(product=matches[0])
+    if len(matches) > 1:
+        return ProductLookup(candidates=_limited_candidates(matches))
+    return None
 
-    if by_code:
-        product = (
-            _active_products_query()
-            .filter(func.lower(Product.code) == query.lower())
-            .first()
-        )
-        return ProductLookup(product=product)
 
-    normalized_query = normalize_text(query)
-    products = _active_products()
+def _active_by_code(query: str):
+    return _active_products_query().filter(func.lower(Product.code) == query.lower()).first()
 
-    exact = [
-        product
-        for product in products
-        if normalize_text(product.name) == normalized_query
-    ]
-    if len(exact) == 1:
-        return ProductLookup(product=exact[0])
-    if len(exact) > 1:
-        return ProductLookup(candidates=_limited_candidates(exact))
 
-    query_words = _product_words(normalized_query)
-    whole_word_matches = [
-        product
-        for product in products
-        if query_words and query_words.issubset(_product_words(product.name))
-    ]
-    if len(whole_word_matches) == 1:
-        return ProductLookup(product=whole_word_matches[0])
-    if len(whole_word_matches) > 1:
-        return ProductLookup(candidates=_limited_candidates(whole_word_matches))
-
-    inclusion_matches = [
-        product
-        for product in products
-        if len(normalized_query) >= 3
-        and (
-            normalized_query in normalize_text(product.name)
-            or normalize_text(product.name) in normalized_query
-        )
-    ]
-    if len(inclusion_matches) == 1:
-        return ProductLookup(product=inclusion_matches[0])
-    if len(inclusion_matches) > 1:
-        return ProductLookup(candidates=_limited_candidates(inclusion_matches))
-
-    if len(normalized_query) < FUZZY_MIN_LENGTH:
-        return ProductLookup()
-
+def _fuzzy_lookup(normalized_query: str, products) -> ProductLookup:
     scored = sorted(
         (
             (
@@ -451,6 +410,54 @@ def find_product(query: str, *, by_code: bool = False) -> ProductLookup:
             product for _, product in matches[:MAX_AMBIGUOUS_CANDIDATES]
         )
     )
+
+
+def find_product(query: str, *, by_code: bool = False) -> ProductLookup:
+    """Busca solo productos activos; los códigos nunca usan fuzzy matching."""
+    query = (query or "").strip()
+    if not query:
+        return ProductLookup()
+    if by_code:
+        return ProductLookup(product=_active_by_code(query))
+
+    # Una entidad de una sola palabra puede ser el código ("stock del producto HER-001"):
+    # se prueba la coincidencia exacta de código antes que el nombre.
+    if " " not in query:
+        product = _active_by_code(query)
+        if product is not None:
+            return ProductLookup(product=product)
+
+    normalized_query = normalize_text(query)
+    products = _active_products()
+
+    exact = [
+        product
+        for product in products
+        if normalize_text(product.name) == normalized_query
+    ]
+    query_words = _product_words(normalized_query)
+    whole_word = [
+        product
+        for product in products
+        if query_words and query_words.issubset(_product_words(product.name))
+    ]
+    inclusion = [
+        product
+        for product in products
+        if len(normalized_query) >= 3
+        and (
+            normalized_query in normalize_text(product.name)
+            or normalize_text(product.name) in normalized_query
+        )
+    ]
+    for matches in (exact, whole_word, inclusion):
+        found = _single_or_candidates(matches)
+        if found is not None:
+            return found
+
+    if len(normalized_query) < FUZZY_MIN_LENGTH:
+        return ProductLookup()
+    return _fuzzy_lookup(normalized_query, products)
 
 
 def _sees_sale_price(role: str) -> bool:

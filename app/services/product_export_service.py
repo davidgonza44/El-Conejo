@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from fpdf import FPDF
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as SheetImage
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from PIL import Image, UnidentifiedImageError
 
@@ -121,18 +121,25 @@ def csv_file(rows, columns, _now):
 
 
 def xlsx_file(rows, columns, _now, title='Productos'):
+    from app.services import document_branding
+
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = title
-    sheet.append([label for _, label, _ in columns])
-    for cell in sheet[1]:
-        cell.font = Font(bold=True)
+    # Membrete arriba; la tabla empieza en ``header`` con filtros y encabezado fijo.
+    header = document_branding.xlsx_letterhead(sheet, document_branding.company(), title, len(columns))
+    fill = PatternFill('solid', fgColor='EAF2FF')
+    for index, (_, label, _) in enumerate(columns, 1):
+        cell = sheet.cell(header, index, label)
+        cell.font = Font(bold=True, color='0B3D91')
+        cell.fill = fill
     for index, (key, _, width) in enumerate(columns, 1):
         sheet.column_dimensions[get_column_letter(index)].width = width
-        for number, row in enumerate(rows, 2):
+        for number, row in enumerate(rows, header + 1):
             _xlsx_cell(sheet, number, index, key, row[key])
-    sheet.freeze_panes = 'A2'
-    sheet.auto_filter.ref = sheet.dimensions
+    sheet.freeze_panes = f'A{header + 1}'
+    last = get_column_letter(len(columns))
+    sheet.auto_filter.ref = f'A{header}:{last}{header + max(len(rows), 1)}'
     output = BytesIO()
     workbook.save(output)
     output.seek(0)
@@ -163,6 +170,15 @@ def pdf_text(value):
 
 
 class CatalogPDF(FPDF):
+    """PDF de exportación con membrete (logo, empresa y RIF) en cada página."""
+
+    def header(self):
+        from app.services import document_branding
+
+        if not hasattr(self, "_brand"):
+            self._brand = document_branding.company()
+        document_branding.pdf_letterhead(self, self._brand)
+
     def footer(self):
         self.set_y(-12)
         self.set_font('Helvetica', '', 8)

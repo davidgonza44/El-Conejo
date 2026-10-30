@@ -49,15 +49,20 @@
 {% set purchase_children = visible_nav(purchase_children, reference_mode) %}
 {% set sales_children = visible_nav(sales_children, reference_mode) %}
 {% set pred_children = visible_nav(pred_children, reference_mode) %}
+{# Pantallas reales sin réplica de referencia: solo en modo real, cada una con su permiso. #}
+{% if not reference_mode %}
+{% set pred_children = pred_children + visible_nav([('historical_imports', 'Importación histórica', url_for('pages.historical_imports')), ('predictions', 'Diagnóstico de historial', url_for('pages.predictions'))]) %}
+{% endif %}
 {% if not reference_mode and has_permission('historical_imports:read') %}
 {% set pred_children = pred_children + [('real_2026', 'Histórico real 2026', url_for('real_2026.page'))] %}
 {% endif %}
 {% set pred_active = active_page in (pred_children | map(attribute=0) | list) %}
 {% set inv_children = visible_nav(inv_children, reference_mode) %}
+{% if not reference_mode %}{% set inv_children = inv_children + visible_nav([('catalog', 'Catálogo visual', url_for('pages.catalog'))]) %}{% endif %}
 {% set notification_sidebar = reference_mode and sidebar_variant == 'settings' and tab is defined and tab == 'notifications' %}
 {% set account_sidebar = reference_mode and sidebar_variant == 'settings' and tab is defined and tab in ('users', 'security', 'backup') %}
 {% set lucide_sidebar = notification_sidebar or account_sidebar %}
-{% macro sidebar_icon(name) %}{% if lucide_sidebar %}{{ st.icon({'ti-home':'home','ti-package':'boxes','ti-shopping-cart':'cart','ti-shopping-bag':'bag','ti-users':'users','ti-chart-line':'chart','ti-chart-bar':'chart','ti-message-chatbot':'message','ti-settings':'settings'}.get(name,'settings')) }}{% else %}<i class="ti {{ name }}" aria-hidden="true"></i>{% endif %}{% endmacro %}
+{% macro sidebar_icon(name) %}{% if lucide_sidebar %}{{ st.icon({'ti-home':'home','ti-package':'boxes','ti-shopping-cart':'cart','ti-shopping-bag':'bag','ti-users':'users','ti-chart-line':'chart','ti-chart-bar':'chart','ti-message-chatbot':'message','ti-settings':'settings','ti-book':'book'}.get(name,'settings')) }}{% else %}<i class="ti {{ name }}" aria-hidden="true"></i>{% endif %}{% endmacro %}
 {% macro sidebar_chevron(direction) %}{% if lucide_sidebar %}<span class="ti-chevron-{{ direction }} ix-nav-chevron" aria-hidden="true">{{ st.icon("chevron") }}</span>{% else %}<i class="ti ti-chevron-{{ direction }} ix-nav-chevron" aria-hidden="true"></i>{% endif %}{% endmacro %}
 {% macro nav_link(href, icon, label, current=False, chevron=None) %}
 <li><a href="{{ href }}" {% if current %}aria-current="page"{% elif href == "#" %}aria-disabled="true"{% endif %}>{{ sidebar_icon(icon) }}{{ label }}{% if chevron %}{{ sidebar_chevron(chevron) }}{% endif %}</a></li>
@@ -169,6 +174,7 @@
             {{ nav_link(url_for("pages.settings") ~ ref_qs, "ti-settings", "Configuración", current=(active_page == "settings"), chevron=("up" if active_page == "settings" else "right")) }}
             {% if notification_sidebar %}<li class="st-sidebar-settings"><ul class="ix-nav-children">{% for key, label in tabs if settings_tab_allowed(key, reference_mode) %}<li><a href="{{ url_for('pages.settings', tab=key) ~ ref_qs }}" {% if key == tab %}aria-current="page"{% endif %}>{{ label }}</a></li>{% endfor %}</ul></li>{% endif %}
             {% endif %}
+            {% if not reference_mode %}{{ nav_link(url_for("pages.help"), "ti-book", "Guía de uso", current=(active_page == "help")) }}{% endif %}
             {% else %}
             {% if nav_allowed('products') or nav_allowed('categories') or nav_allowed('catalog') or nav_allowed('chatbot') or nav_allowed('inventory') %}
             <li class="ix-nav-section" aria-hidden="true">Inventario</li>
@@ -192,6 +198,7 @@
             {% endif %}
             {% if nav_allowed('reports') %}{{ nav_link(url_for("pages.report_sales"), "ti-chart-bar", "Reportes", current=(active_page == "reports")) }}{% endif %}
             {% if nav_allowed('settings') %}{{ nav_link(url_for("pages.settings"), "ti-settings", "Configuración", current=(active_page == "settings")) }}{% endif %}
+            {{ nav_link(url_for("pages.help"), "ti-book", "Guía de uso", current=(active_page == "help")) }}
             {% endif %}
         </ul>
     </nav>
@@ -200,7 +207,7 @@
         <div class="ix-divider" role="presentation"></div>
         {% import "settings/_macros.html" as account_icons %}
         <button type="button" class="ix-user ix-account-toggle" id="ix-account-toggle" aria-expanded="false" aria-controls="ix-account-menu">
-            <span class="ix-user-avatar" aria-hidden="true">{% if not reference_mode and current_user.profile_photo_url %}<img src="{{ current_user.profile_photo_url }}" alt="">{% else %}{{ "AD" if reference_mode else (current_user.name or 'U')[:2]|upper }}{% endif %}</span>
+            <span class="ix-user-avatar" aria-hidden="true">{% if not reference_mode and current_user.profile_photo_url %}<img src="{{ current_user.profile_photo_url }}" alt="">{% else %}{% if reference_mode %}AD{% else %}{% set words = (current_user.name or 'U').split() %}{{ (words[0][:1] ~ (words[1][:1] if words|length > 1 else words[0][1:2]))|upper }}{% endif %}{% endif %}</span>
             <span class="ix-user-text"><span class="ix-user-name">{{ "Administrador" if reference_mode else current_user.name }}</span><span class="ix-user-meta">{{ "admin" if reference_mode else current_user.username }}</span></span>
             {{ account_icons.icon('chevron') }}
         </button>

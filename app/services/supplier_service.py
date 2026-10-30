@@ -51,6 +51,13 @@ def save(data, supplier_id=None):
         supplier = get_supplier(supplier_id, True) if supplier_id else Supplier()
         if supplier_id and supplier.approval_status == "pending" and supplier.proposed_by_user_id != current_user.id:
             raise ValidationError("Solo puede editar sus propias propuestas pendientes.", status_code=403)
+        if supplier_id and supplier.approval_status == "approved":
+            # Proveedor aprobado: el cambio queda como propuesta; los datos oficiales no se tocan.
+            from app.services import supplier_change_service
+
+            supplier_change_service.propose(supplier, fields)
+            db.session.commit()
+            return supplier
         for key, value in fields.items():
             setattr(supplier, key, value)
         supplier.approval_status = "pending"
@@ -85,6 +92,13 @@ def decide(supplier_id, *, approve, reason=None):
     require_operational_permission("suppliers:approve")
     try:
         supplier = get_supplier(supplier_id, True)
+        from app.services import supplier_change_service
+
+        if supplier.approval_status == "approved" and supplier_change_service.pending_for(supplier.id):
+            note = None if approve else text_value(reason or "", "Motivo", 1000, required=True)
+            supplier_change_service.decide(supplier, approve=approve, reason=note)
+            db.session.commit()
+            return supplier
         if supplier.proposed_by_user_id == current_user.id:
             raise ValidationError("Quien propone el proveedor no puede aprobarlo ni rechazarlo.", status_code=403)
         if supplier.approval_status != "pending":

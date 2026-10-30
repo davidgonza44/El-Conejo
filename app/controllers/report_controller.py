@@ -11,12 +11,11 @@ from decimal import Decimal
 from flask import jsonify, request, url_for
 
 from app.controllers import attachment_response
-from app.controllers.dashboard_controller import (MONTHS_SHORT, _money, _num, _page_items, _range_label,
+from app.controllers.dashboard_controller import (MONTHS_SHORT, _num, _page_items, _range_label,
                                                   _scale, _when)
 from app.models.category import CATEGORY_COLORS
 from app.services import report_service, sales_report_export_service, sales_report_service
 from app.services.exceptions import ValidationError
-from app.services.inventory_service import COMMERCIAL_ZONE
 
 PER_PAGE = 8
 PER_PAGE_CHOICES = (8, 20, 50)
@@ -28,6 +27,11 @@ PAYMENT_ICON = {'transfer': ('bank', 'muted'), 'cash': ('cash', 'green'), 'credi
                 'debit_card': ('card', 'blue'), 'check': ('file', 'muted'), 'receivable': ('clock', 'orange')}
 STOCK_STATUS = {'agotado': ('Agotado', 'red'), 'bajo_stock': ('Bajo stock', 'orange'), 'inactivo': ('Inactivo', 'muted')}
 EMPTY = 'Sin ventas completadas en el período'
+
+
+def _money(value) -> str:
+    """Sin símbolo $: las ventas no registran moneda de origen (sales_report_service.CURRENCY_NOTE)."""
+    return f"{Decimal(value):,.2f}"
 
 
 def _dates() -> dict:
@@ -216,10 +220,14 @@ def _common(data: dict, params: dict) -> dict:
     start, end = (d.isoformat() for d in data["period"])
     p_start, p_end = (d.isoformat() for d in data["comparison_period"])
     previous = "vs. " + _range_label(p_start, p_end)
-    query = {"tab": data["tab"], "start": start, "end": end, **({"q": data["q"]} if data["q"] else {})}
+    query = {"tab": data["tab"], "start": start, "end": end, **({"q": data["q"]} if data["q"] else {}),
+             **({"category": params["category"]} if data.get("category") else {})}
     if params.get("per_page") and params["per_page"] != str(PER_PAGE):
         query["per_page"] = params["per_page"]
     return {"tab": data["tab"], "tabs": sales_report_service.TABS, "reference": False, "q": data["q"],
+            "category": data.get("category"), "category_id": params.get("category") if data.get("category") else None,
+            "notes": [sales_report_service.CURRENCY_NOTE] + (["Agrupación según la categoría actual de cada producto: las ventas anteriores no conservan la categoría del momento."]
+                                        if data["tab"] in ("categories", "products", "summary") else []),
             "period": {"start": start, "end": end}, "today": data["today"].isoformat(),
             "date_range": _range_label(start, end), "compare": "Comparar con: " + _range_label(p_start, p_end),
             "previous": previous, "page_base": url_for("pages.report_sales", **query) + "&page=",
@@ -232,7 +240,7 @@ def _products_view(data, view, params) -> dict:
         _kpi("boxes", "blue", "Productos vendidos", _num(k["products"][0]), k["products"][1], view["previous"]),
         _kpi("cart", "green", "Unidades vendidas", f"{_num(k['units'][0])} uds.", k["units"][1], view["previous"]),
         _kpi("dollar", "blue", "Ingresos por producto", _money(k["revenue"][0]), k["revenue"][1], view["previous"]),
-        _kpi("tag", "purple", "Ticket prom. por producto", _money(k["average"][0]), k["average"][1], view["previous"]),
+        _kpi("tag", "purple", "Ingreso prom. por producto", _money(k["average"][0]), k["average"][1], view["previous"]),
     ]
     rows, first, pagination = _paginate(data["rows"], params, "productos", view["page_base"])
     view["table"] = {"title": "Ventas por producto", "link": "Ver todo", "href": _history_link(view), "empty": EMPTY,
@@ -256,7 +264,7 @@ def _products_view(data, view, params) -> dict:
 def _customers_view(data, view, params) -> dict:
     k, today = data["kpis"], date.fromisoformat(view["today"])
     view["kpis"] = [
-        _kpi("users", "blue", "Clientes activos", _num(k["active"][0]), k["active"][1], view["previous"]),
+        _kpi("users", "blue", "Clientes identificados", _num(k["active"][0]), k["active"][1], view["previous"]),
         _kpi("refresh", "green", "Clientes recurrentes", _pct(k["recurring"][0]), k["recurring"][1], view["previous"]),
         _kpi("dollar", "blue", "Ingresos por cliente", _money(k["revenue"][0]), k["revenue"][1], view["previous"]),
         _kpi("tag", "purple", "Ticket promedio", _money(k["average"][0]), k["average"][1], view["previous"]),
@@ -296,12 +304,12 @@ def _categories_view(data, view, params) -> dict:
                      "columns": ["#", "Categoría", "Productos vendidos", "Unidades", "Ingresos", "Participación", "Variación", "Acciones"],
                      "widths": [5, 23, 14, 9, 13, 12, 12, 14], "pagination": pagination,
                      "rows": [[str(first + n), _category_cell(r), _num(r["products"]), _num(r["units"]), _money(r["revenue"]), _pct(r["percent"]), _delta(r["change_percent"]),
-                               _action(url_for("pages.report_sales", tab="products", q=r["name"], start=view["period"]["start"], end=view["period"]["end"]))]
+                               _action(url_for("pages.report_sales", tab="products", category=r["id"], start=view["period"]["start"], end=view["period"]["end"]))]
                               for n, r in enumerate(rows)]}
     labels = [r["name"] for r in data["ranking"]]
     y_max, y_step = _scale([r["revenue"] for r in data["ranking"]])
     view["bars"] = {"title": "Ventas por categoría", "empty": EMPTY, "labels": labels, "values": [float(r["revenue"]) for r in data["ranking"]],
-                    "value_labels": [f"${Decimal(r['revenue']):,.0f}" for r in data["ranking"]], "y_max": y_max, "y_step": y_step}
+                    "value_labels": [f"{Decimal(r['revenue']):,.0f}" for r in data["ranking"]], "y_max": y_max, "y_step": y_step}
     view["donut"] = _donut("Participación por categoría", data["distribution"], _num(k["active"][0]), "Categorías", _money)
     view["ranking"] = _ranking("Top categorías", data["ranking"], lambda r: r["name"])
     view["chart"] = {"title": "Evolución por categoría", "subtitle": None, **_line_chart(data["evolution"])}
@@ -319,10 +327,10 @@ def _payments_view(data, view, params) -> dict:
     main = k["main"][0]
     view["kpis"] = [
         _kpi("card", "blue", "Métodos activos", _num(k["active"][0]), k["active"][1], f"de {k['configured']} configurados para ventas"),
-        _kpi("cash", "green", "Ingresos cobrados", _money(k["revenue"][0]), k["revenue"][1], view["previous"]),
+        _kpi("cash", "green", "Ventas registradas", _money(k["revenue"][0]), k["revenue"][1], view["previous"]),
         _kpi("transfer", "purple", "Método principal", main["name"] if main else "—", None, f"{_pct(main['percent'])} del total" if main else EMPTY,
              trend=_trend({"reason": "ok", "change_percent": main["change_percent"]}) if main and main["change_percent"] is not None else (None, "muted", None)),
-        _kpi("card", "orange", "Ticket prom. por método", _money(k["average"][0] or 0), k["average"][1], view["previous"]),
+        _kpi("card", "orange", "Ticket promedio por venta", _money(k["average"][0] or 0), k["average"][1], view["previous"]),
     ]
     rows, first, pagination = _paginate(data["rows"], params, "métodos", view["page_base"])
     view["table"] = {"title": "Ventas por método de pago", "link": "Ver todo", "href": _history_link(view), "empty": EMPTY,
@@ -350,7 +358,7 @@ def _summary_view(data, view, params) -> dict:
         _kpi("dollar", "blue", "Ventas del período", _money(k["revenue"][0]), k["revenue"][1], view["previous"]),
         _kpi("cart", "green", "Ventas realizadas", _num(k["count"][0]), k["count"][1], view["previous"]),
         _kpi("tag", "purple", "Ticket promedio", _money(k["average"][0]), k["average"][1], view["previous"]),
-        _kpi("users", "blue", "Clientes activos", _num(k["customers"][0]), k["customers"][1], view["previous"]),
+        _kpi("users", "blue", "Clientes identificados", _num(k["customers"][0]), k["customers"][1], view["previous"]),
     ]
     series = [{"label": "Ventas actuales", "data": [None if v is None else float(v) for v in m["current"]], "fill": True}]
     if m["previous_year_available"]:
@@ -359,7 +367,7 @@ def _summary_view(data, view, params) -> dict:
     view["chart"] = {"title": "Tendencia de ventas", "subtitle": None, "labels": [MONTHS_SHORT[date.fromisoformat(x).month - 1] for x in m["months"]],
                      "series": series, "y_max": y_max, "y_step": y_step, "money": True, "empty": None if m["available"] else "Sin ventas registradas todavía"}
     tones = [6 if i["id"] is None else n + 1 for n, i in enumerate(cat["items"])]
-    view["donut"] = {"title": "Ventas por categoría", "center_value": f"$ {Decimal(cat['total']):,.0f}", "center_label": "Ingresos totales", "empty": EMPTY,
+    view["donut"] = {"title": "Ventas por categoría", "center_value": f"{Decimal(cat['total']):,.0f}", "center_label": "Ventas registradas", "empty": EMPTY,
                      "values": [float(i["percent"]) for i in cat["items"]], "tones": tones,
                      "items": [{"name": i["name"], "sub": f"{_pct(i['percent'])} ({_money(i['revenue'])})", "tone": t} for i, t in zip(cat["items"], tones)]}
     view["top_products"] = {"title": "Top productos", "link": "Ver todo", "href": view["tab_href"]["products"], "empty": EMPTY,
@@ -370,7 +378,7 @@ def _summary_view(data, view, params) -> dict:
                              "rows": [[str(n + 1), {"kind": "customer", "text": c["name"], "tone": n + 1 if n < 4 else 6}, _money(c["revenue"])]
                                       for n, c in enumerate(data["top_customers"])]}
     e = data["executive"]
-    growth_label = {"revenue": "Ventas del período", "count": "Ventas realizadas", "average": "Ticket promedio", "customers": "Clientes activos"}
+    growth_label = {"revenue": "Ventas del período", "count": "Ventas realizadas", "average": "Ticket promedio", "customers": "Clientes identificados"}
     view["executive"] = {"title": "Resumen ejecutivo", "empty": EMPTY, "items": [
         ("trophy", "orange", "Mejor categoría:", e["category"]["name"] if e["category"] else "—"),
         ("chart", "green", "Mayor crecimiento:", f"{growth_label[e['growth'][0]]} ({'+' if e['growth'][1] > 0 else ''}{e['growth'][1]:g}%)" if e["growth"] else "Sin período anterior comparable"),

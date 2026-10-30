@@ -24,6 +24,8 @@ PO_STATUSES = tuple(STATUS_LABELS)
 # Estados cuyo saldo pedido-recibido sigue siendo mercancía por recibir. Los del flujo anterior
 # conservan su lectura histórica: nunca registraron quantity_not_supplied.
 EXPECTING_STATUSES = ("pending_approval", "approved", "pending", "partial")
+# Criterio único de "orden completada" para Compras y Proveedores (incluye el cierre completo).
+COMPLETED_STATUSES = ("completed", "closed_complete")
 
 
 class Supplier(db.Model):

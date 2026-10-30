@@ -119,7 +119,9 @@
         if(correction)kind.value='ajuste';
         updateKind();
         notes.addEventListener('input',()=>{form.querySelector('.mv-counter').textContent=notes.value.length+'/255';});
-        const error=node('p','mv-info');error.dataset.liveError='';error.setAttribute('role','alert');form.querySelector('.mv-fields').prepend(error);
+        const error=node('p','mv-info mv-field-error');error.dataset.liveError='';error.setAttribute('role','alert');error.id='mv-live-error';
+        // Junto a Cantidad: el aviso de stock insuficiente queda al lado del dato que lo causa.
+        quantity.closest('label').parentElement.after(error);quantity.setAttribute('aria-describedby','mv-live-error');
         form.querySelector('button[data-mv-close]').addEventListener('click',close);
         form.addEventListener('submit',async event=>{
             event.preventDefault();if(!form.reportValidity())return;
@@ -132,7 +134,7 @@
             try{
                 const result=await api({entrada:'entry',salida:'exit',ajuste:'adjustment'}[kind.value],{method:'POST',body:JSON.stringify(body)});
                 close();announce(kind.value==='ajuste'?`Solicitud #${result.id} pendiente de aprobación. El stock permanece intacto.`:`${result.movement.movement_number} registrado. El stock se actualizó correctamente.`);document.dispatchEvent(new Event('mv:refresh'));
-            }catch(failure){error.textContent=failure.message;}finally{button.disabled=false;}
+            }catch(failure){error.textContent=failure.message;error.scrollIntoView({block:'nearest'});quantity.focus();}finally{button.disabled=false;}
         });
         setupProducts(form,correction);
     }

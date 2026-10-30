@@ -1,0 +1,96 @@
+{% extends "ix_base.html" %}
+{# Consulta histórica del reporte de ventas (sales_history_service.detail). Solo lectura;
+   el enlace de regreso lo arma el controlador con los mismos filtros del reporte. #}
+{% set active_page = "reports" %}
+{% set sidebar_variant = "reports" %}
+{% macro money(value) %}{{ "{:,.2f}".format(value) }}{% endmacro %}
+
+{% block title %}{{ view.title }} — El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/report_history.css') }}">{% endblock %}
+
+{% block main %}
+<div class="rh-page">
+    <a class="rh-back" href="{{ view.back }}">&larr; Volver al reporte</a>
+
+    <header class="rh-heading">
+        <div>
+            {# Sin filas, la identidad es solo un aviso: el título del ámbito encabeza y la tarjeta vacía lo explica. #}
+            <h1>{{ view.identity if view.count else view.title }}</h1>
+            {% if view.count %}<p>{{ view.title }}{% if view.subtitle %} · {{ view.subtitle }}{% endif %}</p>{% endif %}
+            <p>Período: {{ view.start }} a {{ view.end }}{% if view.q %} · Filtro: «{{ view.q }}»{% endif %}</p>
+        </div>
+        <span class="rh-badge">Solo lectura</span>
+    </header>
+
+    {% if not view.money %}
+    <p class="rh-warning" role="note">Tu rol no incluye la consulta de montos de venta: se muestran operaciones y unidades.</p>
+    {% endif %}
+
+    <section class="rh-kpis" aria-label="Totales del período">
+        <article class="rh-card"><span>Operaciones</span><strong>{{ "{:,}".format(view.count) }}</strong><small>Ventas completadas</small></article>
+        <article class="rh-card"><span>Unidades</span><strong>{{ "{:,}".format(view.units) }}</strong><small>{{ 'Líneas del ámbito consultado' if view.line_basis else 'Todas las líneas de cada venta' }}</small></article>
+        {% if view.money %}
+        <article class="rh-card"><span>{{ 'Monto de las líneas' if view.line_basis else 'Monto vendido' }}</span><strong>{{ money(view.line_amount if view.line_basis else view.amount) }}</strong><small>Total del período</small></article>
+        {% endif %}
+    </section>
+
+    {% if not view.count %}
+    <section class="rh-card rh-empty" aria-live="polite">
+        <h2>Sin operaciones</h2>
+        <p class="rh-note">No hay ventas completadas para este ámbito en el período seleccionado.</p>
+    </section>
+    {% else %}
+    <section class="rh-card" aria-labelledby="rh-monthly">
+        <div class="rh-section"><h2 id="rh-monthly">Resumen mensual</h2><span>{{ view.monthly | length }} meses con ventas</span></div>
+        <div class="rh-scroll">
+            <table>
+                <thead><tr><th scope="col">Mes</th><th scope="col">Operaciones</th><th scope="col">Unidades</th>{% if view.money %}<th scope="col">Monto</th>{% endif %}</tr></thead>
+                <tbody>
+                    {% for m in view.monthly %}
+                    <tr><th scope="row">{{ m.period }}</th><td>{{ m.operations }}</td><td>{{ m.units }}</td>{% if view.money %}<td>{{ money(m.amount) }}</td>{% endif %}</tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if view.products %}
+    <section class="rh-card" aria-labelledby="rh-products">
+        <div class="rh-section"><h2 id="rh-products">Productos vendidos</h2><span>{{ view.products | length }} productos</span></div>
+        <div class="rh-scroll">
+            <table>
+                <thead><tr><th scope="col">Producto</th><th scope="col">Código</th><th scope="col">Unidades</th>{% if view.money %}<th scope="col">Monto</th>{% endif %}</tr></thead>
+                <tbody>
+                    {% for p in view.products %}
+                    <tr><th scope="row">{{ p.name }}</th><td>{{ p.code }}</td><td>{{ p.units }}</td>{% if view.money %}<td>{{ money(p.amount) }}</td>{% endif %}</tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="rh-card rh-operations" aria-labelledby="rh-ops">
+        <div class="rh-section"><h2 id="rh-ops">Operaciones</h2><span>Página {{ view.page }} de {{ view.pages }}</span></div>
+        <p class="rh-scroll-hint">Desliza la tabla horizontalmente para ver todas las columnas.</p>
+        <div class="rh-scroll">
+            <table>
+                <thead><tr><th scope="col">Venta</th><th scope="col">Fecha</th><th scope="col">Cliente</th><th scope="col">Método</th><th scope="col">Unidades</th>{% if view.money %}<th scope="col">Monto</th>{% endif %}</tr></thead>
+                <tbody>
+                    {% for op in view.operations %}
+                    <tr><th scope="row">{{ op.number }}</th><td>{{ op.date }}</td><td>{{ op.customer }}</td><td>{{ op.method }}</td><td>{{ op.units }}</td>{% if view.money %}<td>{{ money(op.amount) }}</td>{% endif %}</tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if view.pages > 1 %}
+        <nav class="rh-pagination" aria-label="Páginas de operaciones">
+            {% if view.prev %}<a href="{{ view.prev }}" rel="prev">&larr; Anterior</a>{% else %}<span></span>{% endif %}
+            <span>Página {{ view.page }} de {{ view.pages }}</span>
+            {% if view.next %}<a href="{{ view.next }}" rel="next">Siguiente &rarr;</a>{% else %}<span></span>{% endif %}
+        </nav>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

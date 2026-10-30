@@ -1,0 +1,256 @@
+{% extends "ix_base.html" %}
+{# Guía de uso. Cada sección se muestra solo si el rol puede usar ese módulo (mismos permisos que
+   el menú), así nadie lee instrucciones de pantallas que no puede abrir. Solo texto: sin datos. #}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "help" %}
+{% set role_names = {'admin': 'Administrador', 'inventario': 'Inventario', 'asistente': 'Asistente administrativo',
+                     'vendedor': 'Vendedor', 'soporte_ti': 'Soporte TI'} %}
+
+{% macro steps(items) %}<ol class="hp-steps">{% for item in items %}<li>{{ item }}</li>{% endfor %}</ol>{% endmacro %}
+{% macro tip(text) %}<p class="hp-tip"><i class="ti ti-bulb" aria-hidden="true"></i><span>{{ text }}</span></p>{% endmacro %}
+
+{# (id, título, icono, visible, resumen) #}
+{% set sections = [
+    ('inicio', 'Primeros pasos', 'ti-rocket', true, 'Ingreso, menú, búsqueda y alertas.'),
+    ('panel', 'Inicio', 'ti-home', nav_allowed('dashboard'), 'Indicadores del negocio y propuestas pendientes.'),
+    ('productos', 'Productos y categorías', 'ti-package', nav_allowed('products'), 'Catálogo, propuestas y aprobaciones.'),
+    ('movimientos', 'Movimientos de inventario', 'ti-arrows-exchange', nav_allowed('inventory'), 'Entradas, salidas y ajustes.'),
+    ('notas', 'Notas de entrega y clientes', 'ti-file-invoice', nav_allowed('delivery_notes') or nav_allowed('sales_customers'), 'Despachos que descuentan stock.'),
+    ('compras', 'Compras', 'ti-shopping-bag', nav_allowed('purchases') or nav_allowed('suppliers'), 'Solicitud, cotización, orden y recepción.'),
+    ('historico', 'Importación histórica', 'ti-file-upload', nav_allowed('historical_imports'), 'Carga auditable de ventas pasadas.'),
+    ('prediccion', 'Análisis predictivo', 'ti-chart-line', nav_allowed('demand_forecast'), 'Pronóstico, reabastecimiento y precisión.'),
+    ('reportes', 'Reportes', 'ti-chart-bar', nav_allowed('reports'), 'Ventas por período y exportaciones.'),
+    ('asistente', 'Chatbot', 'ti-message-chatbot', nav_allowed('chatbot'), 'Consultas rápidas en lenguaje natural.'),
+    ('configuracion', 'Configuración', 'ti-settings', nav_allowed('settings'), 'Empresa, usuarios, seguridad y respaldos.'),
+    ('documentos', 'Documentos e impresión', 'ti-printer', true, 'PDF, Excel y CSV con membrete.'),
+    ('preguntas', 'Preguntas frecuentes', 'ti-help-circle', true, 'Dudas comunes y cómo resolverlas.'),
+] | selectattr(3) | list %}
+
+{% block title %}Guía de uso — El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/help.css') }}">{% endblock %}
+{% block main_class %} hp-main{% endblock %}
+
+{% block main %}
+<header class="hp-header">
+    <div>
+        <h1>Guía de uso</h1>
+        <p>Cómo trabajar en el sistema con tu rol: <strong>{{ role_names.get(current_user.role, current_user.role) }}</strong>. Solo ves las secciones de los módulos a los que tienes acceso.</p>
+    </div>
+    <div class="ix-header-actions">
+        <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú"><i class="ti ti-menu-2" aria-hidden="true"></i></button>
+        <button type="button" class="hp-print" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i>Imprimir guía</button>
+    </div>
+</header>
+
+<div class="hp-layout">
+    <nav class="hp-toc" aria-label="Contenido de la guía">
+        <label class="hp-filter"><i class="ti ti-search" aria-hidden="true"></i><input type="search" id="hp-filter" placeholder="Buscar en la guía…" aria-label="Buscar en la guía"></label>
+        <ol>
+            {% for id, title, icon, _, summary in sections %}
+            <li><a href="#{{ id }}" data-hp-link="{{ id }}"><i class="ti {{ icon }}" aria-hidden="true"></i><span>{{ title }}<small>{{ summary }}</small></span></a></li>
+            {% endfor %}
+        </ol>
+    </nav>
+
+    <div class="hp-content">
+        <p class="hp-empty" id="hp-empty" hidden>No hay secciones que coincidan con la búsqueda.</p>
+
+        <section class="hp-card" id="inicio" data-hp-section>
+            <h2><i class="ti ti-rocket" aria-hidden="true"></i>Primeros pasos</h2>
+            <p>El sistema registra el inventario de la ferretería, sus compras y despachos, y usa ese historial para estimar la demanda y sugerir reabastecimiento. Cada persona trabaja con un rol que define qué puede ver y qué puede modificar.</p>
+            <h3>Ingresar y salir</h3>
+            {{ steps(['Abre la dirección del sistema e ingresa tu usuario (o correo) y tu contraseña.',
+                      'Si olvidaste la contraseña, usa «¿Olvidaste tu contraseña?» en la pantalla de ingreso.',
+                      'Para salir, abre tu nombre al pie del menú lateral y elige «Cerrar sesión».']) }}
+            <h3>Moverte por el sistema</h3>
+            <ul class="hp-list">
+                <li><strong>Menú lateral:</strong> agrupa los módulos. Solo muestra lo que tu rol puede abrir.</li>
+                <li><strong>Búsqueda global</strong> (arriba a la derecha): encuentra productos y clientes por nombre o código.</li>
+                <li><strong>Campana de alertas:</strong> avisa de productos agotados o por debajo del mínimo.</li>
+                <li><strong>Mi perfil:</strong> datos personales, preferencias, sesiones abiertas y cambio de contraseña.</li>
+            </ul>
+            <h3>Separación de funciones</h3>
+            <div class="hp-table-wrap"><table class="hp-table">
+                <thead><tr><th scope="col">Rol</th><th scope="col">Responsabilidad principal</th></tr></thead>
+                <tbody>
+                    <tr><th scope="row">Asistente administrativo</th><td>Propone productos, categorías y proveedores; cotiza y prepara órdenes de compra.</td></tr>
+                    <tr><th scope="row">Administrador</th><td>Aprueba o rechaza propuestas y órdenes; administra usuarios y configuración.</td></tr>
+                    <tr><th scope="row">Inventario</th><td>Registra entradas y salidas, recibe mercancía y solicita reposición.</td></tr>
+                    <tr><th scope="row">Vendedor</th><td>Consulta el catálogo, atiende clientes y emite notas de entrega.</td></tr>
+                    <tr><th scope="row">Soporte TI</th><td>Seguridad de acceso y respaldos del sistema.</td></tr>
+                </tbody>
+            </table></div>
+            {{ tip('Quien propone un cambio nunca puede aprobarlo: así cada modificación del catálogo o de una compra queda revisada por otra persona.') }}
+        </section>
+
+        {% if nav_allowed('dashboard') %}
+        <section class="hp-card" id="panel" data-hp-section>
+            <h2><i class="ti ti-home" aria-hidden="true"></i>Inicio</h2>
+            <p>Resume el estado del negocio: productos en stock, alertas activas, movimientos recientes y productos por debajo del mínimo. El bloque <strong>Propuestas pendientes</strong> muestra cuántos productos, proveedores y categorías esperan revisión; un clic abre la lista filtrada.</p>
+            {{ tip('Las cifras se calculan con los datos registrados; si un indicador muestra «Sin datos», todavía no hay operaciones en el período.') }}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('products') %}
+        <section class="hp-card" id="productos" data-hp-section>
+            <h2><i class="ti ti-package" aria-hidden="true"></i>Productos y categorías</h2>
+            <p>El catálogo conserva código, nombre, categoría, unidad, precios con su moneda (USD o VES), stock y stock mínimo. Un producto nuevo queda <em>pendiente</em> e inactivo hasta que el administrador lo aprueba.</p>
+            <h3>Proponer un producto (asistente)</h3>
+            {{ steps(['Entra a Inventario › Productos y pulsa «Nuevo producto».',
+                      'Completa los campos obligatorios (*): nombre, código, categoría, unidad, precio de venta y su moneda.',
+                      'Indica el stock inicial: se registra como un movimiento de entrada trazable.',
+                      'Guarda. El producto aparece como «Pendiente» hasta su aprobación.']) }}
+            <h3>Aprobar o rechazar (administrador)</h3>
+            {{ steps(['Abre Inicio › Propuestas pendientes, o filtra Productos por «Estado de aprobación: Pendiente».',
+                      'Pulsa «Ver detalle» en la fila y revisa los datos.',
+                      'Elige «Aprobar» o «Rechazar» (el rechazo exige un motivo).']) }}
+            <p>Las <strong>categorías</strong> siguen el mismo flujo desde Inventario › Categorías. El <strong>Catálogo visual</strong> muestra las fichas de productos activos con su existencia; los precios solo aparecen para los roles que pueden verlos.</p>
+            {{ tip('Para cambiar un producto ya aprobado usa «Proponer modificación»: los datos vigentes no cambian hasta que se aprueba la propuesta.') }}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('inventory') %}
+        <section class="hp-card" id="movimientos" data-hp-section>
+            <h2><i class="ti ti-arrows-exchange" aria-hidden="true"></i>Movimientos de inventario</h2>
+            <p>Toda variación de stock deja un movimiento con fecha, responsable, cantidad, stock anterior y stock resultante. El stock nunca se edita a mano.</p>
+            <h3>Registrar una entrada o una salida</h3>
+            {{ steps(['Abre Inventario › Movimientos y pulsa «Nuevo movimiento».',
+                      'Elige el tipo (Entrada o Salida) y busca el producto por nombre o código.',
+                      'Escribe la cantidad (entero mayor que cero) y el motivo.',
+                      'Pulsa «Guardar movimiento». El stock se actualiza al instante.']) }}
+            <ul class="hp-list">
+                <li>Una salida mayor que la existencia se rechaza y el aviso aparece junto al campo Cantidad.</li>
+                <li>Los <strong>ajustes</strong> (conteo físico) se registran como solicitud: el stock cambia solo cuando un administrador la aprueba.</li>
+                <li>«Exportar» descarga el listado filtrado en Excel, CSV o PDF; también existe una versión imprimible.</li>
+            </ul>
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('delivery_notes') or nav_allowed('sales_customers') %}
+        <section class="hp-card" id="notas" data-hp-section>
+            <h2><i class="ti ti-file-invoice" aria-hidden="true"></i>Notas de entrega y clientes</h2>
+            <p>La nota de entrega documenta un despacho al cliente y descuenta el inventario de cada producto. Es un documento interno: no sustituye a una factura.</p>
+            {% if nav_allowed('delivery_notes') %}
+            <h3>Emitir una nota</h3>
+            {{ steps(['Abre Notas de entrega y pulsa «Nueva nota».',
+                      'Escribe el nombre del cliente y, si aplica, su documento (V-12345678 o J-12345678-9) y teléfono.',
+                      'Agrega cada producto con su cantidad. Solo se ofrecen productos con existencia y precio en USD.',
+                      'Pulsa «Revisar nota»: verás cliente, líneas, total y el aviso de salida de inventario.',
+                      'Confirma con «Confirmar emisión». Si un precio cambió mientras preparabas la nota, el sistema muestra el importe nuevo y pide confirmarlo otra vez.']) }}
+            <p>Desde «Ver detalle» puedes descargar el PDF con el membrete de la empresa. Solo el administrador puede cancelar una nota; al hacerlo, el stock vuelve al inventario.</p>
+            {% endif %}
+            {% if nav_allowed('sales_customers') %}
+            <h3>Clientes</h3>
+            <p>En Ventas › Clientes registras razón social, RIF, teléfono y correo. La búsqueda filtra mientras escribes.</p>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('purchases') or nav_allowed('suppliers') %}
+        <section class="hp-card" id="compras" data-hp-section>
+            <h2><i class="ti ti-shopping-bag" aria-hidden="true"></i>Compras</h2>
+            <p>Cada compra sigue un ciclo con responsables distintos, para que nadie compre, apruebe y reciba a la vez:</p>
+            <ol class="hp-flow" aria-label="Ciclo de compra">
+                <li><strong>Solicitud de reposición</strong><span>Inventario indica qué productos y cantidades faltan.</span></li>
+                <li><strong>Cotización</strong><span>El asistente registra el precio y la moneda del proveedor.</span></li>
+                <li><strong>Orden en borrador</strong><span>El asistente prepara la orden desde la solicitud.</span></li>
+                <li><strong>Aprobación</strong><span>El administrador aprueba o rechaza.</span></li>
+                <li><strong>Recepción</strong><span>Inventario registra lo recibido y el stock aumenta.</span></li>
+            </ol>
+            <ul class="hp-list">
+                <li>Un borrador se imprime con la marca «BORRADOR PENDIENTE DE APROBACIÓN»: no debe enviarse al proveedor.</li>
+                <li>Si llega menos de lo pedido, la recepción parcial exige un motivo y la diferencia puede generar una nueva solicitud.</li>
+                <li><strong>Proveedores:</strong> el asistente propone altas y modificaciones; el administrador las aprueba. Mientras una modificación está pendiente, los datos oficiales del proveedor no cambian.</li>
+                <li>Los roles sin permiso de costos no ven importes de compra ni pueden filtrar u ordenar por ellos.</li>
+            </ul>
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('historical_imports') %}
+        <section class="hp-card" id="historico" data-hp-section>
+            <h2><i class="ti ti-file-upload" aria-hidden="true"></i>Importación histórica</h2>
+            <p>Carga las ventas de 2025 desde un archivo CSV v1 para que el análisis predictivo cuente con historial. La importación no modifica el inventario actual.</p>
+            {{ steps(['Descarga la «Plantilla CSV vacía» y completa una fila por línea de venta (UTF-8, separador punto y coma).',
+                      'Pulsa «Nueva importación», elige el archivo e indica el sistema de origen.',
+                      'Revisa el lote: filas válidas, advertencias, errores y duplicados.',
+                      'Ejecuta la simulación y, si todo está bien, confirma. Un lote confirmado puede revertirse con un motivo.']) }}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('demand_forecast') %}
+        <section class="hp-card" id="prediccion" data-hp-section>
+            <h2><i class="ti ti-chart-line" aria-hidden="true"></i>Análisis predictivo</h2>
+            <p>Usa el historial confirmado, las ventas y las notas de entrega para estimar la demanda de los próximos días y sugerir cuánto reponer.</p>
+            <ul class="hp-list">
+                <li><strong>Pronóstico de demanda:</strong> demanda estimada por producto y riesgo de quiebre de stock.</li>
+                <li><strong>Reabastecimiento:</strong> cantidades sugeridas según demanda, stock actual y mínimo.</li>
+                <li><strong>Productos críticos y Tendencias:</strong> qué productos requieren atención y cómo evoluciona su demanda.</li>
+                <li><strong>Precisión del modelo:</strong> error medido fuera de muestra (WAPE, MAE), para saber cuánto confiar en el pronóstico.</li>
+            </ul>
+            {{ tip('Si un producto no tiene ventas recientes, el sistema lo indica («historial insuficiente») en lugar de inventar un pronóstico.') }}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('reports') %}
+        <section class="hp-card" id="reportes" data-hp-section>
+            <h2><i class="ti ti-chart-bar" aria-hidden="true"></i>Reportes</h2>
+            <p>El reporte de ventas tiene cinco pestañas: Resumen, por producto, por cliente, por categoría y métodos de pago.</p>
+            {{ steps(['Pulsa el botón del período para elegir las fechas «Desde» y «Hasta» y, si quieres, un filtro de texto.',
+                      'Cambia de pestaña: el período se conserva.',
+                      'Usa «Ver todo» o «Ver detalle» para abrir el histórico de operaciones.',
+                      '«Exportar PDF» o «Exportar CSV» descargan la pestaña actual con el mismo período y filtro.']) }}
+            {{ tip('Las ventas no registran moneda de origen: los importes se muestran como unidades monetarias, sin convertir ni asumir USD.') }}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('chatbot') %}
+        <section class="hp-card" id="asistente" data-hp-section>
+            <h2><i class="ti ti-message-chatbot" aria-hidden="true"></i>Chatbot</h2>
+            <p>Responde preguntas sobre el catálogo sin navegar por las pantallas. Ejemplos:</p>
+            <ul class="hp-list hp-examples">
+                <li>«¿Cuál es el stock del producto HER-001?»</li>
+                <li>«Productos bajo stock»</li>
+                <li>«¿Hay cemento disponible?»</li>
+                <li>«Productos de la categoría Electricidad»</li>
+            </ul>
+            {{ tip('Solo responde con datos que tu rol puede ver. Para un resultado exacto escribe el código del producto.') }}
+        </section>
+        {% endif %}
+
+        {% if nav_allowed('settings') %}
+        <section class="hp-card" id="configuracion" data-hp-section>
+            <h2><i class="ti ti-settings" aria-hidden="true"></i>Configuración</h2>
+            <ul class="hp-list">
+                <li><strong>General:</strong> nombre de la empresa, <strong>RIF</strong> y logo. Estos datos forman el membrete de los PDF, Excel e impresiones.</li>
+                <li><strong>Usuarios y roles:</strong> alta de usuarios, asignación de rol y permisos.</li>
+                <li><strong>Seguridad:</strong> política de contraseñas, verificación en dos pasos y sesiones abiertas.</li>
+                <li><strong>Notificaciones y Respaldo:</strong> avisos por canal y copias de seguridad de la base de datos.</li>
+            </ul>
+        </section>
+        {% endif %}
+
+        <section class="hp-card" id="documentos" data-hp-section>
+            <h2><i class="ti ti-printer" aria-hidden="true"></i>Documentos e impresión</h2>
+            <ul class="hp-list">
+                <li><strong>PDF:</strong> notas de entrega, listados y reportes llevan logo, nombre y RIF de la empresa, fecha de generación y número de página.</li>
+                <li><strong>Excel:</strong> el membrete ocupa las primeras filas; la tabla conserva filtros y encabezado fijo.</li>
+                <li><strong>CSV:</strong> solo datos (sin membrete), para abrir en hojas de cálculo o volver a importar.</li>
+                <li>Las órdenes de compra, recepciones y movimientos tienen una versión imprimible con el mismo membrete.</li>
+            </ul>
+        </section>
+
+        <section class="hp-card" id="preguntas" data-hp-section>
+            <h2><i class="ti ti-help-circle" aria-hidden="true"></i>Preguntas frecuentes</h2>
+            <dl class="hp-faq">
+                <div><dt>Veo «Acceso restringido» al abrir una página.</dt><dd>Tu rol no tiene permiso para esa sección. Pide el acceso al administrador.</dd></div>
+                <div><dt>Mi cambio aparece como «Pendiente».</dt><dd>Es normal: las altas y modificaciones del catálogo, proveedores y órdenes esperan la aprobación del administrador.</dd></div>
+                <div><dt>No encuentro un producto al emitir una nota.</dt><dd>Solo se ofrecen productos activos, con existencia y precio en USD.</dd></div>
+                <div><dt>Aparece «Token CSRF inválido».</dt><dd>La sesión de la página expiró. Recarga la página e intenta de nuevo.</dd></div>
+                <div><dt>El pronóstico dice «historial insuficiente».</dt><dd>El producto no tiene suficientes ventas recientes. Importa el historial o registra las operaciones del día a día.</dd></div>
+            </dl>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/help.js') }}"></script>{% endblock %}

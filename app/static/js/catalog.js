@@ -278,6 +278,9 @@
         holder.appendChild(image);
     }
 
+    // Sin products:view_price la API omite sale_price: no se muestra un precio inventado.
+    const hasPrice = (product) => product.sale_price !== undefined && product.sale_price !== null;
+
     function createFact(labelText, valueText) {
         const fact = document.createElement("div");
         fact.className = "catalog-card-fact";
@@ -321,7 +324,7 @@
         const facts = document.createElement("div");
         facts.className = "catalog-card-facts";
         facts.append(
-            createFact("Precio", priceFormat.format(numericValue(product.sale_price))),
+            ...(hasPrice(product) ? [createFact("Precio", priceFormat.format(numericValue(product.sale_price)))] : []),
             createFact(
                 "Stock",
                 `${numberFormat.format(numericValue(product.current_stock))} ${product.unit || ""}`.trim()
@@ -480,7 +483,7 @@
             "stock-desc",
         ];
 
-        elements.search.value = params.get("q") || "";
+        elements.search.value = params.get("q") ?? elements.search.value;
         const category = params.get("category") || "";
         if ([...elements.category.options].some((option) => option.value === category)) {
             elements.category.value = category;
@@ -488,7 +491,8 @@
         const stock = params.get("stock") || "";
         elements.stockStatus.value = validStock.includes(stock) ? stock : "";
         const sort = params.get("sort") || "name-asc";
-        elements.sort.value = validSort.includes(sort) ? sort : "name-asc";
+        const offered = [...elements.sort.options].some((option) => option.value === sort);
+        elements.sort.value = validSort.includes(sort) && offered ? sort : "name-asc";
 
         const page = Number.parseInt(params.get("page") || "1", 10);
         state.page = Number.isInteger(page) && page > 0 ? page : 1;
@@ -526,9 +530,10 @@
         $("catalog-detail-name").textContent = product.name || "Producto sin nombre";
         $("catalog-detail-code").textContent = product.code || "Sin código";
         $("catalog-detail-category").textContent = product.category || "Sin categoría";
-        $("catalog-detail-price").textContent = priceFormat.format(
-            numericValue(product.sale_price)
-        );
+        $("catalog-detail-price").closest(".catalog-detail__price-block").hidden = !hasPrice(product);
+        $("catalog-detail-price").textContent = hasPrice(product)
+            ? priceFormat.format(numericValue(product.sale_price))
+            : "—";
         $("catalog-detail-stock").textContent = numberFormat.format(
             numericValue(product.current_stock)
         );
@@ -620,6 +625,9 @@
                 : [];
 
             state.products = products.filter((product) => product.is_active === true);
+            if (!state.products.some(hasPrice)) {
+                elements.sort.querySelectorAll('option[value^="price-"]').forEach((option) => option.remove());
+            }
             populateCategories(categories);
             restoreFiltersFromUrl();
             applyFilters(false);

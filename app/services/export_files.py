@@ -31,14 +31,12 @@ def _pdf_value(value):
 
 
 def pdf_report(title, lines, rows, columns):
-    """Landscape A4: brand, title, metadata lines, then one table of real rows."""
+    """Landscape A4: letterhead (CatalogPDF), title, metadata lines, then one table of real rows."""
     pdf = CatalogPDF(orientation='L', format='A4')
     pdf.core_fonts_encoding = 'cp1252'
     pdf.set_margins(10, 10, 10)
     pdf.set_auto_page_break(True, 18)
     pdf.add_page()
-    pdf.set_font('Helvetica', 'B', 11)
-    pdf.cell(0, 6, 'Ferretería y Construcciones El Conejo C.A.', new_x='LMARGIN', new_y='NEXT')
     pdf.set_font('Helvetica', 'B', 16)
     pdf.cell(0, 9, pdf_text(title), new_x='LMARGIN', new_y='NEXT')
     pdf.set_font('Helvetica', '', 9)

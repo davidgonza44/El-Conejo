@@ -12,7 +12,9 @@
     "zg:preflight": "node scripts/zg_preflight.mjs",
     "zg:index": "npm run zg:preflight && zg index . --mode direct --embedding local/potion-code-16m-v2 --ignore-file .repomixignore --iglob \"!**/*.png\" --iglob \"!**/*.jpg\" --iglob \"!**/*.jpeg\" --iglob \"!**/*.gif\" --iglob \"!**/*.webp\" --iglob \"!**/*.tif\" --iglob \"!**/*.tiff\" --iglob \"!**/*.vips\"",
     "zg:status": "npm run zg:preflight && zg status . --mode direct --check-ready",
-    "zg:version": "zg --version"
+    "zg:version": "zg --version",
+    "e2e": "playwright test -c e2e/playwright.config.mjs",
+    "e2e:report": "playwright show-report .tmp/e2e-report"
   },
   "devDependencies": {
     "@fission-ai/openspec": "1.10.0",

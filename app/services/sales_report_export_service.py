@@ -33,11 +33,11 @@ COLUMNS = {
     'summary': [('section', 'Sección', 40), ('concept', 'Concepto', 60), ('value', 'Valor', 40), ('detail', 'Detalle', 50)],
 }
 KPI_LABELS = {
-    'summary': [('revenue', 'Ventas del período'), ('count', 'Ventas realizadas'), ('average', 'Ticket promedio'), ('customers', 'Clientes activos')],
-    'products': [('products', 'Productos vendidos'), ('units', 'Unidades vendidas'), ('revenue', 'Ingresos por producto'), ('average', 'Ticket prom. por producto')],
-    'customers': [('active', 'Clientes activos'), ('recurring', 'Clientes recurrentes (%)'), ('revenue', 'Ingresos por cliente'), ('average', 'Ticket promedio')],
+    'summary': [('revenue', 'Ventas del período'), ('count', 'Ventas realizadas'), ('average', 'Ticket promedio'), ('customers', 'Clientes identificados')],
+    'products': [('products', 'Productos vendidos'), ('units', 'Unidades vendidas'), ('revenue', 'Ingresos por producto'), ('average', 'Ingreso prom. por producto')],
+    'customers': [('active', 'Clientes identificados'), ('recurring', 'Clientes recurrentes (%)'), ('revenue', 'Ingresos por cliente'), ('average', 'Ticket promedio')],
     'categories': [('active', 'Categorías activas'), ('revenue', 'Ingresos por categoría'), ('leader', 'Categoría líder'), ('growth', 'Crecimiento prom. (%)')],
-    'payments': [('active', 'Métodos activos'), ('revenue', 'Ingresos cobrados'), ('main', 'Método principal'), ('average', 'Ticket prom. por método')],
+    'payments': [('active', 'Métodos activos'), ('revenue', 'Ventas registradas'), ('main', 'Método principal'), ('average', 'Ticket promedio por venta')],
 }
 MONEY = {'revenue', 'average', 'total', 'previous_revenue', 'average_unit'}
 MONTHS_SHORT = ('Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic')
@@ -46,7 +46,8 @@ BLUE, INK, MUTED, LINE, PANEL = (8, 102, 245), (16, 24, 50), (101, 113, 141), (2
 
 
 def _money(value) -> str:
-    return f"$ {Decimal(value):,.2f}"
+    # Sin símbolo: las ventas no registran moneda de origen (ver CURRENCY_NOTE).
+    return f"{Decimal(value):,.2f}"
 
 
 def _range(start, end) -> str:
@@ -140,17 +141,7 @@ def _executive(data) -> list[tuple]:
 # --- PDF -------------------------------------------------------------------------------
 
 class ReportPDF(CatalogPDF):
-    def header(self):
-        self.set_font('Helvetica', 'B', 10)
-        self.set_text_color(*BLUE)
-        self.cell(95, 6, 'Ferretería y Construcciones El Conejo C.A.')
-        self.set_font('Helvetica', '', 8)
-        self.set_text_color(*MUTED)
-        self.cell(95, 6, 'Sistema de Inventario', align='R', new_x='LMARGIN', new_y='NEXT')
-        self.set_draw_color(*LINE)
-        self.line(10, self.get_y() + 1, 200, self.get_y() + 1)
-        self.ln(4)
-        self.set_text_color(*INK)
+    """Mismo membrete con logo y RIF que el resto de exportaciones (CatalogPDF.header)."""
 
 
 def _fmt(key, value) -> str:
@@ -365,6 +356,7 @@ def pdf_file(tab: str, data: dict, now: datetime) -> BytesIO:
     _paragraph(pdf, f"Período: {_range(*data['period'])}   |   Comparación: {_range(*data['comparison_period'])}")
     _paragraph(pdf, f"Generado: {now:%d/%m/%Y %H:%M} (America/Caracas)   |   Ventas completadas"
                     + (f"   |   Filtro: {data['q']}" if data['q'] else ''))
+    _paragraph(pdf, sales_report_service.CURRENCY_NOTE)
     pdf.ln(3)
     _kpi_boxes(pdf, _kpis(tab, data))
     _PDF[tab](pdf, data)

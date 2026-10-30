@@ -27,9 +27,10 @@
     // API
     // ------------------------------------------------------------------
     class ApiError extends Error {
-        constructor(status, message) {
+        constructor(status, message, data = {}) {
             super(message);
             this.status = status;
+            this.data = data;
         }
     }
 
@@ -61,7 +62,7 @@
             // sin cuerpo JSON
         }
         if (!response.ok) {
-            throw new ApiError(response.status, data.error || `Error HTTP ${response.status}.`);
+            throw new ApiError(response.status, data.error || `Error HTTP ${response.status}.`, data);
         }
         return data;
     }
@@ -166,7 +167,8 @@
         const sel = $("c-product");
         if (!sel) return;
         const options = Object.values(productMap)
-            .filter((p) => p.current_stock > 0)
+            // La nota solo admite precios en USD (regla del servidor): no se ofrecen otras monedas.
+            .filter((p) => p.current_stock > 0 && (p.sale_price_currency ?? "USD") === "USD")
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((p) => {
                 const opt = document.createElement("option");
@@ -355,6 +357,7 @@
             btnRemove.appendChild(icon);
             btnRemove.addEventListener("click", () => {
                 createLines.splice(index, 1);
+                setConfirmStep(false);
                 renderCreateLines();
             });
             tdAct.appendChild(btnRemove);
@@ -392,10 +395,7 @@
             errBox.classList.remove("d-none");
             return;
         }
-        const alreadyInNote = createLines
-            .filter((l) => l.product_id === productId)
-            .reduce((s, l) => s + l.quantity, 0);
-        if (quantity + alreadyInNote > p.current_stock) {
+        if (quantity > p.current_stock) {
             errBox.textContent = `Stock insuficiente: disponible ${p.current_stock}, solicitado ${quantity}.`;
             errBox.classList.remove("d-none");
             return;
@@ -410,6 +410,7 @@
             unit_price: p.sale_price,
         });
         renderCreateLines();
+        setConfirmStep(false);
         $("c-product").value = "";
         $("c-quantity").value = "1";
         updateProductHint();
@@ -426,6 +427,57 @@
         $("c-product-hint").textContent = "";
         createLines = [];
         renderCreateLines();
+        setConfirmStep(false);
+    }
+
+    // Paso 1 "Revisar nota" muestra el resumen; paso 2 "Confirmar emisión" crea la nota.
+    let confirming = false;
+
+    function setConfirmStep(on) {
+        confirming = on;
+        $("create-confirm").classList.toggle("d-none", !on);
+        $("create-back-btn").classList.toggle("d-none", !on);
+        $("create-save-label").textContent = on ? "Confirmar emisión" : "Revisar nota";
+        if (!on) $("create-price-changes").classList.add("d-none");
+    }
+
+    function renderConfirmSummary() {
+        const summary = $("create-confirm-summary");
+        const rows = [
+            ["Cliente", $("c-customer-name").value.trim()],
+            ["Documento", $("c-customer-document").value.trim() || "—"],
+            ["Teléfono", $("c-customer-phone").value.trim() || "—"],
+            ...createLines.map((l) => [`${l.code} · ${l.name}`, `${l.quantity} × ${fmtMoney(l.unit_price)} = ${fmtMoney(l.quantity * Number(l.unit_price))}`]),
+            ["Total (USD)", fmtMoney(createTotal())],
+        ];
+        summary.replaceChildren(...rows.map(([label, value]) => {
+            const row = document.createElement("div");
+            const dt = document.createElement("dt");
+            const dd = document.createElement("dd");
+            dt.textContent = label;
+            dd.textContent = value;
+            row.append(dt, dd);
+            return row;
+        }));
+    }
+
+    function showPriceChanges(changes) {
+        const box = $("create-price-changes");
+        const title = document.createElement("strong");
+        title.textContent = "El precio de un producto cambió. Revise el nuevo importe antes de confirmar.";
+        const list = document.createElement("ul");
+        list.className = "mb-0 mt-1";
+        changes.forEach((change) => {
+            const line = createLines.find((l) => l.product_id === change.product_id);
+            if (line) line.unit_price = change.current;
+            const item = document.createElement("li");
+            item.textContent = `${change.code} · ${change.name}: ${fmtMoney(change.shown)} → ${fmtMoney(change.current)}`;
+            list.appendChild(item);
+        });
+        box.replaceChildren(title, list);
+        box.classList.remove("d-none");
+        renderCreateLines();
+        renderConfirmSummary();
     }
 
     async function submitCreate(e) {
@@ -444,19 +496,28 @@
             errBox.classList.remove("d-none");
             return;
         }
+        if (!confirming) {
+            renderConfirmSummary();
+            setConfirmStep(true);
+            $("create-confirm").scrollIntoView({ block: "nearest" });
+            return;
+        }
 
         const payload = {
             customer_name: customerName,
             customer_document: $("c-customer-document").value.trim(),
             customer_phone: $("c-customer-phone").value.trim(),
             customer_address: $("c-customer-address").value.trim(),
+            // El precio mostrado permite al servidor detectar cambios antes de emitir.
             items: createLines.map((l) => ({
                 product_id: l.product_id,
                 quantity: l.quantity,
+                unit_price: l.unit_price,
             })),
         };
 
         const saveBtn = $("create-save-btn");
+        if (saveBtn.disabled) return;
         saveBtn.disabled = true;
         try {
             const data = await apiFetch("/api/delivery-notes", { method: "POST", body: payload });
@@ -466,8 +527,13 @@
             await Promise.all([loadNotes(), loadProducts()]);
         } catch (error) {
             console.error("Error al crear nota:", error);
+            if (error instanceof ApiError && error.data?.price_changes?.length) {
+                showPriceChanges(error.data.price_changes);
+                return;
+            }
             errBox.textContent = errorMessage(error);
             errBox.classList.remove("d-none");
+            errBox.scrollIntoView({ block: "nearest" });
         } finally {
             saveBtn.disabled = false;
         }
@@ -682,6 +748,7 @@
         });
         $("c-product").addEventListener("change", updateProductHint);
         $("btn-add-line").addEventListener("click", addLine);
+        $("create-back-btn").addEventListener("click", () => setConfirmStep(false));
         $("create-form").addEventListener("submit", submitCreate);
     }
 

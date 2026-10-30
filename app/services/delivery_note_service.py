@@ -8,7 +8,9 @@ Reglas clave:
 - Los items guardan copia de código, nombre y precio del producto para
   preservar el histórico de la nota.
 """
+import re
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 
 from flask_login import current_user
@@ -21,6 +23,7 @@ from app.models.delivery_note import (
     STATUS_ISSUED,
 )
 from app.models.stock_movement import MOVEMENT_ENTRADA, MOVEMENT_SALIDA
+from app.services import inventory_service
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 
 
@@ -41,6 +44,48 @@ def _reject_movement_ids(data):
         raise ValidationError("Los vínculos de movimientos son asignados por el servidor.")
 
 
+# Límites de las columnas de delivery_notes y formatos aceptados para identificar al cliente.
+_FIELD_LIMITS = {"customer_name": ("nombre del cliente", 150), "customer_document": ("documento", 30),
+                 "customer_phone": ("teléfono", 30), "customer_address": ("dirección", 255)}
+_DOCUMENT_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.\- ]{2,29}")
+_PHONE_RE = re.compile(r"\+?[0-9][0-9 ()\-.]{6,29}")
+
+
+def _customer_field(data: dict, field: str) -> str | None:
+    label, limit = _FIELD_LIMITS[field]
+    value = (data.get(field) or "")
+    if not isinstance(value, str):
+        raise ValidationError(f"El campo {label} debe ser texto.")
+    value = value.strip()
+    if len(value) > limit:
+        raise ValidationError(f"El {label} admite como máximo {limit} caracteres.")
+    if value and field == "customer_document" and not _DOCUMENT_RE.fullmatch(value):
+        raise ValidationError("El documento solo admite letras, números, puntos y guiones (p. ej. V-12345678 o J-12345678-9).")
+    if value and field == "customer_phone" and not _PHONE_RE.fullmatch(value):
+        raise ValidationError("El teléfono solo admite dígitos, espacios, paréntesis, guiones y un + inicial (p. ej. 0414-1234567).")
+    return value or None
+
+
+def _item_integer(value, message: str) -> int:
+    try:
+        return inventory_service._integer(value, "item")
+    except ValidationError:
+        raise ValidationError(message) from None
+
+
+def _shown_prices(items) -> dict[int, Decimal]:
+    """Precio que el usuario vio por producto (opcional). Sirve para confirmar cambios de precio."""
+    shown = {}
+    for item in items:
+        if item.get("unit_price") is None:
+            continue
+        try:
+            shown[int(item["product_id"])] = Decimal(str(item["unit_price"])).quantize(Decimal("0.01"))
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValidationError("El precio mostrado de un item no es válido.") from None
+    return shown
+
+
 def _validate_items_payload(items) -> list[tuple[int, int]]:
     """Valida la lista de items y devuelve pares (product_id, quantity)."""
     if not isinstance(items, list) or len(items) == 0:
@@ -53,15 +98,8 @@ def _validate_items_payload(items) -> list[tuple[int, int]]:
             raise ValidationError(f"El item #{index} debe ser un objeto JSON.")
 
         _reject_movement_ids(item)
-        try:
-            product_id = int(item.get("product_id"))
-        except (TypeError, ValueError):
-            raise ValidationError(f"El item #{index} requiere un 'product_id' entero.")
-
-        try:
-            quantity = int(item.get("quantity"))
-        except (TypeError, ValueError):
-            raise ValidationError(f"El item #{index} requiere una 'quantity' entera.")
+        product_id = _item_integer(item.get("product_id"), f"El item #{index} requiere un 'product_id' entero positivo.")
+        quantity = _item_integer(item.get("quantity"), f"El item #{index} requiere una 'quantity' entera.")
         if quantity <= 0:
             raise ValidationError(f"La cantidad del item #{index} debe ser mayor que 0.")
 
@@ -96,11 +134,13 @@ def create_note(data: dict) -> DeliveryNote:
             "registra a nombre del usuario autenticado."
         )
 
-    customer_name = (data.get("customer_name") or "").strip()
+    customer_name = _customer_field(data, "customer_name")
     if not customer_name:
         raise ValidationError("El campo 'customer_name' es obligatorio.")
+    customer = {field: _customer_field(data, field) for field in ("customer_document", "customer_phone", "customer_address")}
 
     parsed_items = _validate_items_payload(data.get("items"))
+    shown_prices = _shown_prices(data.get("items"))
 
     # Valida y bloquea todos los productos ANTES de crear nada (transaccional).
     products: list[tuple[Product, int]] = []
@@ -127,12 +167,21 @@ def create_note(data: dict) -> DeliveryNote:
             "La nota de entrega solo admite precios USD explícitos mientras su moneda documental esté pendiente. "
             "No se mezclan monedas ni se convierten precios.")
 
+    # Con las filas bloqueadas, el precio no puede cambiar entre esta verificación y la emisión.
+    changes = [{"product_id": product.id, "code": product.code, "name": product.name,
+                "shown": str(shown_prices[product.id]), "current": str(product.sale_price)}
+               for product, _ in products
+               if product.id in shown_prices and shown_prices[product.id] != product.sale_price]
+    if changes:
+        raise ConflictError("El precio de uno o más productos cambió. Revise y confirme los importes vigentes.",
+                            payload={"price_changes": changes})
+
     note = DeliveryNote(
         note_number="PENDIENTE",  # se reemplaza tras obtener el id
         customer_name=customer_name,
-        customer_document=(data.get("customer_document") or "").strip() or None,
-        customer_phone=(data.get("customer_phone") or "").strip() or None,
-        customer_address=(data.get("customer_address") or "").strip() or None,
+        customer_document=customer["customer_document"],
+        customer_phone=customer["customer_phone"],
+        customer_address=customer["customer_address"],
         status=STATUS_ISSUED,
         total_amount=0,
         created_by_user_id=current_user.id,

@@ -11,6 +11,15 @@ def create_app(config_class: type = Config) -> Flask:
     from app.services.company_logo_service import get_company_logo_url
     from flask_wtf.csrf import generate_csrf
     app.add_template_global(get_company_logo_url)
+
+    @app.template_global("company_brand")
+    def _company_brand() -> dict:
+        """Membrete de impresiones: nombre, RIF (puede ser vacío) y logo propio u oficial."""
+        from app.services import settings_service
+
+        return {"name": settings_service.get(settings_service.COMPANY_NAME),
+                "tax_id": settings_service.get(settings_service.COMPANY_TAX_ID),
+                "logo_url": get_company_logo_url() or url_for("static", filename="img/logo_oficial_el_conejo.png")}
     app.add_template_global(generate_csrf, "csrf_token")
 
     db.init_app(app)
@@ -126,6 +135,28 @@ def create_app(config_class: type = Config) -> Flask:
     app.register_blueprint(real_2026_bp)
     app.register_blueprint(predictions_bp)
 
+    # Inicio de sesión, recuperación y segundo factor ocurren antes de tener una sesión establecida.
+    _csrf_exempt = ("/api/auth/login", "/api/auth/register", "/api/auth/passwordless",
+                    "/api/auth/password-reset", "/api/auth/mfa/challenge", "/api/auth/mfa/verify",
+                    "/api/auth/google")
+
+    @app.before_request
+    def _require_csrf_for_writes():
+        """Toda escritura con sesión exige X-CSRFToken (auth.js lo añade a fetch del mismo origen)."""
+        from flask_login import current_user
+        from flask_wtf.csrf import validate_csrf
+        from wtforms.validators import ValidationError as CsrfError
+
+        if request.method in ("GET", "HEAD", "OPTIONS") or not app.config.get("WTF_CSRF_ENABLED", True):
+            return None
+        if request.path.startswith(_csrf_exempt) or not current_user.is_authenticated:
+            return None
+        try:
+            validate_csrf(request.headers.get("X-CSRFToken"))
+        except CsrfError:
+            return jsonify({"error": "Token CSRF inválido o ausente. Recargue la página e intente de nuevo."}), 400
+        return None
+
     @app.before_request
     def _block_withdrawn_customer_sales():
         from app.services.rbac_service import block_withdrawn_customer_sales_request
@@ -134,12 +165,28 @@ def create_app(config_class: type = Config) -> Flask:
 
     from app.services.exceptions import ApiError
 
+    def _wants_page() -> bool:
+        """Navegación del navegador a una página: HTML. /api/*, /media/* y fetch(): JSON intacto."""
+        if request.path.startswith(("/api/", "/media/")):
+            return False
+        return request.accept_mimetypes.best_match(("application/json", "text/html")) == "text/html"
+
+    def _error_page(code: int, title: str, message: str):
+        from flask import render_template
+
+        return render_template("error.html", code=code, title=title, message=message), code
+
     @app.errorhandler(ApiError)
     def handle_api_error(error: ApiError):
-        return jsonify({"error": error.message}), error.status_code
+        if _wants_page() and error.status_code in (400, 404):
+            title = "Página no encontrada" if error.status_code == 404 else "No se pudo mostrar la página"
+            return _error_page(error.status_code, title, error.message)
+        return jsonify({**error.payload, "error": error.message}), error.status_code
 
     @app.errorhandler(404)
     def handle_not_found(_):
+        if _wants_page():
+            return _error_page(404, "Página no encontrada", "La dirección no existe o el registro ya no está disponible.")
         return jsonify({"error": "Ruta no encontrada."}), 404
 
     @app.errorhandler(405)

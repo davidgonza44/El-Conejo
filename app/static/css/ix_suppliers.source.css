@@ -90,3 +90,6 @@ html:has(.sp-page){scrollbar-gutter:auto}.sp-page{padding:16px 16px 30px!importa
   #sp-detail .sp-purchase-summary,#sp-detail .sp-product-meta,#sp-detail .sp-detail-grid{grid-template-columns:minmax(0,1fr)}
   #sp-detail .sp-detail-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Propuesta de modificación pendiente en el detalle del proveedor. */
+.sp-change{margin:0 0 16px;padding:14px 16px;border:1px solid #f6d58a;border-radius:12px;background:#fff9eb}.sp-change h3{margin:0 0 4px;font-size:14px;color:#7a4b00}.sp-change p{margin:0 0 8px;font-size:12px;color:#7a5a1a}

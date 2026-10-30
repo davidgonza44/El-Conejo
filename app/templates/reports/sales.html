@@ -1,0 +1,191 @@
+{% extends "ix_base.html" %}
+{# Reporte de ventas (cinco pestañas). Una sola geometría para la vista real
+   (report_controller.sales_report_view) y la de referencia (debug + ?ref=1). Solo lectura:
+   el período y el filtro son formularios GET y la exportación usa /api/reports/sales/export. #}
+{% import "reports/_sales_macros.html" as rs %}
+{% import "inventory/_macros.html" as iv %}
+{% set active_page = "reports" %}
+{% set sidebar_variant = "reports" %}
+{% set reference = view.reference %}
+{% set tab_label = dict(view.tabs)[view.tab] %}
+{% set export_url = None if reference else url_for('reports.export_sales_report', tab=view.tab, start=view.period.start, end=view.period.end, q=view.q or None, category=view.category_id) %}
+
+{% block title %}Reportes de ventas — El Conejo{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_report_sales.css') }}">{% endblock %}
+{% block main_class %} rs-main{% endblock %}
+
+{% block main %}
+<script type="application/json" id="rs-config">{{ {"tab": view.tab, "reference": reference, "page_base": view.page_base, "export_url": export_url} | tojson }}</script>
+<div class="rs-page rs-{{ view.tab }}">
+    <header class="rs-header">
+        <h1>Reportes de ventas</h1>
+        <p>Analiza ingresos, productos, clientes, categorías y métodos de pago del período.</p>
+        <div class="rs-global">
+            <button type="button" class="ix-menu-toggle" id="ix-menu-toggle" aria-controls="ix-sidebar" aria-expanded="false" aria-label="Abrir menú">
+                <i class="ti ti-menu-2" aria-hidden="true"></i>
+            </button>
+            {{ iv.shell_chrome(reference, "Buscar productos, clientes, reportes...") }}
+        </div>
+        <div class="rs-exports">
+            <button type="button" class="rs-button" data-rs-export="pdf"><span class="rs-red">{{ rs.icon('file') }}</span>Exportar PDF</button>
+            <button type="button" class="rs-button" data-rs-export="csv"><span class="rs-green">{{ rs.icon('download') }}</span>Exportar CSV</button>
+        </div>
+    </header>
+
+    <div class="rs-toolbar">
+        {% if reference %}
+        <button type="button" class="rs-button rs-date" data-rs-preview>{{ rs.icon('calendar') }}{{ view.date_range }}<span>&#9662;</span></button>
+        {% else %}
+        <button type="button" class="rs-button rs-date" data-rs-period-toggle aria-controls="rs-period" aria-expanded="false">{{ rs.icon('calendar') }}{{ view.date_range }}<span aria-hidden="true">&#9662;</span></button>
+        {% endif %}
+        <span class="rs-compare">{{ rs.icon('refresh') }}{{ view.compare }}</span>
+        {% if view.q %}
+        <a class="rs-filter" href="{{ view.tab_href[view.tab] }}" title="Quitar el filtro «{{ view.q }}»">Filtro: {{ view.q }} &times;</a>
+        {% endif %}
+        {% if view.category %}
+        <a class="rs-filter" href="{{ view.tab_href[view.tab] }}" title="Quitar el filtro de categoría">Categoría: {{ view.category }} &times;</a>
+        {% endif %}
+    </div>
+
+    {% if not reference %}
+    <form class="rs-card rs-period" id="rs-period" method="get" action="{{ url_for('pages.report_sales') }}" aria-label="Período y filtro del reporte" hidden>
+        <input type="hidden" name="tab" value="{{ view.tab }}">
+        <label>Desde<input type="date" name="start" value="{{ view.period.start }}" max="{{ view.today }}" required></label>
+        <label>Hasta<input type="date" name="end" value="{{ view.period.end }}" max="{{ view.today }}" required></label>
+        {% if view.tab != 'summary' %}
+        <label>Filtrar<input type="search" name="q" value="{{ view.q }}" maxlength="100" placeholder="Nombre, código o RIF"></label>
+        {% endif %}
+        <button type="submit" class="rs-button rs-primary">Aplicar</button>
+    </form>
+    {% endif %}
+
+    <nav class="rs-tabs" aria-label="Secciones del reporte">
+        {% for key, label in view.tabs %}<a href="{{ view.tab_href[key] }}"{% if key == view.tab %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+    </nav>
+
+    {% if view.notes %}
+    <ul class="rs-notes" aria-label="Notas sobre los datos">
+        {% for note in view.notes %}<li>{{ rs.icon('bulb') }}<span>{{ note }}</span></li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {{ rs.kpis(view.kpis) }}
+
+    {% if view.physical %}
+    {{ rs.table(view.table) }}
+
+    {% elif view.tab == 'summary' %}
+    <section class="rs-summary-charts" aria-label="Tendencia y distribución">
+        {{ rs.line_chart(view.chart) }}
+        {{ rs.donut(view.donut, summary=True) }}
+    </section>
+    <section class="rs-summary-bottom" aria-label="Rankings y resumen ejecutivo">
+        {% for block in (view.top_products, view.top_customers) %}
+        <article class="rs-card">
+            {{ rs.card_head(block.title, block.link, block.href) }}
+            <table>
+                <thead><tr>{% for c in block.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                    {% for row in block.rows %}<tr>{% for c in row %}<td>{{ rs.cell(c) }}</td>{% endfor %}</tr>
+                    {% else %}<tr><td class="rs-empty-cell" colspan="{{ block.columns | length }}">{{ block.empty }}</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </article>
+        {% endfor %}
+        <article class="rs-card rs-executive">
+            {{ rs.card_head(view.executive.title) }}
+            {% for ico, tone, label, value in view.executive["items"] %}
+            <div><span class="rs-circle rs-{{ tone }}" aria-hidden="true">{{ rs.icon(ico) }}</span><p><span>{{ label }}</span><strong>{{ value }}</strong></p></div>
+            {% else %}
+            <p class="rs-empty">{{ view.executive.empty }}</p>
+            {% endfor %}
+        </article>
+    </section>
+
+    {% elif view.tab == 'categories' %}
+    <section class="rs-category-grid" aria-label="Ventas por categoría">
+        <div class="rs-category-top">
+            <article class="rs-card">
+                {{ rs.card_head(view.bars.title) }}
+                {% if view.bars.values %}
+                <div class="rs-bars" data-rs-bars='{{ view.bars | tojson }}'><canvas role="img" aria-label="{{ view.bars.title }}"></canvas></div>
+                {% else %}<p class="rs-empty">{{ view.bars.empty }}</p>{% endif %}
+            </article>
+            {{ rs.donut(view.donut) }}
+        </div>
+        <div class="rs-category-right">
+            {{ rs.ranking(view.ranking) }}
+            {{ rs.line_chart(view.chart) }}
+            {{ rs.details(view.summary["items"], view.summary.title, view.summary.icon) }}
+        </div>
+        {{ rs.table(view.table) }}
+    </section>
+
+    {% else %}
+    <section class="{{ 'rs-payment-grid' if view.tab == 'payments' else 'rs-report-grid' }}" aria-label="{{ tab_label }}">
+        <div class="rs-left">
+            {{ rs.table(view.table) }}
+            {{ rs.line_chart(view.chart) }}
+        </div>
+        <div class="rs-right">
+            {{ rs.ranking(view.ranking) }}
+            {{ rs.donut(view.donut) }}
+            {% if view.tab == 'products' %}
+            {% set f = view.featured %}
+            <article class="rs-card rs-featured">
+                {{ rs.card_head(f.title) }}
+                {% if f.product %}
+                <div>
+                    {{ rs.thumb(f.product) }}
+                    <p><strong class="rs-clip" title="{{ f.product.name }}">{{ f.product.name }}</strong><span>{{ f.code }}</span><span>{{ f.category }}</span></p>
+                    <p><span>{{ f.stock }}</span><strong class="rs-{{ f.status_tone }}">{{ f.status }}</strong></p>
+                </div>
+                {% else %}<p class="rs-empty">{{ f.empty }}</p>{% endif %}
+            </article>
+            {% elif view.tab == 'customers' %}
+            {% set a = view.activity %}
+            <article class="rs-card rs-activity">
+                {{ rs.card_head(a.title, a.link, a.href) }}
+                {% for ico, tone, title, who, when, amount, amount_tone in a.rows %}
+                <div class="rs-event">
+                    <span class="rs-circle rs-{{ tone }}" aria-hidden="true">{{ rs.icon(ico) }}</span>
+                    <p>{{ title }}<span class="rs-clip" title="{{ who }}">{{ who }}</span></p>
+                    <time>{{ when }}</time>
+                    <b class="rs-{{ amount_tone }}">{{ amount }}</b>
+                </div>
+                {% else %}<p class="rs-empty">{{ a.empty }}</p>{% endfor %}
+            </article>
+            {% else %}
+            {{ rs.details(view.summary["items"], view.summary.title, view.summary.icon) }}
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+{% for kind, label in (("csv", "CSV"), ("pdf", "PDF")) %}
+<dialog class="rs-export" id="rs-export-{{ kind }}" aria-labelledby="rs-export-{{ kind }}-title">
+    <h2 id="rs-export-{{ kind }}-title">Exportar {{ label }}</h2>
+    <p>Se descargará la pestaña actual con el período y el filtro aplicados.</p>
+    <dl>
+        <div><dt>Reporte</dt><dd>{{ tab_label }}</dd></div>
+        <div><dt>Período</dt><dd>{{ view.date_range }}</dd></div>
+        {% if view.q %}<div><dt>Filtro</dt><dd>{{ view.q }}</dd></div>{% endif %}
+    </dl>
+    {% if reference %}<small>Vista de referencia: la descarga contiene solo datos de ejemplo.</small>{% endif %}
+    <div class="rs-export-actions">
+        <button type="button" class="rs-button" data-rs-close>Cancelar</button>
+        <button type="button" class="rs-button rs-primary" data-rs-confirm="{{ kind }}">{{ rs.icon('download') }}Descargar {{ label }}</button>
+    </div>
+</dialog>
+{% endfor %}
+
+<dialog id="rs-dialog" aria-labelledby="rs-dialog-title">
+    <h2 id="rs-dialog-title">Vista de referencia</h2>
+    <p></p>
+    <button type="button" class="rs-button" data-rs-close>Cerrar</button>
+</dialog>
+<div id="rs-status" role="status" aria-live="polite" hidden></div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/ix_report_sales.js') }}"></script>{% endblock %}

@@ -18,7 +18,7 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models import Category, Customer, Product, Sale, SaleLine
 from app.models.sale import PAYMENT_METHODS, STATUS_COMPLETED
-from app.services.exceptions import ValidationError
+from app.services.exceptions import NotFoundError, ValidationError
 from app.services.product_history_service import previous_range
 from app.services.sales_common import commercial_today, like_term, quantize, utc_boundary
 from app.services.sales_dashboard_service import (MONTHS, _by_category, _comparison, _completed, _day,
@@ -28,6 +28,8 @@ from app.utils.permissions import response_includes_sale_price
 TABS = [('summary', 'Resumen'), ('products', 'Ventas por producto'), ('customers', 'Ventas por cliente'),
         ('categories', 'Ventas por categoría'), ('payments', 'Métodos de pago')]
 LEGACY_TABS = {'trends': 'summary'}
+# Las ventas no registran moneda de origen: los importes no se presentan como USD confirmados.
+CURRENCY_NOTE = 'Importes sin moneda de origen registrada: se presentan como unidades monetarias, sin convertir ni asumir USD.'
 TOP = 5
 SLICES = 6
 MAX_QUERY = 100
@@ -40,6 +42,17 @@ def _q(params: dict) -> str:
     if not isinstance(value, str):
         raise ValidationError("El parámetro 'q' debe ser texto.")
     return value.strip()[:MAX_QUERY]
+
+
+def _category(params: dict) -> int | None:
+    value = params.get('category')
+    if value in (None, ''):
+        return None
+    if not str(value).isdigit() or not 1 <= int(value) <= 2_147_483_647:
+        raise ValidationError("El parámetro 'category' debe ser un id de categoría.")
+    if db.session.get(Category, int(value)) is None:
+        raise NotFoundError('Categoría no encontrada.')
+    return int(value)
 
 
 def _range(start: date, end: date):
@@ -110,7 +123,7 @@ def _evolution(today: date, query, keys: list, names: dict) -> dict:
 
 # --- Ventas por producto -------------------------------------------------------------
 
-def _product_rows(start: date, end: date, q: str = '') -> list[dict]:
+def _product_rows(start: date, end: date, q: str = '', category_id: int | None = None) -> list[dict]:
     units, revenue = func.sum(SaleLine.quantity), func.sum(SaleLine.line_total)
     columns = (Product.id, Product.code, Product.name, Product.image_url, Category.name, Product.current_stock,
                Product.minimum_stock, Product.is_active)
@@ -120,6 +133,8 @@ def _product_rows(start: date, end: date, q: str = '') -> list[dict]:
         term = like_term(q)
         query = query.filter(or_(Product.name.ilike(term, escape=_ESC), Product.code.ilike(term, escape=_ESC),
                                  Category.name.ilike(term, escape=_ESC)))
+    if category_id is not None:
+        query = query.filter(Product.category_id == category_id)
     rows = query.group_by(*columns).order_by(revenue.desc(), Product.name.asc()).all()
     return [{'id': pid, 'code': code, 'name': name, 'image_url': image, 'category': category, 'stock': stock,
              'minimum_stock': minimum, 'is_active': bool(active), 'units': int(qty or 0),
@@ -144,10 +159,10 @@ def _products_by_category(start: date, end: date) -> dict:
     return _slices([{'id': cid, 'name': name, 'value': int(n)} for cid, name, n in rows])
 
 
-def _products(start, end, previous, today, q) -> dict:
+def _products(start, end, previous, today, q, category_id=None) -> dict:
     current, before = _product_totals(start, end), _product_totals(*previous)
     ranking = _product_rows(start, end)
-    rows = ranking if not q else _product_rows(start, end, q)
+    rows = ranking if not (q or category_id) else _product_rows(start, end, q, category_id)
     _share(rows, current['revenue'])
     _share(ranking, current['revenue'])
     top = ranking[:TOP]
@@ -161,6 +176,7 @@ def _products(start, end, previous, today, q) -> dict:
                  'average': (current['average'], _compare(current['average'], before['average']))},
         'rows': rows, 'ranking': top, 'distribution': _products_by_category(start, end),
         'featured': top[0] if top else None, 'evolution': evolution,
+        'category': db.session.get(Category, category_id).name if category_id else None,
     }
 
 
@@ -185,8 +201,10 @@ def _customer_rows(start: date, end: date, q: str = '') -> list[dict]:
 
 
 def _customer_totals(start: date, end: date) -> dict:
-    per_customer = [int(n) for _, n in _completed(start, end).with_entities(Sale.customer_id, func.count(Sale.id))
-                    .group_by(Sale.customer_id).all()]
+    # "Público en general" agrupa ventas anónimas: no cuenta como cliente identificable ni recurrente.
+    per_customer = [int(n) for _, n in _completed(start, end).join(Customer, Customer.id == Sale.customer_id)
+                    .filter(Customer.is_walk_in.is_(False))
+                    .with_entities(Sale.customer_id, func.count(Sale.id)).group_by(Sale.customer_id).all()]
     active = len(per_customer)
     recurring = sum(1 for n in per_customer if n >= 2)
     totals = _totals(start, end)
@@ -291,6 +309,11 @@ def _payment_rows(start: date, end: date) -> list[dict]:
     return result
 
 
+def _weighted_ticket(rows):
+    count = sum(r['count'] for r in rows)
+    return quantize(sum((r['revenue'] for r in rows), _ZERO) / count) if count else None
+
+
 def _payments(start, end, previous, today, q) -> dict:
     ranking, before = _payment_rows(start, end), _payment_rows(*previous)
     previous_by_id = {r['id']: r for r in before}
@@ -302,7 +325,8 @@ def _payments(start, end, previous, today, q) -> dict:
         row['change_percent'] = _pct(row['revenue'], row['previous_revenue'])
     _share(ranking, revenue)
     rows = [r for r in ranking if q.lower() in r['name'].lower()] if q else ranking
-    average, previous_average = _mean([r['average'] for r in ranking]), _mean([r['average'] for r in before])
+    # Ticket promedio por venta ponderado por transacciones (no media simple de promedios por método).
+    average, previous_average = _weighted_ticket(ranking), _weighted_ticket(before)
     with_previous = [r for r in ranking if r['change_percent'] is not None]
     ids = [r['id'] for r in ranking]
     evolution = _evolution(today, Sale.query.filter(Sale.status == STATUS_COMPLETED, Sale.payment_method.in_(ids))
@@ -326,7 +350,10 @@ def _payments(start, end, previous, today, q) -> dict:
 # --- Resumen -------------------------------------------------------------------------
 
 def _active_customers(start: date, end: date) -> int:
-    return int(_completed(start, end).with_entities(func.count(func.distinct(Sale.customer_id))).scalar() or 0)
+    """Clientes identificados con ventas; las ventas a "Público en general" no suman clientes."""
+    return int(_completed(start, end).join(Customer, Customer.id == Sale.customer_id)
+               .filter(Customer.is_walk_in.is_(False))
+               .with_entities(func.count(func.distinct(Sale.customer_id))).scalar() or 0)
 
 
 def _summary(start, end, previous, today, q) -> dict:
@@ -433,6 +460,8 @@ def report(tab: str, params: dict, now=None) -> dict:
         return {'tab': tab, 'timezone': 'America/Caracas', 'today': today, 'period': (start, end),
                 'comparison_period': previous, 'q': q, 'physical': True,
                 'kpis': _physical_totals(start, end), 'rows': _physical_rows(tab, start, end, q)}
-    data = _BUILDERS[tab](start, end, previous, today, q)
+    # "Ver detalle" de una categoría filtra por su id exacto, no por coincidencia de texto.
+    extra = {'category_id': _category(params)} if tab == 'products' else {}
+    data = _BUILDERS[tab](start, end, previous, today, q, **extra)
     return {'tab': tab, 'timezone': 'America/Caracas', 'today': today, 'period': (start, end),
             'comparison_period': previous, 'q': q, **data}

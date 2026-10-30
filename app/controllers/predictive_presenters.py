@@ -11,7 +11,7 @@ from datetime import date
 from decimal import Decimal
 
 from app.services import critical_product_service as risk_service, forecast_service
-from app.services import predictive_data_service as data, predictive_metrics_service as metrics
+from app.services import predictive_metrics_service as metrics
 from app.services import replenishment_service, trend_service
 from app.services.predictive_analysis_service import Analysis, ProductAnalysis
 

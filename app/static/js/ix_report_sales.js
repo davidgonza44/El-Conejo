@@ -24,7 +24,7 @@
             options: {
                 responsive: true, maintainAspectRatio: false, animation: false,
                 plugins: {legend: {position: 'top', align: summary ? 'start' : 'center', labels: {color: '#596a88', boxWidth: 18, boxHeight: 2, padding: summary ? 14 : 10, font: {family: 'Arial', size: summary ? 12 : 10}}},
-                    tooltip: {callbacks: {label: item => `${item.dataset.label}: ${chart.money ? `$ ${item.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}` : item.parsed.y}`}}},
+                    tooltip: {callbacks: {label: item => `${item.dataset.label}: ${chart.money ? item.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2}) : item.parsed.y}`}}},
                 scales: {
                     y: {min: 0, max: chart.y_max, ticks: {autoSkip: false, stepSize: chart.y_step, ...AXIS, font: {family: 'Arial', size: size}, callback: v => chart.money ? money(v) : v}, grid: GRID, border: BORDER},
                     x: {ticks: {autoSkip: false, maxRotation: 0, padding: 8, ...AXIS, font: {family: 'Arial', size: size}}, grid: {color: '#f0f2f6'}, border: BORDER},
@@ -94,6 +94,11 @@
         periodToggle.setAttribute('aria-expanded', String(!periodForm.hidden));
         if (!periodForm.hidden) periodForm.querySelector('input[name="start"]').focus();
     });
+    /* El navegador impide un "Hasta" anterior a "Desde"; el servidor valida igual. */
+    const startInput = periodForm?.querySelector('input[name="start"]');
+    const endInput = periodForm?.querySelector('input[name="end"]');
+    startInput?.addEventListener('change', () => { endInput.min = startInput.value; });
+    if (startInput && endInput) endInput.min = startInput.value;
 
     /* Filas por página: navegación GET en vivo; simulado en referencia. */
     document.querySelectorAll('[data-rs-per-page]').forEach(select => select.addEventListener('change', () => {

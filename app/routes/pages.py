@@ -19,7 +19,6 @@ from app.utils import inventory_reference, predictive_reference, reports_referen
 from app.utils.auth_decorators import forbidden_page, require_page_permission, require_page_roles
 from app.utils.navigation import home_path, settings_tab_allowed
 from app.utils.permissions import (
-    CATEGORIES_WRITE,
     CATEGORIES_PROPOSE,
     CATEGORIES_APPROVE,
     DELIVERY_NOTES_CANCEL,
@@ -158,6 +157,13 @@ def chatbot():
         can_view_stock=role_has_permission(current_user.role, INVENTORY_READ),
         can_view_price=role_has_permission(current_user.role, "products:view_price"),
     )
+
+
+@pages_bp.get("/ayuda", endpoint="help")
+@login_required
+def help_page():
+    """Guía de uso: cada rol ve solo las secciones de los módulos que puede usar."""
+    return render_template("help.html", pro_shell=True, movements_live=True)
 
 
 @pages_bp.get("/profile")

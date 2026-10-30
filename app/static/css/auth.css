@@ -24,6 +24,26 @@ body.auth-brand .btn-primary {
     max-width: 30rem;
 }
 
+/* Páginas de error (403/404/400): misma tarjeta y marca que el login. */
+.auth-error .auth-logo {
+    width: 72px;
+}
+
+.auth-error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.auth-error-help {
+    margin: 20px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid #e6ebf2;
+    color: #66768a;
+    font-size: 13px;
+}
+
 /* El código de desarrollo del passwordless debe poder copiarse fácil. */
 #pwl-dev-token {
     word-break: break-all;

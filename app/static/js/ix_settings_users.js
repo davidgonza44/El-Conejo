@@ -113,7 +113,7 @@
     }
     async function patchUser(user, payload, message) {
         try {
-            const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify(payload) });
+            const { user: updated } = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify(payload) });
             toast(message || `Usuario ${updated.name} actualizado.`);
             await load(updated.id);
         } catch (error) { toast(error.message, true); }
@@ -148,13 +148,14 @@
         try {
             if (state.mode === "create") {
                 Object.assign(payload, { email: els.email.value.trim(), username: els.username.value.trim(), password: els.password.value });
-                const created = await api("/api/users", { method: "POST", body: JSON.stringify(payload) });
+                // POST/PUT /api/users responden {message, user}.
+                const { user: created } = await api("/api/users", { method: "POST", body: JSON.stringify(payload) });
                 toast(`Usuario ${created.name} creado (${userCode(created.id)}).`);
                 await load(created.id);
             } else {
                 if (!els.active.disabled) payload.is_active = els.active.value === "1";
                 if (els.role.disabled) delete payload.role;
-                const updated = await api(`/api/users/${state.selected.id}`, { method: "PUT", body: JSON.stringify(payload) });
+                const { user: updated } = await api(`/api/users/${state.selected.id}`, { method: "PUT", body: JSON.stringify(payload) });
                 toast(`Usuario ${updated.name} actualizado.`);
                 await load(updated.id);
             }

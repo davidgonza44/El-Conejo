@@ -281,3 +281,6 @@ html[data-reference-mode="0"] .mv-activity-copy small { white-space: normal; }
     white-space: normal; text-overflow: ellipsis; line-height: 18px; max-height: 36px;
 }
 .ix-sidebar .mv-location > i { flex-shrink: 0; }
+/* Error del formulario de movimiento: rojo, junto a Cantidad y oculto mientras no haya mensaje. */
+.mv-field-error { background: #fdecee; color: #b42318; border: 1px solid #f7c1c7; }
+.mv-field-error:empty { display: none; }

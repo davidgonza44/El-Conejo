@@ -79,7 +79,6 @@ from app.services.historical_validation_service import (
     has_dangerous_cell_control,
     has_dangerous_control,
     normalize_code,
-    normalize_identifier,
     normalize_name,
     resolve_column_mapping,
     starts_like_formula,

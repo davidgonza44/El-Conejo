@@ -1,26 +1,5 @@
-{% extends "base_auth.html" %}
-
-{% block title %}Acceso denegado — Ferretería El Conejo{% endblock %}
-
-{% block content %}
-<div class="page page-center">
-    <div class="container container-tight py-4">
-        <div class="empty">
-            <div class="empty-header">403</div>
-            <p class="empty-title">No tiene permisos para acceder a esta sección.</p>
-            <p class="empty-subtitle text-secondary">
-                No tiene permisos para acceder a esta sección.
-                Si cree que es un error, contacte al administrador del sistema.
-            </p>
-            <div class="empty-action">
-                <a href="{{ url_for('pages.login') }}" class="btn">
-                    <i class="ti ti-arrow-left me-2"></i>Volver al login
-                </a>
-                <button type="button" class="btn btn-danger" onclick="logout()">
-                    <i class="ti ti-logout me-2"></i>Cerrar sesión
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% extends "error.html" %}
+{# 403 HTML de las páginas protegidas (forbidden_page) y destino de /access-denied. #}
+{% set code = 403 %}
+{% set title = "Acceso restringido" %}
+{% set message = "No tiene permisos para acceder a esta sección." %}

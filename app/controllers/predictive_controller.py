@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from functools import wraps
 
 from flask import request, send_file, url_for
@@ -19,7 +18,7 @@ from flask_wtf.csrf import ValidationError as CsrfValidationError, validate_csrf
 
 from app.controllers import predictive_presenters as fmt
 from app.services import critical_product_service as risk_service, forecast_service, predictive_analysis_service
-from app.services import predictive_data_service as data, predictive_metrics_service as metrics, purchase_service
+from app.services import predictive_data_service as data, predictive_metrics_service as metrics
 from app.services import replenishment_service, trend_service
 from app.services.exceptions import ValidationError
 from app.services.export_files import csv_file
@@ -520,7 +519,7 @@ def _error_patterns(items) -> list[tuple[str, str, str]]:
     return [row("Demanda intermitente (≥ 50% de períodos en 0)", intermittent, "red"),
             row("Alta volatilidad (CV ≥ 1)", volatile, "orange"),
             row("Historial corto", short, "orange"),
-            (f"Error concentrado en el 20% de productos", f"{top_share:.1f}%", "red" if top_share > 60 else "green")]
+            ("Error concentrado en el 20% de productos", f"{top_share:.1f}%", "red" if top_share > 60 else "green")]
 
 
 @_deferred_view

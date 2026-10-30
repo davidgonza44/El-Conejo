@@ -1,0 +1,9 @@
+{# Membrete de las páginas imprimibles: logo, empresa y RIF de Configuración > General. #}
+{% set brand = company_brand() %}
+<div class="print-letterhead" style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+    <img src="{{ brand.logo_url }}" alt="Logo de {{ brand.name }}" width="56" height="56" style="width:56px;height:56px;object-fit:contain">
+    <div>
+        <strong style="display:block;font-size:17px;line-height:1.3;color:#101832">{{ brand.name }}</strong>
+        {% if brand.tax_id %}<span style="font-size:13px;color:#5b6b85">RIF: {{ brand.tax_id }}</span>{% endif %}
+    </div>
+</div>

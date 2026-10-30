@@ -1,0 +1,144 @@
+{% extends "ix_base.html" %}
+{# Dashboard de Reportes: solo existe como réplica visual (debug + ?ref=1) con el fixture de
+   app/utils/reports_reference.py. En modo normal /reports redirige a Inicio. Sin escrituras. #}
+{% import "inventory/_macros.html" as iv %}
+{% import "predictive/_macros.html" as px %}
+{% set active_page = "reports" %}
+{% set sidebar_variant = "reports" %}
+{% set view = fixture %}
+
+{% block title %}Reportes — El Conejo{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/predictive.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_inventory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_reports.css') }}">
+{% endblock %}
+{% block main_class %} iv-page rp-page{% endblock %}
+
+{% macro legend(items) %}
+<ul class="ix-chart-legend rp-legend">
+    {% for label, dashed in items %}<li><span class="ix-swatch{{ ' is-dashed' if dashed }}"></span><span>{{ label }}</span></li>{% endfor %}
+</ul>
+{% endmacro %}
+
+{% block main %}
+{{ iv.header("Reportes", "", view.search_placeholder, reference_mode=reference_mode) }}
+
+<div class="rp-toolbar">
+    <button type="button" class="rp-date"><i class="ti ti-calendar" aria-hidden="true"></i>{{ view.date_range }}<i class="ti ti-chevron-down rp-date-chevron" aria-hidden="true"></i></button>
+    <span class="rp-compare">{{ view.compare }}</span>
+    <div class="px-actions rp-actions">
+        {% for label, ico, tone in view.actions %}
+        <button type="button" class="px-btn"{% if not label %} aria-label="Actualizar"{% endif %}><i class="ti {{ ico }}{{ ' rp-ico-' ~ tone if tone }}" aria-hidden="true"></i>{{ label or '' }}</button>
+        {% endfor %}
+    </div>
+</div>
+
+{{ iv.kpis(view.kpis) }}
+
+<section class="rp-row rp-charts" aria-label="Ventas e inventario">
+    {% set s = view.sales_chart %}
+    <article class="ix-card rp-chart-card">
+        <div class="ix-card-head iv-card-head"><h2 class="ix-card-title">{{ s.title }}</h2><span class="rp-range">{{ s.range }}</span></div>
+        {{ legend(s.legend) }}
+        <div class="rp-chart" data-line-chart='{{ s | tojson }}'><canvas role="img" aria-label="{{ s.title }}"></canvas><div class="ix-chart-tip rp-chart-tip"></div></div>
+    </article>
+    {% set c = view.category_chart %}
+    <article class="ix-card rp-chart-card">
+        <div class="ix-card-head iv-card-head"><h2 class="ix-card-title">{{ c.title }}</h2><span class="rp-range">{{ c.range }}</span></div>
+        <div class="rp-bars" data-bar-chart='{{ c | tojson }}'><canvas role="img" aria-label="{{ c.title }}"></canvas></div>
+    </article>
+    {{ iv.donut_card(view.donut, "rp-donut", "rp-donut-card") }}
+</section>
+
+<section class="rp-row rp-lists" aria-label="Productos, movimientos y alertas">
+    {% set t = view.top %}
+    <article class="ix-card rp-top">
+        {{ iv.card_head(t.title, t.link) }}
+        <div class="rp-table-wrap">
+            <table class="rp-table rp-top-table">
+                <thead><tr>{% for col in t.columns %}<th scope="col">{{ col }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                    {% for p, cat, units, revenue in t.rows %}
+                    <tr><td class="rp-rank">{{ loop.index }}</td><td>{{ iv.product(p) }}</td><td class="px-cell-muted">{{ cat }}</td><td>{{ units }}</td><td>{{ revenue }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="rp-table-footer">{{ t.footer }}</p>
+    </article>
+    {% set a = view.activity %}
+    <article class="ix-card rp-activity">
+        {{ iv.card_head(a.title, a.link) }}
+        <ul class="iv-activity-list">
+            {% for ico, tone, title, desc, when, amount, arrow in a.rows %}
+            <li class="ix-row">
+                <span class="ix-row-icon tone-{{ tone }}" aria-hidden="true">{{ iv.icon(ico) }}</span>
+                <span><span class="ix-row-title">{{ title }}</span><span class="ix-row-desc">{{ desc }}</span></span>
+                <span class="ix-row-time">{{ when }}</span>
+                <span class="ix-row-amount is-{{ 'green' if arrow == 'up' else 'red' }}">{{ amount }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </article>
+    {% set al = view.alerts %}
+    <article class="ix-card rp-alerts">
+        {{ iv.card_head(al.title, al.link) }}
+        <ul class="rp-alert-list">
+            {% for name, desc in al.rows %}
+            <li><span class="iv-alert-icon" aria-hidden="true">{{ iv.icon('svg:alert-triangle') }}</span><span><span class="ix-row-title">{{ name }}</span><span class="ix-row-desc">{{ desc }}</span></span><i class="ti ti-chevron-right rp-alert-chevron" aria-hidden="true"></i></li>
+            {% endfor %}
+        </ul>
+        <a href="#" class="rp-alerts-more" aria-disabled="true">{{ al.more }}</a>
+    </article>
+</section>
+
+{% set p = view.predictive %}
+<section class="ix-card rp-forecast" aria-labelledby="rp-pred-title">
+    <div class="rp-pred-head"><h2 class="rp-pred-title" id="rp-pred-title">{{ p.title }}</h2><p class="rp-pred-subtitle">{{ p.subtitle }}</p></div>
+    <div class="rp-pred-kpis">
+        {% for ico, tone, label, value, sub in p.kpis %}
+        <div class="rp-pkpi"><span class="rp-pkpi-icon tone-{{ tone }}" aria-hidden="true">{{ px.icon(ico) }}</span><span class="rp-pkpi-body"><span class="rp-pkpi-label">{{ label }}</span><span class="rp-pkpi-value">{{ value }}</span><span class="rp-pkpi-sub">{{ sub }}</span></span></div>
+        {% endfor %}
+    </div>
+    <div class="rp-pred-body">
+        {% set f = p.forecast %}
+        <div>
+            <div class="rp-forecast-head"><div><h3 class="ix-card-title">{{ f.title }}</h3><p class="rp-card-subtitle">{{ f.subtitle }}</p></div><span class="rp-range">{{ f.range }}</span></div>
+            {{ legend(f.legend) }}
+            <div class="rp-forecast-chart" data-forecast-chart='{{ f | tojson }}'><canvas role="img" aria-label="{{ f.title }}"></canvas></div>
+        </div>
+        {% set r = p.risk %}
+        <div class="rp-risk">
+            <h3 class="ix-card-title">{{ r.title }}</h3>
+            <div class="rp-risk-body">
+                <div class="iv-donut rp-risk-donut" data-donut='{{ r["items"] | map(attribute=3) | list | tojson }}' data-tones='{{ r["items"] | map(attribute=2) | list | tojson }}'>
+                    <canvas role="img" aria-label="{{ r.title }}"></canvas>
+                    <div class="ix-donut-center"><span class="ix-donut-value">{{ r.center_value }}</span><span class="ix-donut-label">{{ r.center_label }}</span></div>
+                </div>
+                <ul class="rp-risk-legend">
+                    {% for name, sub, tone, _ in r["items"] %}<li><span class="ix-legend-dot iv-dot-{{ tone }}"></span><span class="ix-legend-name">{{ name }}</span><span class="ix-legend-sub">{{ sub }}</span></li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% set cr = p.critical %}
+        <div class="rp-critical">
+            {{ iv.card_head(cr.title, cr.link) }}
+            <div class="rp-table-wrap">
+                <table class="rp-table rp-critical-table">
+                    <thead><tr>{% for col in cr.columns %}<th scope="col">{{ col }}</th>{% endfor %}</tr></thead>
+                    <tbody>
+                        {% for name, (risk, tone), stock, action in cr.rows %}
+                        <tr><td>{{ loop.index }}</td><td>{{ name }}</td><td><span class="rp-pill is-{{ tone }}">{{ risk }}</span></td><td>{{ stock }}</td><td>{{ action }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ix_reports.js') }}"></script>
+{% endblock %}

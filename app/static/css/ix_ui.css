@@ -717,3 +717,35 @@
     .po-doc-lines tbody tr { padding: 12px 14px; }
     .po-totals { width: 100%; }
 }
+
+/* Pantallas Tabler dentro del shell "ix" (base_app.html): barra superior ligera y contenido sin
+   los rellenos del layout antiguo. */
+.app-legacy-main { padding-top: 12px; }
+.app-legacy-topbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 24px 4px; }
+.app-legacy-topbar .ix-menu-toggle { margin-right: auto; }
+.app-legacy-actions { display: flex; align-items: center; gap: 14px; }
+.app-legacy-body { padding: 0 24px 32px; max-width: 1440px; }
+body.ix-body { background-color: var(--ix-bg, #f6f8fb); }
+@media (max-width: 640px) { .app-legacy-topbar, .app-legacy-body { padding-left: 12px; padding-right: 12px; } }
+
+/* ------------------------------------------------------------------ */
+/* Acabados globales del shell: superficies del navegador y accesibilidad */
+/* ------------------------------------------------------------------ */
+.ix-body ::selection { background: #cfe0fd; color: var(--ds-ink); }
+.ix-body { scrollbar-color: #c3cddb transparent; }
+.ix-body ::-webkit-scrollbar { width: 10px; height: 10px; }
+.ix-body ::-webkit-scrollbar-thumb { background: #c9d3e1; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+.ix-body ::-webkit-scrollbar-thumb:hover { background-color: #a9b6c9; }
+.ix-body ::-webkit-scrollbar-track { background: transparent; }
+/* Foco visible y consistente para teclado en todas las pantallas. */
+.ix-main :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+.ix-sidebar :is(a, button):focus-visible { outline: 2px solid var(--ds-primary); outline-offset: 2px; }
+/* Cifras alineadas en tablas y KPI: las columnas numéricas se leen sin saltos. */
+.ix-main table, .ix-kpi-value, .rs-kpi-value strong, .rh-kpis strong { font-variant-numeric: tabular-nums; }
+/* Diálogos nativos: fondo atenuado uniforme. */
+.ix-body dialog::backdrop { background: rgba(15, 23, 42, .38); backdrop-filter: blur(2px); }
+/* Enlaces y botones del menú responden con transición corta, sin animar el layout. */
+.ix-main a, .ix-main button { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }
+@media (prefers-reduced-motion: reduce) { .ix-main a, .ix-main button, .ix-nav a { transition: none; } }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

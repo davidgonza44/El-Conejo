@@ -138,3 +138,8 @@ body:has(.rs-page){--rs-color-1:#0866f5;--rs-color-2:#25b65a;--rs-color-3:#ffbb2
 .rs-payments .rs-table-card{height:auto;min-height:320px}.rs-payments .rs-donut-card{height:auto;min-height:216px}.rs-payments .rs-donut-body{padding-bottom:14px}
 .rs-category-grid{grid-template-rows:248px minmax(332px,auto)}.rs-categories .rs-ranking{height:auto;min-height:212px}
 .rs-payments .rs-ranking{height:auto;min-height:184px}
+/* Tablet y móvil: cabecera en flujo normal; el menú, la búsqueda y la exportación no se superponen al subtítulo. */
+@media(max-width:1100px){.rs-header{height:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px}.rs-global,.rs-exports{position:static}.rs-global{order:-1;justify-content:space-between;width:100%}.rs-exports{flex-wrap:wrap}}
+@media(max-width:600px){.rs-exports .rs-button{min-width:0;flex:1}}
+/* Notas sobre la calidad de los datos (moneda no acreditada, categoría actual). */
+.rs-notes{list-style:none;margin:-4px 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}.rs-notes li{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:17px;color:#5b4a14;background:#fff8e6;border:1px solid #f6e2a9;border-radius:8px;padding:7px 12px}.rs-notes .st-icon{width:16px;height:16px;color:#c98a00;flex-shrink:0;margin-top:1px}

@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo_oficial_el_conejo.png') }}">
 <title>Pedido {{ order.order_number }} — Versión para impresión</title>
 <style>
     body { margin: 24px; font: 12px/1.45 Inter, 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #fff; }
     header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
     h1 { margin: 0 0 4px; font-size: 20px; }
-    .brand { margin: 0; font-weight: 700; color: #1a73e8; }
     .meta { margin: 0; color: #4b5563; }
     .actions button { padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
     dl { display: grid; grid-template-columns: 150px 1fr 150px 1fr; gap: 4px 12px; margin: 0 0 16px; }
@@ -25,7 +25,7 @@
 <body>
 <header>
     <div>
-        <p class="brand">Ferretería y Construcciones El Conejo C.A.</p>
+        {% include "_print_letterhead.html" %}
         <h1>Pedido {{ order.order_number }}</h1>
         <p class="meta">Impreso: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
     </div>
