@@ -95,15 +95,17 @@ class SupplierAccessTests(IsolatedCase):
         self.assertEqual(admin.post(path + "/approve", json={}).status_code, 200)
         proposed = self.clients["asistente"].patch(path, json=payload("Cambio propuesto"))
         self.assertEqual(proposed.status_code, 200)
-        self.assertEqual(proposed.get_json()["approval_status"], "pending")
-        self.assertFalse(proposed.get_json()["is_active"])
+        self.assertEqual(proposed.get_json()["approval_status"], "approved")
+        self.assertTrue(proposed.get_json()["is_active"])
+        self.assertIsNotNone(proposed.get_json()["pending_change"])
         self.assertEqual(admin.post(path + "/reject", json={}).status_code, 400)
         rejected = admin.post(path + "/reject", json={"reason": "Datos por verificar"})
         self.assertEqual(rejected.status_code, 200)
-        self.assertEqual(rejected.get_json()["approval_status"], "rejected")
-        self.assertEqual(rejected.get_json()["rejection_reason"], "Datos por verificar")
-        rows = admin.get("/api/suppliers?approval_status=rejected").get_json()["items"]
-        self.assertIn(supplier_id, [row["id"] for row in rows])
+        self.assertEqual(rejected.get_json()["approval_status"], "approved")
+        self.assertIsNone(rejected.get_json()["pending_change"])
+        self.assertEqual(rejected.get_json()["changes_history"][0]["rejection_reason"], "Datos por verificar")
+        rows = admin.get("/api/suppliers?approval_status=pending").get_json()["items"]
+        self.assertNotIn(supplier_id, [row["id"] for row in rows])
 
     def test_authorization_denials_and_decided_state_conflicts(self):
         admin = self.clients["admin"]

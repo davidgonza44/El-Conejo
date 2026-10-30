@@ -34,7 +34,7 @@ def _mutation_guard():
     if not request.is_json:
         raise ValidationError("Las operaciones de compras requieren JSON.", status_code=415)
     if not queries.available():
-        raise ValidationError("Compras no está disponible. Falta aplicar la migración de órdenes de compra.", status_code=503)
+        raise ValidationError("Compras no está disponible. Falta aplicar la migración de Compras.", status_code=503)
 
 
 def _context(view):
@@ -59,6 +59,17 @@ def page():
     return render_template("purchases/page.html", **_context(view))
 
 
+def approvals():
+    from app.services import purchase_approval_service
+    return render_template("purchases/approvals.html", view=purchase_approval_service.listing(request.args),
+                           reference_mode=False, pro_shell=True)
+
+
+def approvals_listing():
+    from app.services import purchase_approval_service
+    return jsonify(purchase_approval_service.listing(request.args))
+
+
 def listing():
     return jsonify(purchase_reference.view(request.args) if reference() else queries.list_orders(request.args))
 
@@ -69,6 +80,8 @@ def detail_data(order_id):
         if data is None:
             abort(404)
         return data
+    if not queries.available():
+        raise ValidationError("Falta aplicar la migración de Compras.", status_code=503)
     return service.get_order(order_id).to_dict()
 
 
@@ -156,7 +169,8 @@ def export():
     else:
         if not queries.available():
             raise ValidationError("Falta la migración de compras.", status_code=503)
-        rows = [row.to_dict(False) for row in queries.relations(queries.query(queries.filters(request.args))).order_by(service.PurchaseOrder.id.desc()).all()]
+        from app.services.purchase_export_service import bounded_rows
+        rows = [row.to_dict(False) for row in bounded_rows(queries.relations(queries.query(queries.filters(request.args))).order_by(service.PurchaseOrder.id.desc()))]
     show_money = role_has_permission(current_user.role, "products:view_cost")
     records = [{"number": row["order_number"], "supplier": row["supplier"]["name"],
                 "date": row["ordered_date"], "status": row["status_label"], "products": row["units"],

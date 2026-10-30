@@ -109,7 +109,7 @@ def _supplier(value, lock=False):
 def _locked_links(product_id):
     return db.session.execute(
         select(ProductSupplier).where(ProductSupplier.product_id == product_id)
-        .order_by(ProductSupplier.id).with_for_update()
+        .order_by(ProductSupplier.id).with_for_update().execution_options(populate_existing=True)
     ).scalars().all()
 
 
@@ -275,10 +275,10 @@ def create_link(product_id, data):
         raise ValidationError("Indique el costo del proveedor.")
     currency = require_currency(data.get("purchase_price_currency"), "purchase_price_currency")
     try:
+        supplier = _supplier(data.get("supplier_id"), lock=True)
         product = _product(product_id, lock=True)
         if not product.is_active:
             raise ValidationError("El producto está inactivo.")
-        supplier = _supplier(data.get("supplier_id"), lock=True)
         if not supplier.is_active:
             raise ValidationError("Seleccione un proveedor activo.")
         links = _locked_links(product.id)
@@ -314,12 +314,16 @@ def update_link(product_id, link_id, data):
     if not data:
         raise ValidationError("No hay cambios para guardar.")
     try:
+        identity = ProductSupplier.query.filter_by(id=link_id, product_id=product_id).first()
+        if identity is None:
+            raise NotFoundError("Asociación no encontrada.")
+        supplier = _supplier(identity.supplier_id, lock=True)
         _product(product_id, lock=True)
         links = _locked_links(product_id)
         link = next((row for row in links if row.id == link_id), None)
         if link is None:
             raise NotFoundError("Asociación no encontrada.")
-        link.supplier = _supplier(link.supplier_id, lock=True)
+        link.supplier = supplier
         active = _flag(data, "is_active")
         preferred = _flag(data, "is_preferred")
         if active is False and preferred is True:

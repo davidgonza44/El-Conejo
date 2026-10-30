@@ -34,7 +34,32 @@
     const lines = row.items.map(line => `<tr><td>${esc(line.product_name)}</td><td>${esc(line.product_code)}</td><td>${line.quantity}</td><td>${money(line.unit_cost, row.currency)}</td><td>${money(line.subtotal, row.currency)}</td><td><a href="#rc-inventory">MOV-${line.movement_id}</a></td></tr>`).join('');
     const inventory = row.movements.map(m => `<tr><td>MOV-${m.id}</td><td>${esc(m.product)}</td><td>${esc(m.movement_type)}</td><td>${m.quantity}</td><td>${m.previous_stock} → ${m.new_stock}</td></tr>`).join('');
     openDrawer('Detalle de recepción', row.number + ' · ' + row.status_label, `<div class="rc-scroll"><h3>INFORMACIÓN GENERAL</h3><div class="rc-info">${info.map(([label,value])=>`<p><strong>${label}</strong>${esc(value)}</p>`).join('')}</div><h3>PRODUCTOS RECIBIDOS</h3><div class="rc-lines"><table><thead><tr><th>Producto</th><th>Código</th><th>Cantidad</th><th>Costo unitario</th><th>Subtotal</th><th>Movimiento</th></tr></thead><tbody>${lines || '<tr><td colspan="6">Detalle no incluido en la referencia visual.</td></tr>'}</tbody></table></div><h3>NOTAS</h3><p class="rc-notes">${esc(row.notes || 'Sin notas.')}</p><h3 id="rc-inventory" tabindex="-1">INVENTARIO</h3><div class="rc-lines"><table><thead><tr><th>Referencia</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock</th></tr></thead><tbody>${inventory || '<tr><td colspan="5">Sin movimientos en esta referencia visual.</td></tr>'}</tbody></table></div><h3>AUDITORÍA</h3><p>Creada: ${esc(row.created_at)}</p></div><footer><button class="po-btn" data-close>Cerrar</button><a class="po-btn" href="${poURL(row)}">Ver orden de compra</a><a class="po-btn" target="_blank" rel="noopener" href="${receiptURL(id,'print')}">Imprimir</a><a class="po-btn is-primary" href="${receiptURL(id,'pdf')}">PDF</a></footer>`);
+    if (!ctx.reference) correctionSection(row);
     if (movements) document.getElementById('rc-inventory').focus();
+  }
+  function correctionSection(row) {
+    const history = row.corrections || [];
+    const pending = history.some(item => item.status === 'pending');
+    let html = '<h3>CORRECCIONES Y CANTIDADES EFECTIVAS</h3><p>El comprobante original se conserva. Las diferencias aprobadas generan movimientos compensatorios.</p>';
+    html += `<p>Original: ${row.original_units} unidades. Recibido neto: ${row.units} unidades.</p>`;
+    if (!row.supplier_snapshot_available) html += '<p>Documento histórico sin copia de los datos del proveedor al aprobarse; se muestran los actuales.</p>';
+    html += history.map(item => `<article><h4>COR-${item.id} · ${esc(item.status)}</h4><p>${esc(item.reason)} · ${esc(item.requested_by)} · ${esc(item.created_at)} UTC</p><ul>${item.items.map(line=>`<li>${esc(line.product_name)}: ${line.previous_quantity} → ${line.target_quantity}${line.movement_id ? ' · MOV-'+line.movement_id : ''}</li>`).join('')}</ul>${item.decided_at ? `<p>Decidida por ${esc(item.decided_by)} · ${esc(item.decided_at)} UTC · ${esc(item.decision_note || '')}</p>` : ''}${ctx.canApprove && item.status === 'pending' && item.requested_by_user_id !== ctx.userId ? `<form class="rc-correction-decision" data-receipt="${row.id}" data-correction="${item.id}"><label>Motivo de rechazo<textarea name="reason" maxlength="1000"></textarea></label><p class="rc-error" role="alert"></p><button class="po-btn is-primary" type="submit" value="approve">Aprobar corrección</button><button class="po-btn" type="submit" value="reject">Rechazar corrección</button></form>` : ''}</article>`).join('');
+    if (ctx.canReceive && row.can_correct && !pending) html += `<form id="rc-correction-form" data-receipt="${row.id}"><h4>Solicitar corrección</h4><p>Indique la cantidad total que debió quedar recibida de cada producto. Requiere aprobación administrativa.</p>${row.correction_items.map(line=>`<label>${esc(line.product_name)} · recibido neto: ${line.quantity_received}<input type="number" data-correction-line="${line.id}" min="0" max="${line.quantity_ordered}" step="1" value="${line.quantity_received}" required></label>`).join('')}<label>Motivo obligatorio<textarea name="reason" maxlength="1000" required></textarea></label><p class="rc-error" role="alert"></p><button class="po-btn is-primary" type="submit">Solicitar corrección</button></form>`;
+    body.querySelector('.rc-scroll').insertAdjacentHTML('beforeend', html);
+  }
+  async function saveCorrection(form, action) {
+    const buttons = [...form.querySelectorAll('button')];
+    if (buttons.some(button=>button.disabled)) return;
+    const error = form.querySelector('.rc-error'); error.textContent = '';
+    const reason = form.elements.reason.value.trim();
+    if (action === 'reject' && !reason) { error.textContent = 'Indique el motivo del rechazo.'; return; }
+    buttons.forEach(button=>button.disabled=true);
+    try {
+      const path = '/api/purchases/receptions/'+form.dataset.receipt+'/corrections';
+      if (action) await api(path+'/'+form.dataset.correction+'/'+action, 'POST', action === 'reject' ? {reason} : {});
+      else await api(path, 'POST', {reason, items:[...form.querySelectorAll('[data-correction-line]')].map(input=>({line_id:Number(input.dataset.correctionLine),quantity:Number(input.value)}))});
+      location.href = '/purchases/receptions?detail='+form.dataset.receipt;
+    } catch (failure) { error.textContent = failure.message; buttons.forEach(button=>button.disabled=false); }
   }
   async function newReception(preselect) {
     selectedOrder = null;
@@ -59,7 +84,7 @@
     if (ticket !== orderRequest || !drawer.open) return;
     selectedOrder = order;
     body.querySelector('[name=supplier]').value = order.supplier.name;
-    body.querySelector('[name=received_at]').min = order.ordered_date;
+    body.querySelector('[name=received_at]').min = order.approved_date || order.ordered_date;
     const rows = order.items.map(line => `<tr><td>${esc(line.product_name)}<br><span>${esc(line.product_code)}</span></td><td>${line.quantity_ordered}</td><td>${line.quantity_received}</td><td>${line.quantity_pending}</td><td><input data-line="${line.id}" type="number" min="0" max="${line.quantity_pending}" step="1" value="${ctx.reference ? line.quantity_pending : 0}" required aria-label="Recibir ${esc(line.product_name)}"></td><td>${money(line.unit_cost, order.currency)}</td></tr>`).join('');
     document.getElementById('rc-order-lines').innerHTML = `<table><colgroup><col style="width:25%"><col><col><col><col style="width:17%"><col></colgroup><thead><tr><th>Producto</th><th>Cantidad ordenada</th><th>Recibida</th><th>Pendiente</th><th>Recibir ahora</th><th>Costo unitario</th></tr></thead><tbody>${rows}</tbody></table>`;
     document.getElementById('rc-order-lines').addEventListener('input', preview);
@@ -136,6 +161,8 @@
   document.getElementById('rc-inline').addEventListener('change', e => { if (e.target.type !== 'search') e.currentTarget.requestSubmit(); });
   document.getElementById('rc-per-page').addEventListener('change', e => { const url = new URL(location.href);url.searchParams.set('per_page',e.target.value);url.searchParams.delete('page');location.href=url; });
   document.addEventListener('submit', e => {
+    if (e.target.id === 'rc-correction-form') { e.preventDefault(); saveCorrection(e.target); }
+    if (e.target.classList.contains('rc-correction-decision')) { e.preventDefault(); saveCorrection(e.target, e.submitter.value); }
     if (e.target.id === 'rc-receive-form') { e.preventDefault(); save(e.target); }
     if (e.target.id === 'rc-export-form') {
       e.preventDefault(); const params = new URLSearchParams(location.search);params.delete('page');params.delete('detail');

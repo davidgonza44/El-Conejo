@@ -45,7 +45,7 @@ def _order_ref(order_id):
             "prepared_by": order.creator.name if order.creator else None,
             "prepared_at": order.created_at.isoformat() if order.created_at else None,
             "quote_number": quote.quote_number if quote else None,
-            "supplier_name": order.supplier.name if order.supplier else None}
+            "supplier_name": order.supplier_document().get("name") if order.supplier else None}
 
 
 def _source_ref(order_id):

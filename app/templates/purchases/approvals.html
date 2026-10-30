@@ -1,0 +1,12 @@
+{% extends "ix_base.html" %}
+{% set active_page = "purchase_approvals" %}{% set sidebar_variant = "purchases" %}
+{% block title %}Pendientes de aprobación · Compras{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ix_purchases.css') }}">{% endblock %}
+{% block main_class %}po-page ds-page{% endblock %}
+{% block main %}
+<header class="po-header"><div><h1 class="ix-title">Pendientes de aprobación</h1><p>Órdenes, proveedores, cierres y correcciones, del más antiguo al más reciente.</p></div><a class="po-btn" href="/purchases">Ver órdenes de compra</a></header>
+<p role="status">{{ view.pagination.total }} decisiones pendientes.</p>
+<section class="po-card"><div class="po-table-scroll"><table class="po-table"><thead><tr><th scope="col">Trámite</th><th scope="col">Referencia</th><th scope="col">Solicitado por</th><th scope="col">Fecha UTC</th><th scope="col">Antigüedad</th><th scope="col">Acción</th></tr></thead><tbody>
+{% for row in view['items'] %}<tr><td>{{ row.label }}</td><td>{{ row.reference }}</td><td>{{ row.responsible }}</td><td><time datetime="{{ row.created_at }}">{{ row.created_at }}</time></td><td>{{ row.age_days }} días</td><td><a class="po-btn" href="{{ row.href }}">Revisar</a></td></tr>{% else %}<tr><td colspan="6">No hay decisiones pendientes.</td></tr>{% endfor %}
+</tbody></table></div><nav class="po-pagination" aria-label="Paginación de pendientes">{% if view.pagination.page > 1 %}<a href="?page={{ view.pagination.page-1 }}">Anterior</a>{% endif %}<span>Página {{ view.pagination.page }} de {{ view.pagination.pages }}</span>{% if view.pagination.page < view.pagination.pages %}<a href="?page={{ view.pagination.page+1 }}">Siguiente</a>{% endif %}</nav></section>
+{% endblock %}

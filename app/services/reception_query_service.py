@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import db
 from app.models import User, StockMovement, Product
+from app.models.purchase_correction import PurchaseReceptionCorrection as Correction, PurchaseReceptionCorrectionLine as CL
 from app.models.purchase import PurchaseOrder as PO, PurchaseOrderLine as POL, PurchaseReception as R, PurchaseReceptionLine as RL, Supplier
 from app.services.purchase_service import day, integer, money
 from app.services.inventory_service import COMMERCIAL_ZONE
@@ -50,6 +51,14 @@ def sorts():
 def projection():
     totals = db.session.query(RL.reception_id.label('id'), func.sum(RL.quantity).label('units'),
         func.sum(RL.quantity * POL.unit_cost).label('amount')).join(POL, POL.id == RL.purchase_order_line_id).group_by(RL.reception_id).subquery()
+    corrections = (db.session.query(Correction.reception_id.label('receipt_id'),
+        func.sum(CL.target_quantity-CL.previous_quantity).label('units'),
+        func.sum((CL.target_quantity-CL.previous_quantity)*POL.unit_cost).label('amount'))
+        .join(CL, CL.correction_id == Correction.id).join(POL, POL.id == CL.purchase_order_line_id)
+        .filter(Correction.status == 'approved').group_by(Correction.reception_id).subquery())
+    totals = (db.session.query(totals.c.id, (totals.c.units+func.coalesce(corrections.c.units, 0)).label('units'),
+        (totals.c.amount+func.coalesce(corrections.c.amount, 0)).label('amount'))
+        .outerjoin(corrections, corrections.c.receipt_id == totals.c.id).subquery())
     ordered = db.session.query(POL.purchase_order_id.label('order_id'), func.sum(POL.quantity_ordered).label('ordered')).group_by(POL.purchase_order_id).subquery()
     events = db.session.query(R.id, totals.c.units, totals.c.amount, ordered.c.ordered,
         func.sum(totals.c.units).over(partition_by=R.purchase_order_id,
@@ -93,7 +102,8 @@ def serialize(record, detail=False):
     receipt, units, amount, status = record
     show_money = response_includes_cost()
     row = {'id': receipt.id, 'number': f'REC-{receipt.id:05d}', 'order_id': receipt.purchase_order_id,
-        'order_number': receipt.order.order_number, 'supplier': receipt.order.supplier.to_dict(),
+        'order_number': receipt.order.order_number, 'supplier': receipt.order.supplier_document(),
+        'supplier_snapshot_available': receipt.order.supplier_snapshot is not None,
         'currency': receipt.order.currency,
         'received_at': receipt.received_at.isoformat(), 'responsible': receipt.responsible.name,
         'responsible_id': receipt.received_by_user_id, 'units': int(units),
@@ -113,7 +123,13 @@ def detail(receipt_id):
     if record is None:
         raise NotFoundError('Recepción no encontrada.')
     row = serialize(record, True)
+    from app.services import purchase_correction_service
+    row['corrections'] = purchase_correction_service.history(receipt_id)
+    row['can_correct'] = record[0].order.status in ('closed_complete', 'closed_partial') and len(record[0].order.receptions) == 1
+    row['correction_items'] = [line.to_dict() for line in record[0].order.lines] if row['can_correct'] else []
+    row['original_units'] = sum(line['quantity'] for line in row['items'])
     ids = [line['movement_id'] for line in row['items']]
+    ids += [line['movement_id'] for correction in row['corrections'] for line in correction['items'] if line['movement_id']]
     from app.services.inventory_service import movement_data, movement_presentations
 
     movements = StockMovement.query.options(joinedload(StockMovement.product).joinedload(Product.category),
@@ -156,7 +172,8 @@ def listing(params, export=False):
     values = filters(params)
     result = query(values)
     if export:
-        return [serialize(row) for row in relations(result).all()]
+        from app.services.purchase_export_service import bounded_rows
+        return [serialize(row) for row in bounded_rows(relations(result))]
     page = pagination(params, result.count())
     rows = relations(result).offset((page['page']-1)*page['per_page']).limit(page['per_page']).all()
     return {'filters': values, 'pagination': page, 'items': [serialize(row) for row in rows], 'kpis': kpis(),

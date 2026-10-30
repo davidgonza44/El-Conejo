@@ -83,6 +83,10 @@ def edit(supplier_id):
     return mutate(service.save, _json_body(), supplier_id)
 
 
+def propose_status(supplier_id):
+    return mutate(service.propose_status, supplier_id, _json_body())
+
+
 def preferred(supplier_id):
     return mutate(service.change, supplier_id, "preferred")
 
@@ -98,7 +102,8 @@ def delete(supplier_id):
 def export():
     require_schema()
     format_name = export_files.validate_format(request.args.get("format", "csv"))
-    rows = supplier_reference.listing(request.args)["all_items"] if reference() else [queries.serialize(row) for row in queries.query(queries.filters(request.args)).all()]
+    from app.services.purchase_export_service import bounded_rows
+    rows = supplier_reference.listing(request.args)["all_items"] if reference() else [queries.serialize(row) for row in bounded_rows(queries.query(queries.filters(request.args)))]
     columns = [("name", "Proveedor", 30), ("tax_id", "RIF", 18)]
     options = {"contact": [(key, label, 22) for key, label in (("contact_name", "Contacto"), ("contact_title", "Cargo"), ("phone", "Teléfono"), ("email", "Correo"))],
                "status": [("status_label", "Estado", 12)], "category": [("category", "Categoría", 18)],

@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import func, or_
+from sqlalchemy import inspect, func, or_
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import db
@@ -16,7 +16,13 @@ from app.utils.schema import table_ready
 
 
 def available():
-    return all(table_ready(name) for name in ("suppliers", "purchase_orders", "purchase_order_lines", "purchase_receptions", "purchase_reception_lines"))
+    names = ("suppliers", "purchase_orders", "purchase_order_lines", "purchase_receptions", "purchase_reception_lines",
+             "supplier_changes", "purchase_reception_corrections", "purchase_reception_correction_lines")
+    if not all(table_ready(name) for name in names):
+        return False
+    inspector = inspect(db.engine)
+    return ("supplier_snapshot" in {column["name"] for column in inspector.get_columns("purchase_orders")}
+            and "reason" in {column["name"] for column in inspector.get_columns("supplier_changes")})
 
 
 def filters(params, reference=False):
@@ -65,7 +71,11 @@ def query(filters):
 
 def relations(result):
     return result.options(joinedload(PurchaseOrder.supplier), joinedload(PurchaseOrder.creator),
-                          joinedload(PurchaseOrder.supplier_quote), selectinload(PurchaseOrder.lines))
+                          joinedload(PurchaseOrder.supplier_quote), selectinload(PurchaseOrder.lines),
+                          joinedload(PurchaseOrder.approver), joinedload(PurchaseOrder.rejector),
+                          selectinload(PurchaseOrder.source_request),
+                          selectinload(PurchaseOrder.closure_requests).joinedload(PurchaseClosureRequest.requester),
+                          selectinload(PurchaseOrder.closure_requests).joinedload(PurchaseClosureRequest.decider))
 
 
 def currency_totals(result):
@@ -131,6 +141,23 @@ def page_values(params, count):
             "from": (page - 1) * per_page + 1 if count else 0, "to": min(page * per_page, count)}
 
 
+def stage_totals(result):
+    from app.utils.permissions import response_includes_cost
+    if not response_includes_cost():
+        return {key: [] for key in ("requested", "approved", "received", "not_supplied")}
+    def amounts(query, expression):
+        rows = (query.filter(PurchaseOrder.currency.in_(("USD", "VES")))
+                .with_entities(PurchaseOrder.currency, func.sum(expression))
+                .group_by(PurchaseOrder.currency).order_by(PurchaseOrder.currency).all())
+        return [{"currency": currency, "amount": f"{amount:.2f}"} for currency, amount in rows]
+    valid = result.filter(PurchaseOrder.status.notin_(("cancelled", "rejected")))
+    lines = valid.join(PurchaseOrderLine, PurchaseOrderLine.purchase_order_id == PurchaseOrder.id)
+    return {"requested": amounts(valid, PurchaseOrder.total),
+            "approved": amounts(valid.filter(PurchaseOrder.approved_at.isnot(None)), PurchaseOrder.total),
+            "received": amounts(lines.filter(PurchaseOrderLine.quantity_received > 0), PurchaseOrderLine.quantity_received*PurchaseOrderLine.unit_cost),
+            "not_supplied": amounts(lines.filter(PurchaseOrderLine.quantity_not_supplied > 0), PurchaseOrderLine.quantity_not_supplied*PurchaseOrderLine.unit_cost)}
+
+
 def aggregates(result, values):
     counts = dict(result.with_entities(PurchaseOrder.status, func.count(PurchaseOrder.id)).group_by(PurchaseOrder.status).all())
     non_cancelled = result.filter(PurchaseOrder.status.notin_(("cancelled", "rejected")))
@@ -161,6 +188,7 @@ def aggregates(result, values):
         payload["comparison"] = None
         payload["comparison_by_currency"] = []
         payload["top_suppliers"] = []
+    payload["stage_totals"] = stage_totals(result)
     return payload
 
 

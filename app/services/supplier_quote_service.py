@@ -31,7 +31,7 @@ def _lines(items):
     products = lock_products(seen)
     for item in items:
         product = products.get(int(item["product_id"]))
-        if product is None or not product.is_active or product.approval_status != "approved":
+        if product is None or not product.is_active or product.approval_status != "approved" or getattr(product, "is_service", False):
             raise ValidationError("Todos los productos deben existir, estar aprobados y activos.")
         price = money(item.get("unit_price"))
         if price <= 0:
@@ -133,7 +133,7 @@ def eligibility_error(quote, today=None):
     if quote.currency not in ("USD", "VES"):
         return "La cotización tiene una moneda inválida. Registre una cotización válida."
     ids = [line.product_id for line in quote.lines]
-    if not ids or len(ids) != len(set(ids)) or any(line.unit_price <= 0 for line in quote.lines):
+    if not ids or len(ids) != len(set(ids)) or any(line.unit_price <= 0 or line.quantity <= 0 for line in quote.lines):
         return "La cotización tiene productos o precios inválidos. Registre una cotización válida."
     return ""
 
@@ -144,11 +144,13 @@ def order_mismatch(quote, order):
         return "La cotización no corresponde al proveedor del borrador."
     if quote.currency != order.currency:
         return "La moneda de la cotización no coincide con la del borrador."
-    prices = {line.product_id: line.unit_price for line in quote.lines}
+    quoted = {line.product_id: line for line in quote.lines}
     for line in order.lines:
-        if line.product_id not in prices:
+        if line.product_id not in quoted:
             return f"La cotización no incluye {line.product_code}."
-        if prices[line.product_id] != line.unit_cost:
+        if quoted[line.product_id].quantity != line.quantity_ordered:
+            return f"La cantidad cotizada de {line.product_code} no coincide con el borrador. Registre una cotización para esa cantidad."
+        if quoted[line.product_id].unit_price != line.unit_cost:
             return f"El precio cotizado de {line.product_code} no coincide con el del borrador."
     return ""
 

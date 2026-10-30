@@ -21,10 +21,14 @@ class SupplierChange(db.Model):
     reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     reviewed_at = db.Column(db.DateTime)
     rejection_reason = db.Column(db.String(1000))
+    reason = db.Column(db.String(1000))
     proposed_by_user = db.relationship("User", foreign_keys=[proposed_by_user_id])
 
     def to_dict(self):
         return {"id": self.id, "supplier_id": self.supplier_id, "proposed_by_user_id": self.proposed_by_user_id,
                 "proposed_by_name": self.proposed_by_user.name if self.proposed_by_user else None,
                 "changes": self.changes, "previous_values": self.previous_values, "status": self.status,
-                "created_at": self.created_at.isoformat()}
+                "created_at": self.created_at.isoformat(), "reason": self.reason,
+                "reviewed_by_user_id": self.reviewed_by_user_id,
+                "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+                "rejection_reason": self.rejection_reason}

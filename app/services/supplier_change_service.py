@@ -20,29 +20,34 @@ def available() -> bool:
     return table_ready(_TABLE)
 
 
-def pending_for(supplier_id):
+def pending_for(supplier_id, lock=False):
     if not available():
         return None
-    return SupplierChange.query.filter_by(supplier_id=supplier_id, status="pending").first()
+    query = SupplierChange.query.filter_by(supplier_id=supplier_id, status="pending")
+    return (query.populate_existing().with_for_update() if lock else query).first()
 
 
-def propose(supplier, fields: dict):
+def propose(supplier, fields: dict, reason=None):
     """Registra la propuesta sobre ``supplier`` (bloqueado por el llamador) sin modificarlo."""
     if not available():
         raise ConflictError("Las propuestas de modificación de proveedores requieren la migración "
                             "scripts/migrate_supplier_changes.py. El proveedor no se modificó.")
-    if pending_for(supplier.id):
+    if pending_for(supplier.id, lock=True):
         raise ConflictError("El proveedor ya tiene una propuesta de modificación pendiente.")
-    changes = {key: value for key, value in fields.items() if key != "is_active" and getattr(supplier, key) != value}
+    changes = {key: value for key, value in fields.items() if getattr(supplier, key) != value}
     if not changes:
         raise ValidationError("La propuesta no contiene cambios respecto a los datos vigentes del proveedor.")
-    db.session.add(SupplierChange(supplier_id=supplier.id, proposed_by_user_id=current_user.id, changes=changes,
+    from app.services.purchase_service import text_value
+
+    if "is_active" in changes or reason is not None:
+        reason = text_value(reason, "Motivo del cambio de estado", 1000, required="is_active" in changes)
+    db.session.add(SupplierChange(supplier_id=supplier.id, proposed_by_user_id=current_user.id, changes=changes, reason=reason,
                                   previous_values={key: getattr(supplier, key) for key in changes}))
 
 
 def decide(supplier, *, approve, reason):
     """Aplica o descarta la propuesta pendiente de ``supplier`` (bloqueado por el llamador)."""
-    proposal = SupplierChange.query.filter_by(supplier_id=supplier.id, status="pending").with_for_update().first()
+    proposal = SupplierChange.query.filter_by(supplier_id=supplier.id, status="pending").populate_existing().with_for_update().first()
     if proposal is None:
         raise NotFoundError("El proveedor no tiene una propuesta pendiente.")
     if proposal.proposed_by_user_id == current_user.id:

@@ -128,6 +128,8 @@ class PurchaseOrder(db.Model):
     # trailing spaces to a valid three-character value during assignment.
     currency = db.Column(db.String(8), nullable=False)
     supplier_quote = db.relationship("SupplierQuote")
+    # No se reconstruye para documentos antiguos: no conocemos sus datos al aprobarse.
+    supplier_snapshot = db.Column(db.JSON, nullable=True)
     replenishment_request_id = db.Column(db.Integer, db.ForeignKey("replenishment_requests.id"), unique=True)
     closed_at = db.Column(db.DateTime)
     closed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -136,10 +138,22 @@ class PurchaseOrder(db.Model):
     rejector = db.relationship("User", foreign_keys=[rejected_by_user_id])
     lines = db.relationship("PurchaseOrderLine", back_populates="order", order_by="PurchaseOrderLine.id", cascade="all, delete-orphan")
     receptions = db.relationship("PurchaseReception", back_populates="order", order_by="PurchaseReception.id")
+    closure_requests = db.relationship("PurchaseClosureRequest", viewonly=True, order_by="PurchaseClosureRequest.id.desc()")
+    source_request = db.relationship("ReplenishmentRequest", foreign_keys=[replenishment_request_id], viewonly=True)
 
     @property
     def commercial_order_date(self):
         return self.ordered_at.replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/Caracas")).date()
+
+    @property
+    def approved_date(self):
+        return self.approved_at.replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/Caracas")).date() if self.approved_at else None
+
+    def supplier_document(self):
+        if self.supplier_snapshot is not None:
+            return dict(self.supplier_snapshot)
+        return {**self.supplier.to_dict(), **{key: getattr(self.supplier, key) for key in
+                ("address", "city", "state_province", "contact_title")}}
 
     def to_dict(self, detail=True):
         from app.utils.permissions import response_includes_cost
@@ -152,7 +166,9 @@ class PurchaseOrder(db.Model):
                       Decimal(0)) if expecting else Decimal(0)
         not_supplied = sum(line.quantity_not_supplied for line in self.lines)
         not_supplied_amount = sum((line.quantity_not_supplied * line.unit_cost for line in self.lines), Decimal(0))
-        result = {"id": self.id, "order_number": self.order_number, "supplier": self.supplier.to_dict(),
+        result = {"id": self.id, "order_number": self.order_number, "supplier": self.supplier_document(),
+                  "supplier_snapshot_available": self.supplier_snapshot is not None,
+                  "approved_date": self.approved_date.isoformat() if self.approved_date else None,
                   "creator": {"id": self.created_by_user_id, "name": self.creator.name},
                   "ordered_at": self.ordered_at.isoformat(),
                   "ordered_date": self.commercial_order_date.isoformat(),
@@ -170,7 +186,7 @@ class PurchaseOrder(db.Model):
                   "closed_by_user_id": self.closed_by_user_id}
         if self.replenishment_request_id:
             from app.models.replenishment_request import ReplenishmentRequest
-            source = db.session.get(ReplenishmentRequest, self.replenishment_request_id)
+            source = self.source_request
             result['replenishment_request_number'] = source.request_number if source else None
         if response_includes_cost():
             result.update(subtotal=f"{self.subtotal:.2f}", total=f"{self.total:.2f}", pending_amount=f"{pending:.2f}",
@@ -182,13 +198,15 @@ class PurchaseOrder(db.Model):
                       rejected_by=self.rejector.name if self.rejector else None,
                       rejected_at=self.rejected_at.isoformat() if self.rejected_at else None,
                       rejection_reason=self.rejection_reason, created_at=self.created_at.isoformat())
-        from app.models.purchase_closure import PurchaseClosureRequest
-        latest = (PurchaseClosureRequest.query.filter_by(purchase_order_id=self.id)
-                  .order_by(PurchaseClosureRequest.id.desc()).first())
+        latest = self.closure_requests[0] if self.closure_requests else None
         result["closure_request"] = latest.to_dict() if latest is not None else None
         if detail:
+            from app.models.purchase_correction import PurchaseReceptionCorrection
+            corrections = (PurchaseReceptionCorrection.query.join(PurchaseReception)
+                           .filter(PurchaseReception.purchase_order_id == self.id, PurchaseReceptionCorrection.status == "approved")
+                           .order_by(PurchaseReceptionCorrection.id).limit(100).all())
             result.update(items=[line.to_dict() for line in self.lines], receptions=[row.to_dict() for row in self.receptions],
-                          shortage_requests=self._shortage_requests())
+                          reception_corrections=[row.to_dict() for row in corrections], shortage_requests=self._shortage_requests())
         return result
 
     def _shortage_requests(self):

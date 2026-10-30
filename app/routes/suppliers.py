@@ -13,6 +13,7 @@ for path, endpoint, methods, permission in (
     ("/api/suppliers/<int:supplier_id>", "edit", ["PATCH"], "suppliers:propose"),
     ("/api/suppliers/<int:supplier_id>", "delete", ["DELETE"], "suppliers:approve"),
     ("/api/suppliers/<int:supplier_id>/preferred", "preferred", ["POST"], "suppliers:approve"),
+    ("/api/suppliers/<int:supplier_id>/status-proposals", "propose_status", ["POST"], "suppliers:propose"),
     ("/api/suppliers/<int:supplier_id>/status", "status", ["POST"], "suppliers:approve"),
     ("/api/suppliers/<int:supplier_id>/approve", "approve", ["POST"], "suppliers:approve"),
     ("/api/suppliers/<int:supplier_id>/reject", "reject", ["POST"], "suppliers:approve"),

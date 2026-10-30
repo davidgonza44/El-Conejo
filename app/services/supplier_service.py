@@ -33,7 +33,7 @@ def get_supplier(supplier_id, lock=False):
 
 
 def validated(data):
-    only(data, (*FIELDS, "is_active"))
+    only(data, (*FIELDS, "is_active", "reason"))
     result = {key: text_value(data.get(key, ""), key, size, key in REQUIRED) for key, size in FIELDS.items()}
     result["tax_id"] = result["tax_id"].upper()
     if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", result["email"]):
@@ -55,8 +55,9 @@ def save(data, supplier_id=None):
             # Proveedor aprobado: el cambio queda como propuesta; los datos oficiales no se tocan.
             from app.services import supplier_change_service
 
-            supplier_change_service.propose(supplier, fields)
+            supplier_change_service.propose(supplier, fields, data.get("reason"))
             db.session.commit()
+            _announce(supplier)
             return supplier
         for key, value in fields.items():
             setattr(supplier, key, value)
@@ -69,10 +70,30 @@ def save(data, supplier_id=None):
         supplier.updated_at = datetime.utcnow()
         db.session.add(supplier)
         db.session.commit()
+        _announce(supplier)
         return supplier
     except IntegrityError:
         db.session.rollback()
         raise ConflictError("Ya existe un proveedor con ese RIF.")
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def propose_status(supplier_id, data):
+    authorize()
+    only(data, ("is_active", "reason"))
+    if not isinstance(data.get("is_active"), bool):
+        raise ValidationError("Seleccione un estado válido.")
+    try:
+        supplier = get_supplier(supplier_id, True)
+        if supplier.approval_status != "approved":
+            raise ConflictError("Solo se cambia el estado de un proveedor aprobado.")
+        from app.services import supplier_change_service
+        supplier_change_service.propose(supplier, {"is_active": data["is_active"]}, data.get("reason"))
+        db.session.commit()
+        _announce(supplier)
+        return supplier
     except Exception:
         db.session.rollback()
         raise
@@ -94,10 +115,11 @@ def decide(supplier_id, *, approve, reason=None):
         supplier = get_supplier(supplier_id, True)
         from app.services import supplier_change_service
 
-        if supplier.approval_status == "approved" and supplier_change_service.pending_for(supplier.id):
+        if supplier.approval_status == "approved" and supplier_change_service.pending_for(supplier.id, lock=True):
             note = None if approve else text_value(reason or "", "Motivo", 1000, required=True)
             supplier_change_service.decide(supplier, approve=approve, reason=note)
             db.session.commit()
+            _announce(supplier)
             return supplier
         if supplier.proposed_by_user_id == current_user.id:
             raise ValidationError("Quien propone el proveedor no puede aprobarlo ni rechazarlo.", status_code=403)
@@ -117,7 +139,15 @@ def decide(supplier_id, *, approve, reason=None):
             supplier.approved_by_user_id = current_user.id
             supplier.approved_at = datetime.utcnow()
         db.session.commit()
+        _announce(supplier)
         return supplier
     except Exception:
         db.session.rollback()
         raise
+
+
+def _announce(supplier):
+    from app.services import notification_service
+    notification_service._safe(notification_service.emit, "replenishment", "Trámite de proveedor actualizado",
+        f"{supplier.name}: revise la propuesta y su decisión en Proveedores.", permission="suppliers:read",
+        entity_type="supplier", entity_id=supplier.id, href=f"/suppliers?detail={supplier.id}")

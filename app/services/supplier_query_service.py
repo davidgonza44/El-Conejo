@@ -7,6 +7,8 @@ from sqlalchemy import func, or_, case, inspect
 
 from app.extensions import db
 from app.models.purchase import COMPLETED_STATUSES, Supplier, PurchaseOrder
+from app.models.supplier_change import SupplierChange
+from app.utils.schema import table_ready
 from app.services.supplier_service import FIELDS, get_supplier
 from app.services.purchase_service import day, integer, money
 from app.services.inventory_service import COMMERCIAL_ZONE, _utc_boundary
@@ -21,7 +23,9 @@ def available():
     inspector = inspect(db.engine)
     if not inspector.has_table("suppliers") or not inspector.has_table("purchase_orders"):
         return False
-    return {*FIELDS, "is_preferred"} <= {c["name"] for c in inspector.get_columns("suppliers")}
+    return ({*FIELDS, "is_preferred"} <= {c["name"] for c in inspector.get_columns("suppliers")}
+            and "supplier_snapshot" in {c["name"] for c in inspector.get_columns("purchase_orders")}
+            and (not inspector.has_table("supplier_changes") or "reason" in {c["name"] for c in inspector.get_columns("supplier_changes")}))
 
 
 def filters(params):
@@ -86,7 +90,10 @@ def query(values):
     if values["status"]:
         result = result.filter(Supplier.is_active.is_(values["status"] == "active"))
     if values["approval_status"] not in ("", "all"):
-        result = result.filter(Supplier.approval_status == values["approval_status"])
+        pending = Supplier.id.in_(db.session.query(SupplierChange.supplier_id).filter_by(status="pending")) if table_ready("supplier_changes") else False
+        condition = (Supplier.approval_status == "pending") | pending
+        result = result.filter(condition if values["approval_status"] == "pending" else
+                               (Supplier.approval_status == values["approval_status"]) & ~condition)
     if values["preferred"]:
         result = result.filter(Supplier.is_preferred.is_(values["preferred"] == "yes"))
     if values["last_from"]:
@@ -125,6 +132,10 @@ def serialize(row):
         result["totals_by_currency"] = [{"currency": currency, "amount": f"{amount:.2f}"}
                                         for currency, amount in (("USD", row.total_usd), ("VES", row.total_ves))
                                         if amount is not None]
+    from app.services.supplier_change_service import pending_for
+    pending = pending_for(supplier.id)
+    result["pending_change"] = pending.to_dict() if pending else None
+    result["has_pending_approval"] = supplier.approval_status == "pending" or pending is not None
     return result
 
 
@@ -173,6 +184,7 @@ def kpis():
         PurchaseOrder.currency.is_(None)).count()
     return {"suppliers": suppliers, "active": active, "inactive": suppliers - active,
             "preferred": Supplier.query.filter_by(is_preferred=True).count(),
+            "pending_approvals": query(filters({"approval_status": "pending"})).count(),
             "totals_by_currency": totals if show_money else [],
             "unknown_currency_orders": unknown,
             "comparison": comparison,
@@ -203,6 +215,8 @@ def detail(supplier_id):
     data = serialize(result.filter(Supplier.id == supplier_id).one())
     pending = supplier_change_service.pending_for(supplier_id)
     data["pending_change"] = pending.to_dict() if pending else None
+    data["changes_history"] = [row.to_dict() for row in SupplierChange.query.filter_by(supplier_id=supplier_id)
+                               .order_by(SupplierChange.id.desc()).limit(100).all()] if table_ready("supplier_changes") else []
     all_orders = PurchaseOrder.query.filter_by(supplier_id=supplier_id)
     orders = all_orders.order_by(PurchaseOrder.ordered_at.desc(), PurchaseOrder.id.desc()).limit(10).all()
     show_money = response_includes_cost()
@@ -217,4 +231,6 @@ def detail(supplier_id):
     data["unknown_currency_order_details"] = [order_detail(o) for o in unknown_orders]
     from app.services import product_supplier_service
     data["supplied_products"] = product_supplier_service.list_for_supplier(supplier_id)
+    from app.services.purchase_query_service import stage_totals
+    data["stage_totals"] = stage_totals(PurchaseOrder.query.filter_by(supplier_id=supplier_id))
     return data

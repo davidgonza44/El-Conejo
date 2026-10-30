@@ -6,10 +6,12 @@ from app.utils.auth_decorators import page_permission_required, permission_requi
 
 purchases_bp = Blueprint("purchases", __name__)
 
-_HTML_PAGES = {"page", "receptions"}
+_HTML_PAGES = {"page", "receptions", "approvals"}
 
 for path, endpoint, methods, permission in (
     ("/purchases", "page", ["GET"], "read"),
+    ("/purchases/approvals", "approvals", ["GET"], "read"),
+    ("/api/purchases/approvals", "approvals_listing", ["GET"], "read"),
     ("/purchases/receptions", "receptions", ["GET"], "read"),
     ("/purchases/<int:order_id>/print", "print_order", ["GET"], "read"),
     ("/api/purchases", "listing", ["GET"], "read"),
@@ -51,3 +53,11 @@ for path, endpoint in (
 ):
     purchases_bp.add_url_rule(path, endpoint='reception_' + endpoint,
         view_func=permission_required('purchases:read')(getattr(reception_controller, endpoint)), methods=['GET'])
+
+for path, endpoint, permission in (
+    ("/api/purchases/receptions/<int:receipt_id>/corrections", "propose_correction", "purchases:receive"),
+    ("/api/purchases/receptions/<int:receipt_id>/corrections/<int:correction_id>/approve", "approve_correction", "purchases:approve"),
+    ("/api/purchases/receptions/<int:receipt_id>/corrections/<int:correction_id>/reject", "reject_correction", "purchases:approve"),
+):
+    purchases_bp.add_url_rule(path, endpoint="reception_" + endpoint,
+        view_func=permission_required(permission)(getattr(reception_controller, endpoint)), methods=["POST"])

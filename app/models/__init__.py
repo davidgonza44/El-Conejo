@@ -85,3 +85,5 @@ from app.models.purchase import (
 
 from app.models.reconciliation import ReconciliationRun, ReconciliationLine, ReconciliationCut, ReconciliationCutStock
 from app.models.real_2026 import Real2026Import, Real2026Product, Real2026Daily
+
+from app.models.purchase_correction import PurchaseReceptionCorrection, PurchaseReceptionCorrectionLine

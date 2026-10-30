@@ -71,6 +71,16 @@ def _receptions(ids, access):
         yield row.stock_movement_id, ("purchase_reception", row.id, reference, url, "Recepción de compra")
 
 
+def _receipt_corrections(ids, access):
+    from app.models.purchase_correction import PurchaseReceptionCorrection as Correction, PurchaseReceptionCorrectionLine as Line
+    rows = (db.session.query(Line.stock_movement_id, Correction.id, Correction.reception_id)
+            .join(Correction, Correction.id == Line.correction_id)
+            .filter(Line.stock_movement_id.in_(ids), Correction.status == "approved").all())
+    for movement_id, correction_id, receipt_id in rows:
+        url = f"/purchases/receptions?detail={receipt_id}" if "purchases:read" in access[0] else None
+        yield movement_id, ("purchase_reception_correction", correction_id, f"COR-{correction_id} · REC-{receipt_id:05d}", url, "Corrección de recepción")
+
+
 def _reconciliations(ids, access):
     rows = (db.session.query(ReconciliationLine.stock_movement_id, ReconciliationRun.id, ReconciliationRun.number)
             .join(ReconciliationRun, ReconciliationRun.id == ReconciliationLine.run_id)
@@ -131,6 +141,7 @@ def movement_presentations(movements):
         loaders = [(tables, loader) for tables, loader in (
             (("sale_lines", "sales"), _sales),
             (("purchase_reception_lines", "purchase_receptions", "purchase_orders"), _receptions),
+            (("purchase_reception_corrections", "purchase_reception_correction_lines"), _receipt_corrections),
             (("reconciliation_lines", "reconciliation_runs"), _reconciliations),
             (("delivery_note_items", "delivery_notes"), _delivery_notes),
         ) if all(table_ready(table) for table in tables)]

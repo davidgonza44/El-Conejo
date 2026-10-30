@@ -40,7 +40,7 @@
 {% if not view.available %}<div class="po-notice" role="status">Compras aún no está disponible: falta aplicar la migración de órdenes de compra. No se muestran datos de ejemplo.</div>{% endif %}
 <section class="po-kpis" aria-label="Indicadores de compras">
   <article class="po-card po-kpi"><span class="po-kpi-icon is-blue" aria-hidden="true">{{ st.icon('cart') }}</span><div><h2>Órdenes de compra</h2><strong class="po-kpi-value">{{ k.count }}</strong><p>Total en el período</p></div></article>
-  <article class="po-card po-kpi"><span class="po-kpi-icon is-green" aria-hidden="true">{{ st.icon('dollar') }}</span><div><h2>Monto total compras</h2>
+  <article class="po-card po-kpi"><span class="po-kpi-icon is-green" aria-hidden="true">{{ st.icon('dollar') }}</span><div><h2>Valor solicitado en órdenes</h2>
     {% set totals = k.totals_by_currency|default([]) %}
     {# Variación de cada moneda contra la ventana anterior de igual duración; nunca se convierten ni suman monedas. #}
     {% set compared = {} %}{% for row in k.comparison_by_currency|default([]) %}{% set _ = compared.update({row.currency: row.text}) %}{% endfor %}
@@ -51,6 +51,7 @@
   <article class="po-card po-kpi"><span class="po-kpi-icon is-orange" aria-hidden="true">{{ st.icon('clock') }}</span><div><h2>Pendientes de aprobación</h2><strong class="po-kpi-value">{{ k.pending }}</strong><p>Borradores aún no autorizados</p></div></article>
   <article class="po-card po-kpi"><span class="po-kpi-icon is-purple" aria-hidden="true">{{ st.icon('check') }}</span><div><h2>Completadas</h2><strong class="po-kpi-value">{{ k.completed }}</strong><p>Incluye cerradas completas</p><p>{{ k.completed_percent }}{{ ' del gráfico de estados' if k.relevant }}</p></div></article>
 </section>
+{% if can_view_cost and not reference_mode %}<section class="po-kpis" aria-label="Importes por etapa del proceso">{% for key, label in [('requested','Solicitado'),('approved','Aprobado'),('received','Recibido neto'),('not_supplied','No suministrado')] %}<article class="po-card po-kpi"><div><h2>{{ label }}</h2><strong>{{ pm.totals(k.stage_totals.get(key, []) if k.stage_totals is defined else []) }}</strong><p>Órdenes del período · USD y VES separados</p></div></article>{% endfor %}</section>{% endif %}
 <form class="po-card po-filters ds-filters{{ ' has-closure' if show_closure }}" id="po-filters" method="get" action="/purchases" aria-label="Filtros de órdenes">
   {% if reference_mode %}<input type="hidden" name="ref" value="1">{% endif %}<input type="hidden" name="per_page" value="{{ p.per_page }}">
   <label class="po-search ds-field ds-f-search"><span class="ds-field-label">Buscar órdenes</span><span class="ds-input-icon">{{ st.icon('search') }}<input type="search" name="search" value="{{ f.search }}" placeholder="Número, proveedor o producto"></span></label>

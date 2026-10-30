@@ -12,8 +12,8 @@
   // Alta pendiente o modificación propuesta de un proveedor aprobado: decide quien no la propuso.
   const canDecide = row => !context.reference && context.canApprove && (row.approval_status === 'pending' && row.proposed_by_user_id !== context.currentUserId
     || row.pending_change && row.pending_change.proposed_by_user_id !== context.currentUserId);
-  const CHANGE_LABELS = {name:'Nombre / razón social',tax_id:'RIF',contact_name:'Contacto principal',contact_title:'Cargo',phone:'Teléfono',email:'Correo',address:'Dirección',city:'Ciudad',state_province:'Estado/Provincia',category:'Categoría',notes:'Notas'};
-  const changeSummary = change => `<section class="sp-change" aria-label="Modificación propuesta"><h3>Modificación propuesta por ${esc(change.proposed_by_name || 'Asistente')}</h3><p>Los datos oficiales no cambian hasta que un administrador apruebe la propuesta.</p>${fields(Object.keys(change.changes).map(key => [CHANGE_LABELS[key] || key, `${change.previous_values[key] || '—'} → ${change.changes[key] || '—'}`]))}</section>`;
+  const CHANGE_LABELS = {name:'Nombre / razón social',tax_id:'RIF',contact_name:'Contacto principal',contact_title:'Cargo',phone:'Teléfono',email:'Correo',address:'Dirección',city:'Ciudad',state_province:'Estado/Provincia',category:'Categoría',notes:'Notas',is_active:'Estado'};
+  const changeSummary = change => `<section class="sp-change" aria-label="Modificación propuesta"><h3>Modificación propuesta por ${esc(change.proposed_by_name || 'Asistente')}</h3><p>Los datos oficiales no cambian hasta que un administrador apruebe la propuesta.</p><p>${esc(change.reason || '')}</p>${fields(Object.keys(change.changes).map(key => [CHANGE_LABELS[key] || key, `${typeof change.previous_values[key] === 'boolean' ? (change.previous_values[key] ? 'Activo' : 'Inactivo') : change.previous_values[key] || '—'} → ${typeof change.changes[key] === 'boolean' ? (change.changes[key] ? 'Activo' : 'Inactivo') : change.changes[key] || '—'}`]))}</section>`;
   const canEdit = row => context.canWrite && (context.reference || row.approval_status !== 'pending' || row.proposed_by_user_id === context.currentUserId);
   function toast(message) {
     $('sp-message').textContent = message; $('sp-message').hidden = false;
@@ -51,10 +51,16 @@
     if (context.canViewCost) {
       for (const currency of ['USD', 'VES']) {
         const total = (row.totals_by_currency || []).find(item => item.currency === currency);
-        metrics.push([`Total comprado ${currency}`, total ? PurchaseMoney.format(total.amount, currency) : 'Sin compras en ' + currency, currency]);
+        metrics.push([`Total solicitado ${currency}`, total ? PurchaseMoney.format(total.amount, currency) : 'Sin compras en ' + currency, currency]);
       }
     }
-    metrics.push(['Órdenes totales', row.orders ?? 'No disponible'],
+    if (context.canViewCost && row.stage_totals) {
+      for (const [key,label] of [['approved','Aprobado'],['received','Recibido neto'],['not_supplied','No suministrado']]) {
+        const totals = row.stage_totals[key] || [];
+        metrics.push([label, totals.length ? totals.map(item=>PurchaseMoney.format(item.amount,item.currency)).join(' / ') : 'Sin importes']);
+      }
+    }
+    metrics.push(['Órdenes totales' , row.orders ?? 'No disponible'],
       ['Pendientes o parciales', row.pending ?? 'No disponible'],
       ['Órdenes completadas', row.completed ?? 'No disponible'],
       ['Última compra', row.last ? dateLabel(row.last) : 'Sin compras']);
@@ -106,7 +112,7 @@
       information:fields([['Nombre / razón social',row.name],['RIF',row.tax_id],['Estado',row.is_active?'Activo':'Inactivo'],['Categoría',row.category],['Teléfono',row.phone],['Correo',row.email],['Dirección',row.address],['Ciudad',row.city],['Estado/Provincia',row.state_province],['Contacto principal',row.contact_name],['Cargo',row.contact_title],['Notas',row.notes],['Proveedor preferido',row.is_preferred?'Sí':'No']]),
       purchases:purchases(row, id),
       contacts:fields([['Contacto principal',row.contact_name],['Cargo',row.contact_title],['Teléfono',row.phone],['Correo',row.email]]),
-      history:fields([['Fecha de registro',row.created_at.replace('T',' ')+' UTC'],['Última actualización',row.updated_at.replace('T',' ')+' UTC']]) + '<p>Se conservan las fechas de registro y actualización. No hay un registro de versiones de los cambios del proveedor.</p>'
+      history:fields([['Fecha de registro',row.created_at.replace('T',' ')+' UTC'],['Última actualización',row.updated_at.replace('T',' ')+' UTC']]) + (row.changes_history || []).map(change=>`<article><h3>Propuesta ${change.id} · ${esc(change.status)}</h3>${changeSummary(change)}${fields([['Decisión',change.reviewed_at],['Motivo de rechazo',change.rejection_reason]])}</article>`).join('')
     };
     $('sp-detail-body').innerHTML = `<div class="sp-detail-tabs" role="tablist" aria-label="Información del proveedor">${[['information','Información'],['purchases','Compras'],['contacts','Contactos'],['history','Historial']].map(([key,label],i)=>`<button type="button" role="tab" id="sp-tab-${key}" data-tab="${key}" aria-controls="sp-panel-${key}" aria-selected="${i===0}" tabindex="${i===0?0:-1}">${label}</button>`).join('')}</div>${Object.entries(sections).map(([key,html],i)=>`<section id="sp-panel-${key}" role="tabpanel" tabindex="0" aria-labelledby="sp-tab-${key}"${i?' hidden':''}>${html}</section>`).join('')}`;
     if (!context.reference) {
@@ -123,6 +129,7 @@
     const row = context.items.find(item=>item.id === id);
     const choices = [['detail','Ver detalle']];
     if (canEdit(row)) choices.push(['edit',context.reference?'Editar proveedor':'Proponer modificación']);
+    if (!context.reference && context.canWrite && row.approval_status === 'approved' && !row.pending_change) choices.push(['state_proposal',row.is_active?'Solicitar desactivación':'Solicitar reactivación']);
     let html = choices.map(([action,label])=>`<button role="menuitem" data-action="${action}" data-id="${id}">${label}</button>`).join('');
     html += `<a role="menuitem" href="${ordersURL(id)}">Ver órdenes de compra</a>`;
     if (context.canOrder && row.is_active && (!context.reference || id <= 8)) html += `<a role="menuitem" href="${newOrderURL(id)}">Crear orden de compra</a>`;
@@ -141,6 +148,10 @@
     $('sp-confirm-title').textContent = action==='delete'?'Eliminar proveedor':action==='status'?(row.is_active?'Desactivar proveedor':'Activar proveedor'):(row.is_preferred?'Quitar de preferidos':'Marcar como preferido');
     $('sp-confirm-text').textContent = action==='delete'?'Solo se puede eliminar un proveedor sin registros relacionados. Si tiene órdenes de compra, la eliminación se bloqueará.':'Se actualizará el proveedor '+row.name+'.';
     $('sp-confirm-form').querySelector('.sp-error').textContent = '';
+    $('sp-state-reason-box').hidden = action !== 'state_proposal';
+    $('sp-confirm-form').elements.reason.required = action === 'state_proposal';
+    $('sp-confirm-form').elements.reason.value = '';
+    if (action === 'state_proposal') { $('sp-confirm-title').textContent = row.is_active ? 'Solicitar desactivación' : 'Solicitar reactivación'; $('sp-confirm-text').textContent = 'El estado vigente se conserva hasta la aprobación del Administrador.'; }
     $('sp-confirm').showModal();
   }
   async function action(button) {
@@ -235,7 +246,9 @@
   });
   $('sp-confirm-form').addEventListener('submit',event=>{
     event.preventDefault();submit(event.target,async()=>{
-      await api('/api/suppliers/'+pending.id+(pending.action==='delete'?'':'/'+pending.action),pending.action==='delete'?'DELETE':'POST',{});
+      const row=context.items.find(item=>item.id===pending.id);
+      const state=pending.action==='state_proposal';
+      await api('/api/suppliers/'+pending.id+(state?'/status-proposals':pending.action==='delete'?'':'/'+pending.action),pending.action==='delete'?'DELETE':'POST',state?{is_active:!row.is_active,reason:event.target.elements.reason.value}:{});
       location.reload();
     });
   });

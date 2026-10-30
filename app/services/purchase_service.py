@@ -167,6 +167,7 @@ def _priced_from_quote(data):
     _supplier(supplier_id)
     quote = usable_for_order(data.get("supplier_quote_id"), supplier_id)
     prices = {line.product_id: line.unit_price for line in quote.lines}
+    quantities = {line.product_id: line.quantity for line in quote.lines}
     items = []
     sent = data.get("items")
     if not isinstance(sent, list) or not 1 <= len(sent) <= 100:
@@ -176,6 +177,8 @@ def _priced_from_quote(data):
         product_id = integer(item.get("product_id"), "Producto")
         if product_id not in prices:
             raise ValidationError("El producto no está en la cotización vigente.")
+        if integer(item.get("quantity"), "Cantidad") != quantities[product_id]:
+            raise ValidationError("La cantidad pedida debe coincidir con la cantidad cotizada de cada producto.")
         items.append({"product_id": product_id, "quantity": item.get("quantity"),
                       "unit_cost": f"{prices[product_id]:.2f}"})
     return {**data, "supplier_id": supplier_id, "items": items}, quote
@@ -260,9 +263,12 @@ def _renew_quote(order, quote_id):
         raise ValidationError("La moneda del borrador se conserva. Para otra moneda, anule el borrador "
                               "y tramite una nueva solicitud.")
     prices = {line.product_id: line.unit_price for line in quote.lines}
+    quantities = {line.product_id: line.quantity for line in quote.lines}
     if any(line.product_id not in prices for line in order.lines):
         raise ValidationError("La cotización no cubre todos los productos del borrador.")
     for line in order.lines:
+        if quantities[line.product_id] != line.quantity_ordered:
+            raise ValidationError("La nueva cotización debe conservar las cantidades del borrador.")
         line.unit_cost = prices[line.product_id]
         line.line_total = line.quantity_ordered * line.unit_cost
         if line.line_total > MAX_MONEY:
@@ -345,9 +351,10 @@ def receive_order(order_id, data):
             raise ConflictError("Solo se recibe una vez una orden aprobada y pendiente de recepción.")
         received_at = day(data.get("received_at"), "Fecha de recepción")
         today = datetime.now(inventory_service.COMMERCIAL_ZONE).date()
-        ordered_day = order.commercial_order_date
-        if received_at > today or received_at < ordered_day:
-            raise ValidationError("La recepción debe estar entre la fecha de orden y hoy.")
+        if not order.approved_at:
+            raise ConflictError("La orden no tiene fecha de aprobación registrada; requiere revisión administrativa.")
+        if received_at > today or received_at < order.approved_date:
+            raise ValidationError("La recepción debe estar entre la fecha de aprobación de la orden y hoy.")
         items = _receipt_items(order, data)
         # Before any reception row or stock movement exists.
         partial_reason = _partial_closure_reason(order, items, data)
@@ -504,6 +511,7 @@ def decide_order(order_id, data, *, approve):
             order.status = "approved"
             order.approved_by_user_id = current_user.id
             order.approved_at = datetime.utcnow()
+            order.supplier_snapshot = order.supplier_document()
         else:
             order.rejection_reason = text_value(data.get("reason"), "Motivo de rechazo", 1000, required=True)
             order.status = "rejected"

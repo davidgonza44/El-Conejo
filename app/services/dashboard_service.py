@@ -314,6 +314,9 @@ def pending_proposals(role) -> list[dict]:
                      if model is Product else model.query.filter_by(approval_status="pending"))
             if model is Category:
                 query = category_service.approval_filter(model.query, "pending")
+            if model is Supplier:
+                from app.services import supplier_query_service
+                query = supplier_query_service.query(supplier_query_service.filters({"approval_status": "pending"}))
             count = query.order_by(None).count()
         items.append({"label": label, "count": count, "href": path + "?approval_status=pending"})
     return items

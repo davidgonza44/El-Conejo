@@ -20,7 +20,7 @@
 {% set live_sidebar = pro_shell and not reference_mode %}
 {% set ref_qs = "?ref=1" if reference_mode else "" %}
 {% set purchase_children = [("replenishment_requests", "Solicitudes de reposición", url_for("purchases.requests") ~ ref_qs), ("purchases", "Órdenes de compra", url_for("purchases.page") ~ ref_qs), ("suppliers", "Proveedores", url_for("pages.suppliers") ~ ref_qs), ("receipts", "Recepciones", url_for("purchases.receptions") ~ ref_qs)] %}
-{% set approval_link = [('purchase_approvals', 'Pendientes de aprobación', url_for('purchases.page', status='pending_approval', start='', end='') ~ ('&ref=1' if reference_mode else ''))] %}
+{% set approval_link = [('purchase_approvals', 'Pendientes de aprobación', (url_for('purchases.page', status='pending_approval', start='', end='') ~ '&ref=1') if reference_mode else url_for('purchases.approvals'))] %}
 {% set purchase_children = purchase_children + (approval_link if nav_allowed('purchase_approvals', reference_mode) else []) %}
 {% set sales_href = url_for("pages.sales") ~ ref_qs %}
 {% set chatbot_href = url_for("pages.chatbot") ~ ref_qs %}

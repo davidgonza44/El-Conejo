@@ -28,11 +28,11 @@ from app.services.product_supplier_service import approved_suppliers_for_product
 from app.services.rbac_service import require_operational_permission
 
 PREPARE_GAP = (
-    "La cotización no cubre todos los productos de la solicitud. "
+    "La cotización debe cubrir los productos y las cantidades exactas de la solicitud. "
     "Cada solicitud solo puede generar una orden de compra y no se reparte entre proveedores."
 )
 SPLIT_NOTICE = (
-    "Ninguna cotización vigente cubre todos los productos. "
+    "Ninguna cotización vigente cubre los productos y las cantidades de la solicitud. "
     "Cada solicitud solo puede generar una orden de compra y no se reparte entre proveedores. "
     "Puede cotizar con un proveedor aprobado y activo asociado a todos los productos y después preparar la orden."
 )
@@ -74,6 +74,13 @@ def create_from_shortage(order_id, data):
         order = get_order(order_id, lock=True)
         if order.status not in SHORTAGE_ORDER_STATUSES:
             raise ConflictError("Solo una orden cerrada con faltante admite una solicitud de reposición del faltante.")
+        from app.models.purchase_correction import PurchaseReceptionCorrection
+        from app.models.purchase import PurchaseReception
+        from app.utils.schema import table_ready
+        if table_ready("purchase_reception_corrections") and (PurchaseReceptionCorrection.query.join(PurchaseReception)
+                .filter(PurchaseReception.purchase_order_id == order.id, PurchaseReceptionCorrection.status == "pending")
+                .with_for_update().first()):
+            raise ConflictError("La recepción tiene una corrección pendiente; resuélvala antes de solicitar el faltante.")
         items = [{"product_id": line.product_id, "quantity": line.quantity_not_supplied}
                  for line in order.lines if line.quantity_not_supplied > 0]
         if not items:
@@ -142,6 +149,8 @@ def _request_lines(items):
         product = products.get(product_id)
         if product is None or not product.is_active or product.approval_status != "approved":
             raise ValidationError("Todos los productos deben existir, estar aprobados y activos.")
+        if getattr(product, "is_service", False):
+            raise ValidationError("Los servicios no admiten solicitudes de reposición de stock.")
         lines.append(ReplenishmentRequestLine(
             product_id=product.id, product_code=product.code, product_name=product.name,
             unit=product.unit, quantity=quantity, stock_on_hand=int(product.current_stock)))
@@ -293,8 +302,8 @@ def cancel(request_id):
 
 
 def _missing(row, quote):
-    covered = {line.product_id for line in quote.lines}
-    return [line.product_code for line in row.lines if line.product_id not in covered]
+    covered = {line.product_id: line.quantity for line in quote.lines}
+    return [line.product_code for line in row.lines if covered.get(line.product_id) != line.quantity]
 
 
 def quote_options(row):
@@ -310,7 +319,7 @@ def quote_options(row):
     from app.services.supplier_quote_service import eligibility_error
     covering = []
     for quote in quotes:
-        if eligibility_error(quote, today):
+        if eligibility_error(quote, today) or _missing(row, quote):
             continue
         payload = {
             "id": quote.id, "quote_number": quote.quote_number,

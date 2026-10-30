@@ -435,13 +435,13 @@ class ConcurrencyTests(unittest.TestCase):
         legacy.order_number = f"OC-{legacy.id:06d}"
         db.session.commit()
         edit = ("edit", self.later("asistente", "patch", f"/api/purchases/{legacy.id}", {
-            "supplier_quote_id": order["supplier_quote_id"], "items": [{"product_id": product_id, "quantity": 7}]}))
+            "supplier_quote_id": order["supplier_quote_id"], "items": [{"product_id": product_id, "quantity": 10}]}))
         approve = ("approve", self.later("admin", "post", f"/api/purchases/{order['id']}/approve"))
         with hold(purchase_service, "_apply_pending", thread="edit") as entered:
             results = self.sequenced_without_deadlock(edit, approve, entered)
         self.assertEqual((results["edit"][0], results["approve"][0]), (200, 200), results)
         self.fresh()
-        self.assertEqual(db.session.get(PurchaseOrder, legacy.id).lines[0].quantity_ordered, 7)
+        self.assertEqual(db.session.get(PurchaseOrder, legacy.id).lines[0].quantity_ordered, 10)
 
     def test_multi_product_quote_in_reverse_order_while_approving(self):
         first, second = self.product("LK-MULTI-A"), self.product("LK-MULTI-B")

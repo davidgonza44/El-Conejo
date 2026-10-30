@@ -10,6 +10,10 @@ from app.utils.permissions import response_includes_cost
 
 
 def data(export=False):
+    from app.services.purchase_query_service import available
+    from app.services.exceptions import ValidationError
+    if not reference() and not available():
+        raise ValidationError("Recepciones no está disponible: falta aplicar la migración de Compras.", status_code=503)
     return fixtures.listing(request.args, export) if reference() else queries.listing(request.args, export)
 
 
@@ -44,6 +48,10 @@ def order(order_id):
 
 
 def detail_data(receipt_id):
+    from app.services.purchase_query_service import available
+    from app.services.exceptions import ValidationError
+    if not reference() and not available():
+        raise ValidationError("Falta aplicar la migración de Compras.", status_code=503)
     row = fixtures.detail(receipt_id) if reference() else queries.detail(receipt_id)
     if row is None:
         abort(404)
@@ -88,6 +96,14 @@ def pdf(receipt_id):
     lines = [f"{row['order_number']} · {row['supplier']['name']}",
         f"Fecha: {row['received_at']} · Responsable: {row['responsible']} · {row['status_label']}",
         f"Unidades: {row['units']}", 'Notas: ' + row['notes']]
+    if row.get('supplier_snapshot_available') is False:
+        lines.append('Histórico sin copia del proveedor al aprobarse: datos actuales.')
+    if row.get('corrections'):
+        lines.append('El detalle original se conserva; el total incluye las correcciones aprobadas.')
+        for correction in row['corrections']:
+            lines.append(f"COR-{correction['id']} · {correction['status']} · {correction['reason']}")
+            for item in correction['items']:
+                lines.append(f"{item['product_name']}: {item['previous_quantity']} a {item['target_quantity']} · MOV-{item['movement_id'] or 'sin aplicar'}")
     columns = [('product_name', 'Producto', 60), ('product_code', 'Código', 25), ('quantity', 'Cantidad', 20),
                ('movement_id', 'Movimiento', 25)]
     items = row['items']
@@ -98,3 +114,25 @@ def pdf(receipt_id):
                   'subtotal': format_amount(item['subtotal'], row.get('currency'))} for item in items]
     return document(export_files.pdf_report('Recepción ' + row['number'], lines, items, columns),
                     'application/pdf', row['number'] + '.pdf')
+
+
+def propose_correction(receipt_id):
+    from app.controllers.purchase_controller import _mutate
+    from app.controllers.sale_controller import _json_body
+    from app.services import purchase_correction_service
+    return _mutate(purchase_correction_service.propose, receipt_id, _json_body(), status=201)
+
+
+def approve_correction(receipt_id, correction_id):
+    return _decide_correction(receipt_id, correction_id, True)
+
+
+def reject_correction(receipt_id, correction_id):
+    return _decide_correction(receipt_id, correction_id, False)
+
+
+def _decide_correction(receipt_id, correction_id, approve):
+    from app.controllers.purchase_controller import _mutate
+    from app.controllers.sale_controller import _json_body
+    from app.services import purchase_correction_service
+    return _mutate(lambda: purchase_correction_service.decide(receipt_id, correction_id, _json_body(), approve=approve))
