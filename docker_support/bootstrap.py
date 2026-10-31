@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, inspect, text
 
 from docker_support.guard import wait_database, validate
 
-HEAD = "0007_catalog_currency"
+HEAD = "0010_inventory_integrity"
 
 
 def engine():

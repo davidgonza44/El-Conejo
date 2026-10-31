@@ -94,10 +94,13 @@
     if (line.reviewed_at) parts.push(`Revisó: ${line.reviewed_by} · ${line.reviewed_at} UTC · ${line.review_note}`);
     if (line.resolved_at) parts.push(`Resolvió: ${line.resolved_by} · ${line.resolved_at} UTC · ${labels[line.resolution_action]} · ${line.resolution_note}`);
     if (line.stock_movement_id) parts.push(`Movimiento #${line.stock_movement_id}`);
+    const request = line.adjustment_request;
+    if (request && request.status !== 'approved') parts.push(`Solicitud de ajuste #${request.id}: ${request.status === 'pending' ? 'pendiente de aprobación' : 'rechazada' + (request.review_comment ? ` · ${request.review_comment}` : '')}`);
     return parts.map(escape).join('<br>');
   }
   function lineActions(line) {
     if (!context.canResolve || current.status !== 'confirmed' || line.result !== 'discrepancy' || line.review_status === 'resolved') return '';
+    if (line.adjustment_request?.status === 'pending') return '';
     return (line.review_status === 'pending' ? `<button class="po-btn" data-line="${line.id}" data-mode="review">Revisar</button>` : '') + `<button class="po-btn" data-line="${line.id}" data-mode="resolve">Resolver</button>`;
   }
   function render(run) {
@@ -185,8 +188,10 @@
   }
   function stockField() {
     const adjusting = resolving && node('resolution').elements.action.value === 'adjustment';
+    const line = current && current.items.find(item => item.id === activeLine);
     node('stock-label').hidden = !adjusting;
-    node('resolution').elements.new_stock.required = adjusting;
+    // El servidor calcula el objetivo al aprobar: stock vigente + diferencia, así no se pierden las ventas posteriores.
+    node('stock-label').textContent = line ? `Se solicitará un ajuste de ${line.difference > 0 ? '+' : ''}${line.difference} unidades sobre el stock vigente. Otro administrador debe aprobarlo; hasta entonces las existencias no cambian.` : '';
     node('resolution').elements.note.maxLength = adjusting ? 255 : 1000;
   }
   function openLine(id, mode) {
@@ -239,9 +244,11 @@
     event.preventDefault(); const form = event.target, button = form.querySelector('[type=submit]'); button.disabled = true;
     try {
       const values = Object.fromEntries(new FormData(form)), data = {note:values.note};
-      if (resolving) { data.action = values.action; if (values.action === 'adjustment') data.new_stock = values.new_stock; }
+      if (resolving) data.action = values.action;
       render(await api(`/${current.id}/lines/${activeLine}/${resolving ? 'resolve' : 'review'}${lineQuery()}`, 'POST', data));
-      node('dialog').close(); message('Revisión guardada con su trazabilidad.'); await history();
+      node('dialog').close();
+      message(resolving && values.action === 'adjustment' ? 'Solicitud de ajuste enviada. Las existencias cambian cuando otro administrador la apruebe.' : 'Revisión guardada con su trazabilidad.');
+      await history();
     } catch (error) { node('error').textContent = error.message; } finally { button.disabled = false; }
   });
   node('prev').addEventListener('click', () => { page--; history().catch(error => message(error.message)); });

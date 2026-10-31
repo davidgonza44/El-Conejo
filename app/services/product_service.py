@@ -1,7 +1,8 @@
 """Lógica de negocio de productos.
 
-El stock inicial se registra vía InventoryService (entrada). Después del
-alta, solo los movimientos de inventario pueden modificar current_stock.
+El stock inicial se propone con el alta y se registra vía InventoryService
+(entrada) cuando el Administrador la aprueba. Después, solo los movimientos
+de inventario pueden modificar current_stock.
 """
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -484,6 +485,8 @@ def create_product(data: dict) -> Product:
         category_id=category_id,
         unit=_validate_unit(data),
         current_stock=0,
+        # El stock inicial espera la aprobación: un alta rechazada no deja existencias ni movimientos.
+        proposed_initial_stock=initial_stock or None,
         minimum_stock=minimum_stock,
         purchase_price=purchase_price,
         sale_price=sale_price,
@@ -498,15 +501,6 @@ def create_product(data: dict) -> Product:
         db.session.add(product)
         db.session.flush()
         product_state_history_service.record_baseline(product, datetime.utcnow())
-        if initial_stock > 0:
-            inventory_service.register_entry(
-                {
-                    "product_id": product.id,
-                    "quantity": initial_stock,
-                    "reason": _INITIAL_STOCK_REASON,
-                },
-                commit=False, creation_origin="initial_stock",
-            )
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -542,11 +536,20 @@ def decide_product(product_id: int, *, approve: bool, reason: str | None = None,
     previous_active = bool(product.is_active)
     try:
         if approve:
+            # La categoría pudo desactivarse mientras el alta esperaba revisión.
+            _validate_category(product.category_id)
             product.approval_status = "approved"
             product.is_active = True
             product.approved_by_user_id = current_user.id
             product.approved_at = datetime.utcnow()
             product.rejection_reason = None
+            if product.proposed_initial_stock:
+                inventory_service.register_entry(
+                    {"product_id": product.id, "quantity": product.proposed_initial_stock,
+                     "reason": _INITIAL_STOCK_REASON},
+                    commit=False, creation_origin="initial_stock",
+                )
+                product.proposed_initial_stock = None
         else:
             reason = (reason or "").strip()
             if not reason or len(reason) > 1000:

@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from flask_login import current_user
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
@@ -49,6 +50,16 @@ def _get_active_product_locked(product_id, *, allow_inactive: bool = False) -> P
             f"El producto '{product.name}' está inactivo; no admite movimientos de inventario."
         )
     return product
+
+
+def lock_products(product_ids) -> dict[int, Product]:
+    """Bloquea varias filas en orden de id: dos documentos simultáneos no se bloquean entre sí."""
+    ids = sorted(set(product_ids))
+    if not ids:
+        return {}
+    rows = (db.session.query(Product).populate_existing().filter(Product.id.in_(ids))
+            .order_by(Product.id).with_for_update().all())
+    return {product.id: product for product in rows}
 
 
 def _current_user_id(data: dict) -> int:
@@ -137,15 +148,18 @@ def _commit_owned(product: Product | None = None) -> None:
         notification_service.product_stock_changed(product)
 
 
-def register_entry(data: dict, commit: bool = True, *, creation_origin=None) -> StockMovement:
+def register_entry(data: dict, commit: bool = True, *, creation_origin=None,
+                   allow_inactive: bool = False) -> StockMovement:
     """Regla 2: una entrada aumenta el stock.
 
     ``commit=False`` deja la transacción al llamador (creación de producto).
+    ``allow_inactive`` solo para reversiones de documentos: la mercancía vuelve aunque
+    el producto se haya desactivado después.
     """
     try:
         trace = creation_fields(data, creation_origin)
         product = _get_active_product_locked(
-            data.get("product_id"), allow_inactive=creation_origin == "initial_stock")
+            data.get("product_id"), allow_inactive=allow_inactive or creation_origin == "initial_stock")
         quantity = _positive_quantity(data)
         user_id = _current_user_id(data)
         reason = _reason(data)
@@ -196,20 +210,24 @@ def register_exit(data: dict, commit: bool = True, *, creation_origin=None) -> S
 
 
 def register_adjustment(data: dict, commit: bool = True, *, creation_origin=None) -> StockMovement:
-    """Primitiva interna: ajuste aprobado o conciliación autorizada; nunca HTTP manual.
+    """Primitiva interna: solo la aprobación de una solicitud de ajuste; nunca HTTP manual.
 
-    El workflow manual valida solicitud, revisor y stock esperado antes de llamar.
-    Conciliación conserva su propia autorización y transacción con commit=False.
+    El workflow valida solicitud, revisor y stock esperado antes de llamar.
+    Un producto inactivo solo admite el ajuste a 0: así su stock nunca queda congelado.
     """
     try:
         trace = creation_fields(data, creation_origin)
-        product = _get_active_product_locked(data.get("product_id"))
+        product = _get_active_product_locked(data.get("product_id"), allow_inactive=True)
         user_id = _current_user_id(data)
 
         reason = _reason(data, required=True)
         new_stock = _integer(data.get("new_stock"), "new_stock")
         if new_stock < 0:
             raise ValidationError("El campo 'new_stock' no puede ser negativo.")
+        if not product.is_active and new_stock != 0:
+            raise ConflictError(
+                f"El producto '{product.name}' está inactivo; solo admite un ajuste a 0. "
+                "Reactívelo para registrar otras existencias.")
         if new_stock == product.current_stock:
             raise ValidationError(
                 f"El ajuste no tiene efecto: el stock actual ya es {new_stock}."
@@ -226,6 +244,56 @@ def register_adjustment(data: dict, commit: bool = True, *, creation_origin=None
         if commit:
             db.session.rollback()
         raise
+
+
+_KEY_RE = re.compile(r"[A-Za-z0-9_-]{8,64}")
+
+
+def _idempotency_key(data: dict) -> str | None:
+    key = data.pop("idempotency_key", None)
+    if key is None:
+        return None
+    if not isinstance(key, str) or not _KEY_RE.fullmatch(key.strip()):
+        raise ValidationError("El campo 'idempotency_key' debe tener de 8 a 64 letras, números, '-' o '_'.")
+    return key.strip()
+
+
+def _replay(movement: StockMovement, movement_type: str, data: dict) -> StockMovement:
+    """La misma clave devuelve el movimiento ya registrado; con otros datos es un conflicto."""
+    same = (movement.user_id == current_user.id and movement.movement_type == movement_type
+            and movement.product_id == _integer(data.get("product_id"), "product_id")
+            and movement.quantity == _integer(data.get("quantity"), "quantity"))
+    if not same:
+        raise ConflictError("La clave de reintento ya se usó para otro movimiento. Recargue el formulario.")
+    return movement
+
+
+def register_manual(movement_type: str, data: dict) -> tuple[StockMovement, bool]:
+    """Entrada o salida manual. Devuelve ``(movimiento, creado)``; un reintento no duplica."""
+    data = dict(data)
+    key = _idempotency_key(data)
+    if key:
+        existing = StockMovement.query.filter_by(idempotency_key=key).first()
+        if existing is not None:
+            return _replay(existing, movement_type, data), False
+    register = register_entry if movement_type == MOVEMENT_ENTRADA else register_exit
+    try:
+        movement = register(data, commit=False, creation_origin="manual")
+        movement.idempotency_key = key
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        winner = StockMovement.query.filter_by(idempotency_key=key).first() if key else None
+        if winner is None:
+            raise
+        return _replay(winner, movement_type, data), False  # la petición paralela ya confirmó
+    except Exception:
+        db.session.rollback()
+        raise
+    from app.services import notification_service
+
+    notification_service.product_stock_changed(movement.product)
+    return movement, True
 
 
 def list_movements(

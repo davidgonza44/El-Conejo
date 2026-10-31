@@ -25,6 +25,13 @@ class CategoryChangesTests(IsolatedCase):
         self.assertEqual(response.json["pending_change"]["status"], "pending")
         return response.json["pending_change"]
 
+    def without_active_products(self):
+        # Una categoría solo se desactiva sin productos activos; fixture sintético.
+        changes = {"is_active": False}
+        self.assertEqual(self.clients["asistente"].patch(self.path, json=changes).status_code, 409)
+        self.product.is_active = False
+        db.session.commit()
+
     def decide(self, proposal, action="approve", actor="admin"):
         return self.clients[actor].post(self.path + "/" + action,
             json={"proposal_id": proposal["id"], "reason": "No autorizado"})
@@ -59,6 +66,7 @@ class CategoryChangesTests(IsolatedCase):
                 self.assertEqual(error.exception.status_code, 403)
 
     def test_assistant_proposes_all_fields_without_mutating_operative_record(self):
+        self.without_active_products()
         before = self.snapshot()
         changes = dict(name="Nombre propuesto", description="Descripción propuesta", color="red", icon="hammer", is_active=False)
         proposal = self.propose(changes)
@@ -70,6 +78,7 @@ class CategoryChangesTests(IsolatedCase):
         self.assertEqual(StockMovement.query.count(), 0)
 
     def test_approval_applies_once_and_preserves_actor_trace(self):
+        self.without_active_products()
         before = self.snapshot()
         changes = dict(name="Aprobada nueva", description="Nueva descripción", color="green", icon="zap", is_active=False)
         proposal = self.propose(changes, "put")
@@ -90,6 +99,7 @@ class CategoryChangesTests(IsolatedCase):
         self.assertEqual(CategoryChange.query.count(), 1)
 
     def test_rejection_preserves_every_original_value_and_retries_conflict(self):
+        self.without_active_products()
         before = self.snapshot()
         proposal = self.propose(dict(name="No aplicar", description="No aplicar", color="red", icon="hammer", is_active=False))
         self.assertEqual(self.snapshot(), before)

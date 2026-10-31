@@ -64,10 +64,13 @@ class TraceabilityTests(IsolatedCase):
         url = f"/api/reconciliation/{run['id']}"
         self.assertEqual(self.clients['admin'].post(url + '/confirm', json={}).status_code, 200)
         payload = {'action': action, 'note': 'Conteo sintético'}
-        if action == 'adjustment':
-            payload['new_stock'] = 13
         response = self.clients['admin'].post(url + f"/lines/{run['items'][0]['id']}/resolve", json=payload)
         self.assertEqual(response.status_code, 200, response.json)
+        if action == 'adjustment':  # The adjustment is a request that a second administrator approves.
+            request = response.json['items'][0]['adjustment_request']
+            approved = self.clients['admin2'].post(f"/api/inventory/adjustments/{request['id']}/approve", json={})
+            self.assertEqual(approved.status_code, 200, approved.json)
+            response = self.clients['admin'].get(url)
         return response.json
 
     def grant(self, actor, permission):

@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models import Product
 from app.models.reconciliation import ReconciliationRun, ReconciliationLine
-from app.services import inventory_service
+from app.services import inventory_adjustment_service
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.purchase_service import integer, only, text_value
 from app.utils.permissions import role_has_permission
@@ -257,6 +257,8 @@ def process_line(run_id, line_id, data, *, resolve):
             raise NotFoundError("Discrepancia no encontrada.")
         if run.status != "confirmed" or line.result != "discrepancy" or line.review_status == "resolved":
             raise ConflictError("La línea no admite esta operación.")
+        if resolve and any(request.status == "pending" for request in line.adjustment_requests):
+            raise ConflictError("La discrepancia tiene una solicitud de ajuste pendiente de aprobación.")
         if resolve:
             _resolve(line, data, note)
         else:
@@ -286,15 +288,16 @@ def _resolve(line, data, note):
             product = db.session.get(Product, line.product_id)
             if product is None or product.code.upper() != line.product_code.upper():
                 raise ConflictError("El código del producto cambió desde el corte; revise el catálogo antes de ajustar.")
-        new_stock = integer(data.get("new_stock"), "Nuevo stock", minimum=0)
+        if "new_stock" in data:
+            # El objetivo lo calcula el servidor: stock vigente + diferencia del corte.
+            raise ValidationError("El ajuste aplica la diferencia del corte; no indique un stock absoluto.")
         # Inventory's reason limit is 255; never silently truncate the audit justification.
         reason = text_value(note, "Motivo del ajuste", 255, required=True)
-        # Flujo propio: reconciliation:resolve + inventory:move, ya comprobados.
-        # No es una solicitud manual; resolución y movimiento se confirman juntos.
-        movement = inventory_service.register_adjustment(
-            {"product_id": line.product_id, "new_stock": new_stock, "reason": reason}, commit=False)
-        line.stock_movement_id = movement.id
-    elif "new_stock" in data:
+        # No mueve stock: crea una solicitud que aprueba otra persona. Al aprobarse,
+        # la línea queda resuelta con el movimiento aplicado.
+        inventory_adjustment_service.create_from_reconciliation(line, reason)
+        return
+    if "new_stock" in data:
         raise ValidationError("Reconocer sin ajuste no admite un nuevo stock.")
     line.review_status = "resolved"
     line.resolved_by_user_id, line.resolved_at = current_user.id, datetime.utcnow()

@@ -16,6 +16,15 @@ class StockMovement(db.Model):
                            name="ck_movement_creation_origin"),
         db.CheckConstraint("external_reference IS NULL OR (creation_origin IS NOT NULL AND creation_origin = 'manual')",
                            name="ck_movement_external_manual"),
+        # Las reglas del stock también viven en la base: un script o una importación no las salta.
+        db.CheckConstraint("movement_type IN ('entrada','salida','ajuste')", name="ck_movement_type"),
+        db.CheckConstraint("quantity > 0 AND previous_stock >= 0 AND new_stock >= 0", name="ck_movement_quantities"),
+        db.CheckConstraint(
+            "(movement_type = 'entrada' AND new_stock = previous_stock + quantity) OR "
+            "(movement_type = 'salida' AND new_stock = previous_stock - quantity) OR "
+            "(movement_type = 'ajuste' AND (new_stock = previous_stock + quantity OR new_stock = previous_stock - quantity))",
+            name="ck_movement_arithmetic"),
+        db.CheckConstraint("idempotency_key IS NULL OR creation_origin = 'manual'", name="ck_movement_idempotency_manual"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -29,6 +38,8 @@ class StockMovement(db.Model):
     reason = db.Column(db.String(255))
     creation_origin = db.Column(db.String(20), nullable=True)
     external_reference = db.Column(db.String(120), nullable=True)
+    # Clave del cliente para entradas y salidas manuales: un reintento no duplica el movimiento.
+    idempotency_key = db.Column(db.String(64), nullable=True, unique=True)
     # Nullable mientras no exista autenticación; se guarda si está disponible.
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(

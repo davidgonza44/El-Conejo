@@ -136,8 +136,9 @@ def main() -> int:
                             status=STATUS_COMPLETED, subtotal=qty, total=qty)
                 db.session.add(sale)
                 db.session.flush()
-                mov = StockMovement(product_id=prod.id, movement_type="exit", quantity=qty,
-                                    previous_stock=0, new_stock=0, user_id=admin_id, created_at=when)
+                # Historical sale fixture: a valid salida (the DB rejects unknown types and broken arithmetic).
+                mov = StockMovement(product_id=prod.id, movement_type="salida", quantity=qty,
+                                    previous_stock=qty, new_stock=0, user_id=admin_id, created_at=when)
                 db.session.add(mov)
                 db.session.flush()
                 db.session.add(SaleLine(sale_id=sale.id, product_id=prod.id, stock_movement_id=mov.id,

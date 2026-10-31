@@ -162,6 +162,8 @@ def main():
                 login_user(User.query.filter_by(username="hist_inventario").one())
                 inventory_service.register_exit({"product_id": ids["to_low"], "quantity": 32})      # 8 <= 10 -> low
                 inventory_service.register_exit({"product_id": ids["to_out"], "quantity": 5})       # 0 -> out
+                # Solo se desactiva sin existencias: primero sale el stock restante.
+                inventory_service.register_exit({"product_id": ids["to_inactive"], "quantity": 20})
                 approved_product_change('deactivate_product', ids["to_inactive"])
                 approved_product_change('update_product', ids["steady"], {"minimum_stock": 60})               # 50 <= 60 -> low
                 approved_product_change('create_product', {"code": "H-5", "name": "Nuevo", "category_id": cat_b, "current_stock": 3, "minimum_stock": 1})

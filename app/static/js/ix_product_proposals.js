@@ -38,8 +38,10 @@
                 th.scope = 'col';
                 headings.append(th);
             });
+            // En un alta, el stock inicial espera la aprobación en proposed_initial_stock.
+            const proposed = field => field === 'current_stock' ? (product.proposed_initial_stock ?? 0) : product[field];
             const changes = proposal ? proposal.changes : Object.fromEntries(
-                Object.keys(labels).filter(field => Object.hasOwn(product, field)).map(field => [field, product[field]]));
+                Object.keys(labels).filter(field => Object.hasOwn(product, field)).map(field => [field, proposed(field)]));
             Object.entries(changes).forEach(([field, proposed]) => {
                 const row = node('tr'), label = node('th', labels[field] || field);
                 label.scope = 'row';

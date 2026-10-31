@@ -16,13 +16,12 @@ from functools import wraps
 from flask_login import current_user
 
 from app.extensions import db
-from app.models import DeliveryNote, DeliveryNoteItem, Product, StockMovement
+from app.models import DeliveryNote, DeliveryNoteItem, Product
 from app.models.delivery_note import (
     DELIVERY_NOTE_STATUSES,
     STATUS_CANCELLED,
     STATUS_ISSUED,
 )
-from app.models.stock_movement import MOVEMENT_ENTRADA, MOVEMENT_SALIDA
 from app.services import inventory_service
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 
@@ -114,17 +113,6 @@ def _validate_items_payload(items) -> list[tuple[int, int]]:
     return parsed
 
 
-def _get_locked_product(product_id: int) -> Product:
-    """Bloquea la fila del producto para descontar stock sin carreras."""
-    return (
-        db.session.query(Product)
-        .filter(Product.id == product_id)
-        .with_for_update()
-        .populate_existing()
-        .first()
-    )
-
-
 @_atomic
 def create_note(data: dict) -> DeliveryNote:
     _reject_movement_ids(data)
@@ -143,9 +131,11 @@ def create_note(data: dict) -> DeliveryNote:
     shown_prices = _shown_prices(data.get("items"))
 
     # Valida y bloquea todos los productos ANTES de crear nada (transaccional).
+    # El bloqueo sigue el orden de id para no chocar con otra nota o venta simultánea.
+    locked = inventory_service.lock_products(product_id for product_id, _ in parsed_items)
     products: list[tuple[Product, int]] = []
     for product_id, quantity in parsed_items:
-        product = _get_locked_product(product_id)
+        product = locked.get(product_id)
         if product is None:
             raise NotFoundError(f"El producto con id {product_id} no existe.")
         if not product.is_active:
@@ -196,14 +186,10 @@ def create_note(data: dict) -> DeliveryNote:
         line_total = unit_price * quantity
         total += line_total
 
-        movement = StockMovement(
-            product_id=product.id,
-            movement_type=MOVEMENT_SALIDA,
-            quantity=quantity,
-            previous_stock=product.current_stock,
-            new_stock=product.current_stock - quantity,
-            reason=f"Nota de entrega #{note.note_number}",
-            user_id=current_user.id,
+        # Único camino del stock: valida, crea la salida y descuenta en esta transacción.
+        movement = inventory_service.register_exit(
+            {"product_id": product.id, "quantity": quantity, "reason": f"Nota de entrega #{note.note_number}"},
+            commit=False,
         )
         db.session.add(DeliveryNoteItem(
             delivery_note_id=note.id,
@@ -215,11 +201,19 @@ def create_note(data: dict) -> DeliveryNote:
             line_total=line_total,
             issue_stock_movement=movement,
         ))
-        product.current_stock -= quantity
 
     note.total_amount = total
     db.session.commit()
+    _notify_stock(product for product, _ in products)
     return note
+
+
+def _notify_stock(products) -> None:
+    """Tras confirmar: aviso de stock bajo, agotado o crítico; nunca rompe la operación."""
+    from app.services import notification_service
+
+    for product in products:
+        notification_service.product_stock_changed(product)
 
 
 def get_note_or_404(note_id: int) -> DeliveryNote:
@@ -278,30 +272,28 @@ def cancel_note(note_id: int) -> DeliveryNote:
         raise ConflictError(f"La nota {note.note_number} ya está cancelada.")
 
     # Devuelve el stock de cada item con un movimiento de entrada (transaccional).
+    locked = inventory_service.lock_products(item.product_id for item in note.items)
     for item in note.items:
         if item.reversal_stock_movement_id is not None:
             raise ConflictError("La nota contiene una reversión previa inconsistente.")
-        product = _get_locked_product(item.product_id)
-        if product is None:
+        if item.product_id not in locked:
             raise ConflictError(
                 f"No se puede cancelar: el producto id {item.product_id} ya no existe."
             )
-        # quantity se guarda como DECIMAL(12,2); el stock actual es entero.
-        quantity = int(item.quantity)
-        item.reversal_stock_movement = StockMovement(
-                product_id=product.id,
-                movement_type=MOVEMENT_ENTRADA,
-                quantity=quantity,
-                previous_stock=product.current_stock,
-                new_stock=product.current_stock + quantity,
-                reason=f"Cancelación de nota de entrega #{note.note_number}",
-                user_id=current_user.id,
+        # quantity se guarda como DECIMAL(12,2); el stock es entero y no se trunca en silencio.
+        if item.quantity != int(item.quantity):
+            raise ConflictError(f"La cantidad del producto {item.product_code} no es entera; revise la nota.")
+        # La mercancía vuelve aunque el producto se haya desactivado después de emitir la nota.
+        item.reversal_stock_movement = inventory_service.register_entry(
+            {"product_id": item.product_id, "quantity": int(item.quantity),
+             "reason": f"Cancelación de nota de entrega #{note.note_number}"},
+            commit=False, allow_inactive=True,
         )
-        product.current_stock += quantity
 
     note.status = STATUS_CANCELLED
     note.cancelled_by_user_id = current_user.id
     note.cancelled_at = datetime.utcnow()
     db.session.flush()
     db.session.commit()
+    _notify_stock(locked.values())
     return note

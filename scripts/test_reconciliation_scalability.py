@@ -147,7 +147,8 @@ class ScalableAPI(IsolatedCase):
         db.session.commit()
         controller.available()
         for path,fn,expected in [('/api/reconciliation',controller.listing,2),
-                (f'/api/reconciliation/{run_id}',lambda:controller.detail(run_id),3)]:
+                # Detail: run, count, page lines and one batched query for the page's adjustment requests.
+                (f'/api/reconciliation/{run_id}',lambda:controller.detail(run_id),4)]:
             db.session.remove()
             queries=[]
             def observe(conn,cursor,sql,params,context,many):

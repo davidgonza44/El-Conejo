@@ -74,8 +74,8 @@
   <header><h2 id="rc-dialog-title">Revisar discrepancia</h2><button type="button" class="po-icon-btn" data-close aria-label="Cerrar">{{ st.icon('x') }}</button></header>
   <form id="rc-resolution"><div class="p-5 grid gap-4">
     <p id="rc-line-label"></p>
-    <label id="rc-action-label">Acción<select name="action"><option value="acknowledge">Resolver sin modificar existencias</option>{% if has_permission('inventory:move') %}<option value="adjustment">Ajustar existencias</option>{% endif %}</select></label>
-    <label id="rc-stock-label" hidden>Nuevo stock explícito<input name="new_stock" type="number" min="0" max="2147483647" step="1"></label>
+    <label id="rc-action-label">Acción<select name="action"><option value="acknowledge">Resolver sin modificar existencias</option>{% if has_permission('inventory:move') %}<option value="adjustment">Solicitar ajuste por la diferencia</option>{% endif %}</select></label>
+    <p id="rc-stock-label" class="rc-help" hidden></p>
     <label>Justificación<textarea name="note" required maxlength="1000"></textarea></label>
     <p class="po-form-error" role="alert" id="rc-error"></p>
   </div><footer><button type="button" class="po-btn" data-close>Cancelar</button><button class="po-btn is-primary" type="submit">Guardar</button></footer></form>

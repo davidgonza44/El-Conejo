@@ -10,6 +10,10 @@ class Product(db.Model):
             field + " IS NULL OR HEX(" + field + ") IN ('555344','564553')",
             name="ck_products_" + field)
         for field in ("sale_price_currency", "purchase_price_currency")
+    ) + (
+        db.CheckConstraint("current_stock >= 0 AND minimum_stock >= 0", name="ck_products_stock"),
+        db.CheckConstraint("proposed_initial_stock IS NULL OR proposed_initial_stock > 0",
+                           name="ck_products_proposed_initial_stock"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -23,6 +27,8 @@ class Product(db.Model):
     unit = db.Column(db.String(30), nullable=False, default="unidad")
     current_stock = db.Column(db.Integer, nullable=False, default=0)
     minimum_stock = db.Column(db.Integer, nullable=False, default=0)
+    # Stock inicial de un alta pendiente: entra al inventario solo cuando se aprueba el producto.
+    proposed_initial_stock = db.Column(db.Integer, nullable=True)
     purchase_price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     sale_price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     sale_price_currency = db.Column(db.String(8), nullable=True)
@@ -76,6 +82,7 @@ class Product(db.Model):
             "unit": self.unit,
             "current_stock": self.current_stock,
             "minimum_stock": self.minimum_stock,
+            "proposed_initial_stock": self.proposed_initial_stock,
             "image_url": self.image_url,
             "is_active": self.is_active,
             "approval_status": self.approval_status,

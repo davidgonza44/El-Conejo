@@ -76,6 +76,9 @@ class ReconciliationLine(db.Model):
             result[key] = result[key].isoformat() if result[key] else None
         result.update(reviewed_by=self.reviewer.name if self.reviewer else None,
                       resolved_by=self.resolver.name if self.resolver else None)
+        latest = self.adjustment_requests[0] if self.adjustment_requests else None
+        result["adjustment_request"] = None if latest is None else {
+            key: getattr(latest, key) for key in ("id", "status", "new_stock", "review_comment")}
         return result
 
 

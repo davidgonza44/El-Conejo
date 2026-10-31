@@ -231,7 +231,8 @@ def main() -> int:
                 and movement.previous_stock == 0
                 and movement.new_stock == 30
                 and movement.reason == "Stock inicial"
-                and movement.user_id == ids["asistente_id"],
+                # Entra al aprobar el alta: lo aplica el Administrador que aprueba.
+                and movement.user_id == ids["admin_id"],
             )
 
         low = create_via_api(
@@ -249,7 +250,10 @@ def main() -> int:
         check("semilla estados", all(r.status_code == 201 for r in (low, out, available)))
 
         asistente = app.core_roles["asistente"]
-        inactive = create_via_api(admin, code="INA-1", name="Inactivo demo", category_id=cat_a, current_stock=4)
+        stocked = create_via_api(admin, code="INA-0", name="Con existencias", category_id=cat_a, current_stock=4)
+        check("desactivar con stock se rechaza",
+              asistente.delete(f"/api/products/{stocked.json['id']}").status_code == 409)
+        inactive = create_via_api(admin, code="INA-1", name="Inactivo demo", category_id=cat_a, current_stock=0)
         deact = asistente.delete(f"/api/products/{inactive.json['id']}")
         check("desactivar requiere revisión", deact.status_code == 200 and deact.json["product"]["is_active"] is True)
         approved_deactivation = admin.post(f"/api/products/{inactive.json['id']}/approve", json={
@@ -368,7 +372,11 @@ def main() -> int:
             boom = create_via_api(admin, code="ATOM-1", name="No debe persistir", category_id=cat_a, current_stock=30)
         check("atomicidad HTTP error", boom.status_code >= 400)
         with app.app_context():
-            check("atomicidad sin producto", Product.query.filter_by(code="ATOM-1").first() is None)
+            # El stock inicial entra al aprobar: si falla, el alta sigue pendiente y sin existencias.
+            atom = Product.query.filter_by(code="ATOM-1").first()
+            check("atomicidad alta pendiente sin stock",
+                  atom is not None and atom.approval_status == "pending" and atom.current_stock == 0
+                  and atom.proposed_initial_stock == 30)
             check("atomicidad sin movimiento extra", StockMovement.query.count() == moves_before)
 
         pid = r30.json["id"]

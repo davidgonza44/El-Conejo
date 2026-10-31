@@ -83,6 +83,23 @@ def normalize_changes(product, data):
     return {field: _normalize_field(product, field, value) for field, value in data.items()}
 
 
+def _require_deactivable(product):
+    """Un producto inactivo no admite salidas ni recepciones: desactivarlo con existencias
+    o con compras por recibir dejaría ese stock congelado."""
+    from app.models.purchase import EXPECTING_STATUSES, PurchaseOrder, PurchaseOrderLine
+
+    if product.current_stock:
+        raise ConflictError(
+            f"El producto tiene {product.current_stock} unidades en stock. Llévelo a 0 con una salida "
+            "o un ajuste antes de desactivarlo.")
+    pending = (PurchaseOrderLine.query.join(PurchaseOrder, PurchaseOrder.id == PurchaseOrderLine.purchase_order_id)
+               .filter(PurchaseOrderLine.product_id == product.id,
+                       PurchaseOrder.status.in_(EXPECTING_STATUSES),
+                       PurchaseOrderLine.quantity_received < PurchaseOrderLine.quantity_ordered).count())
+    if pending:
+        raise ConflictError("El producto tiene órdenes de compra por recibir; ciérrelas antes de desactivarlo.")
+
+
 def _value(product, field):
     value = getattr(product, field)
     return str(Decimal(value).quantize(Decimal("0.01"))) if field in ("purchase_price", "sale_price") else value
@@ -105,6 +122,8 @@ def propose_change(product_id, data):
                 changes.update({price: normalized[price], currency: normalized[currency]})
         if not changes:
             raise ValidationError("La propuesta no contiene cambios respecto al producto vigente.")
+        if changes.get("is_active") is False:
+            _require_deactivable(product)
         proposal = ProductChange(product_id=product.id, proposed_by_user_id=current_user.id,
                                  changes=changes, previous_values={key: _value(product, key) for key in changes})
         db.session.add(proposal)
@@ -146,6 +165,8 @@ def _apply(product, proposal):
         # «null conserva la marca» solo se aplica al JSON entrante de la fuente.
         data["brand"] = ""
     changes = normalize_changes(product, data)
+    if changes.get("is_active") is False:
+        _require_deactivable(product)  # pudo entrar mercancía mientras la propuesta esperaba
     previous_minimum, previous_active = product.minimum_stock, bool(product.is_active)
     for field, value in changes.items():
         setattr(product, field, Decimal(value) if field in ("purchase_price", "sale_price") else value)

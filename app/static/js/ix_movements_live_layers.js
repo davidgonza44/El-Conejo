@@ -123,6 +123,9 @@
         // Junto a Cantidad: el aviso de stock insuficiente queda al lado del dato que lo causa.
         quantity.closest('label').parentElement.after(error);quantity.setAttribute('aria-describedby','mv-live-error');
         form.querySelector('button[data-mv-close]').addEventListener('click',close);
+        // Una clave por formulario: si la red reintenta el envío, el servidor devuelve el mismo movimiento.
+        let retryKey=null;
+        const newKey=()=>window.crypto.randomUUID?window.crypto.randomUUID():[...window.crypto.getRandomValues(new Uint8Array(16))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
         form.addEventListener('submit',async event=>{
             event.preventDefault();if(!form.reportValidity())return;
             const value=Number(quantity.value);
@@ -131,6 +134,7 @@
             const body={product_id:Number(form.querySelector('#mv-product').value),reason:notes.value.trim()};
             body.external_reference=form.querySelector('#mv-external-reference').value.trim();
             body[kind.value==='ajuste'?'new_stock':'quantity']=value;
+            if(kind.value!=='ajuste'){retryKey=retryKey||newKey();body.idempotency_key=retryKey;}
             try{
                 const result=await api({entrada:'entry',salida:'exit',ajuste:'adjustment'}[kind.value],{method:'POST',body:JSON.stringify(body)});
                 close();announce(kind.value==='ajuste'?`Solicitud #${result.id} pendiente de aprobación. El stock permanece intacto.`:`${result.movement.movement_number} registrado. El stock se actualizó correctamente.`);document.dispatchEvent(new Event('mv:refresh'));
@@ -165,7 +169,9 @@
         const card=node('section','mv-card');
         const labels={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'};
         card.append(node('h3','',`Solicitud #${row.id} · ${labels[row.status]}`),fieldList([
-            ['Producto',row.product],['Stock anterior / objetivo',`${row.previous_stock} / ${row.new_stock}`],
+            ['Producto',row.product],
+            ['Origen',row.source==='reconciliation'?'Conciliación: se aplica la diferencia del corte sobre el stock vigente al aprobar':'Manual'],
+            ['Stock anterior / objetivo',`${row.previous_stock} / ${row.new_stock}`],
             ['Motivo',row.reason],['Solicitante',`Usuario #${row.requester_user_id}`],['Fecha',date(row.requested_at)],
             ['Revisor',row.reviewer_user_id?`Usuario #${row.reviewer_user_id}`:'Pendiente'],
             ['Comentario',row.review_comment || 'Sin comentario'],['Movimiento aplicado',row.stock_movement_id || 'Ninguno']

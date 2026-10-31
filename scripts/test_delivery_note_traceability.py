@@ -85,7 +85,7 @@ class DeliveryTraceabilityTests(IsolatedCase):
 
     def test_issue_and_cancel_rollback_after_first_movement(self):
         payload = self.payload(True)
-        original_movement = service.StockMovement
+        original_movement = inventory_service.StockMovement
         for operation in ("issue", "cancel"):
             note_id = self.issue(payload).id if operation == "cancel" else None
             before = self.snapshot()
@@ -100,7 +100,7 @@ class DeliveryTraceabilityTests(IsolatedCase):
 
             with self.app.test_request_context():
                 login_user(self.users["admin"])
-                with patch.object(service, "StockMovement", side_effect=failing_movement):
+                with patch.object(inventory_service, "StockMovement", side_effect=failing_movement):
                     with self.assertRaisesRegex(RuntimeError, "Synthetic"):
                         service.cancel_note(note_id) if note_id else service.create_note(payload)
             self.assertEqual(len(calls), 2)
@@ -116,13 +116,13 @@ class DeliveryTraceabilityTests(IsolatedCase):
                 with self.app.test_request_context():
                     login_user(self.users["admin"])
                     if failure == "fk":
-                        original = service.StockMovement
+                        original = inventory_service.StockMovement
 
                         def invalid_movement(**kwargs):
                             kwargs["user_id"] = 2147483647
                             return original(**kwargs)
 
-                        context = patch.object(service, "StockMovement", side_effect=invalid_movement)
+                        context = patch.object(inventory_service, "StockMovement", side_effect=invalid_movement)
                     else:
                         context = patch.object(db.session, failure, side_effect=RuntimeError("Synthetic persistence failure"))
                     with context:
@@ -205,16 +205,25 @@ class DeliveryTraceabilityTests(IsolatedCase):
         note = self.issue(self.payload(True))
         first, second = sorted(note.items, key=lambda item: item.id)
         movement = first.issue_stock_movement
-        for field, value in (("product_id", second.product_id), ("quantity", 99), ("movement_type", "entrada")):
-            previous = getattr(movement, field)
-            setattr(movement, field, value)
+        # The CHECK constraints keep each movement arithmetically valid; the link can still disagree.
+        for changes in ({"product_id": second.product_id},
+                        {"quantity": 99, "previous_stock": movement.new_stock + 99},
+                        {"movement_type": "entrada", "new_stock": movement.previous_stock + movement.quantity}):
+            previous = {field: getattr(movement, field) for field in changes}
+            for field, value in changes.items():
+                setattr(movement, field, value)
             db.session.commit()
             shown = movement_presentations([movement])[movement.id]
             self.assertEqual(shown["source_type"], "inconsistent")
             self.assertEqual(shown["display_reference"], f"MOV-{movement.id:06d}")
             self.assertIsNone(shown["source_url"])
-            setattr(movement, field, previous)
+            for field, value in previous.items():
+                setattr(movement, field, value)
             db.session.commit()
+        movement.quantity = 99  # An arithmetic mismatch is rejected by the database itself.
+        with self.assertRaises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
         second.reversal_stock_movement = movement
         db.session.commit()
         self.assertEqual(movement_presentations([movement])[movement.id]["source_type"], "inconsistent")

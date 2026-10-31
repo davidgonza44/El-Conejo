@@ -27,13 +27,13 @@ def _movement_response(movement, status_code: int = 201):
 
 
 def register_entry():
-    movement = inventory_service.register_entry(_json_body(), creation_origin="manual")
-    return _movement_response(movement)
+    movement, created = inventory_service.register_manual("entrada", _json_body())
+    return _movement_response(movement, 201 if created else 200)
 
 
 def register_exit():
-    movement = inventory_service.register_exit(_json_body(), creation_origin="manual")
-    return _movement_response(movement)
+    movement, created = inventory_service.register_manual("salida", _json_body())
+    return _movement_response(movement, 201 if created else 200)
 
 
 def register_adjustment():

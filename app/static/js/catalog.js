@@ -1,10 +1,14 @@
 /* Catálogo visual de productos.
    Módulo estrictamente de consulta: solo usa GET /api/products,
-   GET /api/categories y GET /api/products/<id>. */
+   GET /api/categories y GET /api/products/<id>.
+   Búsqueda, filtros, orden y paginación los resuelve el servidor: cada página
+   pide solo PAGE_SIZE productos, sin descargar el catálogo completo. */
 (function () {
     "use strict";
 
     const PAGE_SIZE = 12;
+    // Filtro de existencia de la UI -> parámetro status de /api/products.
+    const STOCK_STATUS = { available: "disponible", low: "bajo_stock", out: "agotado" };
     const SEARCH_DEBOUNCE_MS = 300;
     const $ = (id) => document.getElementById(id);
     const hasField = (object, field) =>
@@ -28,9 +32,10 @@
     };
 
     const state = {
-        products: [],
-        filteredProducts: [],
         page: 1,
+        totalPages: 1,
+        request: 0,
+        priceChecked: false,
         searchTimer: null,
         detailModal: null,
     };
@@ -183,10 +188,6 @@
         text.textContent = message;
         elements.state.append(createStateIcon("ti-alert-triangle"), title, text);
         setCount("Error al cargar");
-    }
-
-    function normalText(value) {
-        return String(value ?? "").trim().toLocaleLowerCase("es");
     }
 
     function numericValue(value) {
@@ -358,26 +359,17 @@
         };
     }
 
-    function sortProducts(products, sort) {
-        const sorted = [...products];
-        const byName = (a, b) =>
-            String(a.name || "").localeCompare(String(b.name || ""), "es", {
-                sensitivity: "base",
-            });
-        const sorters = {
-            "name-asc": byName,
-            "name-desc": (a, b) => byName(b, a),
-            "price-asc": (a, b) =>
-                numericValue(a.sale_price) - numericValue(b.sale_price) || byName(a, b),
-            "price-desc": (a, b) =>
-                numericValue(b.sale_price) - numericValue(a.sale_price) || byName(a, b),
-            "stock-asc": (a, b) =>
-                numericValue(a.current_stock) - numericValue(b.current_stock) || byName(a, b),
-            "stock-desc": (a, b) =>
-                numericValue(b.current_stock) - numericValue(a.current_stock) || byName(a, b),
-        };
-        sorted.sort(sorters[sort] || sorters["name-asc"]);
-        return sorted;
+    function pageQuery() {
+        const filters = currentFilters();
+        const params = new URLSearchParams({
+            page: String(state.page),
+            per_page: String(PAGE_SIZE),
+            sort: filters.sort,
+        });
+        if (filters.search) params.set("search", filters.search);
+        if (filters.category) params.set("category_id", filters.category);
+        if (STOCK_STATUS[filters.stock]) params.set("status", STOCK_STATUS[filters.stock]);
+        return params;
     }
 
     function updateUrl() {
@@ -393,32 +385,58 @@
         window.history.replaceState(null, "", nextUrl);
     }
 
-    function renderCurrentPage() {
-        const total = state.filteredProducts.length;
-        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-        state.page = Math.min(Math.max(1, state.page), totalPages);
+    function renderPage(items, total) {
+        state.totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
         setCount(
             total === 1 ? "1 producto encontrado" : `${numberFormat.format(total)} productos encontrados`
         );
-
         if (total === 0) {
             showEmpty();
             updateUrl();
             return;
         }
-
-        const start = (state.page - 1) * PAGE_SIZE;
-        const pageProducts = state.filteredProducts.slice(start, start + PAGE_SIZE);
-        const cards = pageProducts.map(createProductCard);
-        elements.grid.replaceChildren(...cards);
+        elements.grid.replaceChildren(...items.map(createProductCard));
         elements.grid.classList.remove("d-none");
         elements.state.classList.add("d-none");
-
-        elements.pageIndicator.textContent = `Página ${state.page} de ${totalPages}`;
+        elements.pageIndicator.textContent = `Página ${state.page} de ${state.totalPages}`;
         elements.previous.disabled = state.page <= 1;
-        elements.next.disabled = state.page >= totalPages;
+        elements.next.disabled = state.page >= state.totalPages;
         elements.pagination.classList.remove("d-none");
         updateUrl();
+    }
+
+    // Sin products:view_price la API omite sale_price: el orden por precio no se ofrece.
+    function dropPriceSortIfHidden(items) {
+        if (state.priceChecked || !items.length) return false;
+        state.priceChecked = true;
+        if (items.some(hasPrice)) return false;
+        const sortedByPrice = elements.sort.value.startsWith("price-");
+        elements.sort.querySelectorAll('option[value^="price-"]').forEach((option) => option.remove());
+        if (sortedByPrice) elements.sort.value = "name-asc";
+        return sortedByPrice;
+    }
+
+    async function loadPage() {
+        const request = ++state.request;
+        showLoading();
+        try {
+            const data = await apiGet(`/api/products?${pageQuery()}`);
+            if (request !== state.request) return; // una respuesta vieja no pisa la consulta vigente
+            const items = data && Array.isArray(data.items) ? data.items : [];
+            const total = Number(data?.pagination?.total ?? data?.count ?? items.length);
+            const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+            if (state.page > pages || dropPriceSortIfHidden(items)) {
+                state.page = Math.min(state.page, pages);
+                await loadPage();
+                return;
+            }
+            renderPage(items, total);
+        } catch (error) {
+            if (request !== state.request) return;
+            const message = errorMessage(error);
+            showCatalogError(message);
+            showAlert(message, error instanceof ApiError && error.status === 401 ? "warning" : "danger");
+        }
     }
 
     function applyFilters(resetPage = true) {
@@ -426,38 +444,7 @@
         if (resetPage) {
             state.page = 1;
         }
-        const filters = currentFilters();
-        const term = normalText(filters.search);
-
-        const matches = state.products.filter((product) => {
-            if (product.is_active !== true) return false;
-
-            if (term) {
-                const searchable = [
-                    product.name,
-                    product.code,
-                    hasField(product, "description") ? product.description : "",
-                ].map(normalText);
-                if (!searchable.some((value) => value.includes(term))) {
-                    return false;
-                }
-            }
-
-            if (
-                filters.category &&
-                String(product.category_id ?? "") !== filters.category
-            ) {
-                return false;
-            }
-
-            if (filters.stock && stockState(product).key !== filters.stock) {
-                return false;
-            }
-            return true;
-        });
-
-        state.filteredProducts = sortProducts(matches, filters.sort);
-        renderCurrentPage();
+        return loadPage();
     }
 
     function populateCategories(categories) {
@@ -612,25 +599,14 @@
         showLoading();
         hideAlert();
         try {
-            const [productsData, categoriesData] = await Promise.all([
-                apiGet("/api/products"),
-                apiGet("/api/categories"),
-            ]);
-
-            const products = productsData && Array.isArray(productsData.items)
-                ? productsData.items
-                : [];
+            const categoriesData = await apiGet("/api/categories");
             const categories = categoriesData && Array.isArray(categoriesData.items)
                 ? categoriesData.items
                 : [];
 
-            state.products = products.filter((product) => product.is_active === true);
-            if (!state.products.some(hasPrice)) {
-                elements.sort.querySelectorAll('option[value^="price-"]').forEach((option) => option.remove());
-            }
             populateCategories(categories);
             restoreFiltersFromUrl();
-            applyFilters(false);
+            await applyFilters(false);
         } catch (error) {
             const message = errorMessage(error);
             showCatalogError(message);
@@ -667,15 +643,14 @@
     elements.previous.addEventListener("click", () => {
         if (state.page <= 1) return;
         state.page -= 1;
-        renderCurrentPage();
+        loadPage();
         window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
     elements.next.addEventListener("click", () => {
-        const totalPages = Math.ceil(state.filteredProducts.length / PAGE_SIZE);
-        if (state.page >= totalPages) return;
+        if (state.page >= state.totalPages) return;
         state.page += 1;
-        renderCurrentPage();
+        loadPage();
         window.scrollTo({ top: 0, behavior: "smooth" });
     });
 

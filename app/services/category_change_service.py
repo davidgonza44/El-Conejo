@@ -43,6 +43,16 @@ def _locked_category(category_id):
     return category
 
 
+def _require_without_active_products(category):
+    """Desactivar una categoría con productos activos los dejaría en una categoría inactiva."""
+    from app.models import Product
+
+    active = Product.query.filter_by(category_id=category.id, is_active=True).count()
+    if active:
+        raise ConflictError(
+            f"La categoría tiene {active} producto(s) activo(s). Reasígnelos o desactívelos antes de desactivarla.")
+
+
 def propose_change(category_id, data):
     from app.services.category_service import _category_changes
 
@@ -57,6 +67,8 @@ def propose_change(category_id, data):
                    if getattr(category, key) != value}
         if not changes:
             raise ValidationError("La propuesta no contiene cambios respecto a la categoría vigente.")
+        if changes.get("is_active") is False:
+            _require_without_active_products(category)
         db.session.add(CategoryChange(category_id=category.id, proposed_by_user_id=current_user.id,
             changes=changes, previous_values={key: getattr(category, key) for key in changes}))
         db.session.commit()
@@ -73,7 +85,10 @@ def _validated_changes(category, proposal):
         raise ConflictError("La categoría ya no está aprobada.")
     if any(getattr(category, key) != value for key, value in proposal.previous_values.items()):
         raise ConflictError("Los valores vigentes cambiaron. Rechace la propuesta y solicite una nueva.")
-    return _category_changes(category.id, proposal.changes)
+    changes = _category_changes(category.id, proposal.changes)
+    if changes.get("is_active") is False:
+        _require_without_active_products(category)  # pudo aprobarse un producto mientras tanto
+    return changes
 
 
 def decide_change(category_id, proposal_id, *, approve, reason=None):

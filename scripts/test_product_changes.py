@@ -63,6 +63,7 @@ class ProductChangesTests(IsolatedCase):
     def test_assistant_proposes_all_fields_and_admin_applies_exactly(self):
         second = Category(name="Segunda categoría")
         db.session.add(second)
+        self.product.current_stock = 0  # Synthetic fixture: only a product without stock can be deactivated.
         db.session.commit()
         original = self.snapshot()
         changes = {"name": "Nombre nuevo", "category_id": second.id, "unit": "caja", "description": "Descripción nueva",
@@ -140,6 +141,9 @@ class ProductChangesTests(IsolatedCase):
         self.assertEqual(ProductChange.query.count(), 0)
 
     def test_deactivation_is_a_proposal_and_reactivation_requires_approval(self):
+        self.assertEqual(self.clients["asistente"].delete(self.path).status_code, 409)  # 10 units in stock
+        self.product.current_stock = 0  # Synthetic fixture: stock already taken to zero.
+        db.session.commit()
         response = self.clients["asistente"].delete(self.path)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(self.snapshot()["is_active"])

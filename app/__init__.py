@@ -183,6 +183,19 @@ def create_app(config_class: type = Config) -> Flask:
             return _error_page(error.status_code, title, error.message)
         return jsonify({**error.payload, "error": error.message}), error.status_code
 
+    from sqlalchemy.exc import OperationalError
+
+    @app.errorhandler(OperationalError)
+    def handle_lock_conflict(error: OperationalError):
+        # 1213 deadlock, 1205 espera de bloqueo agotada: MariaDB ya revirtió; reintentar es seguro.
+        code = error.orig.args[0] if error.orig is not None and error.orig.args else None
+        if code not in (1205, 1213):
+            raise error
+        from app.extensions import db
+
+        db.session.rollback()
+        return jsonify({"error": "Otra operación modificaba los mismos productos. Intente de nuevo."}), 409
+
     @app.errorhandler(404)
     def handle_not_found(_):
         if _wants_page():

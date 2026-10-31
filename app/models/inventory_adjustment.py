@@ -32,12 +32,18 @@ class InventoryAdjustmentRequest(db.Model):
     reviewed_at = db.Column(db.DateTime)
     review_comment = db.Column(db.String(255))
     stock_movement_id = db.Column(db.Integer, db.ForeignKey("stock_movements.id"), unique=True)
+    # Origen conciliación: al aprobar se aplica la diferencia de la línea sobre el stock vigente.
+    reconciliation_line_id = db.Column(db.Integer, db.ForeignKey("reconciliation_lines.id"), index=True)
 
     product = db.relationship("Product")
+    reconciliation_line = db.relationship(
+        "ReconciliationLine", backref=db.backref(
+            "adjustment_requests", lazy="selectin", order_by="InventoryAdjustmentRequest.id.desc()"))
 
     def to_dict(self):
         result = {column.name: getattr(self, column.name) for column in self.__table__.columns}
         for key in ("requested_at", "reviewed_at"):
             result[key] = result[key].isoformat() if result[key] else None
         result["product"] = self.product.name
+        result["source"] = "reconciliation" if self.reconciliation_line_id else "manual"
         return result

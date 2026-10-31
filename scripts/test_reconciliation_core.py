@@ -84,31 +84,42 @@ class ReconciliationTests(IsolatedCase):
         self.assertEqual(self.stock(), 10)
         self.assertEqual(self.action(run, "resolve", {"note":"Again", "action":"acknowledge"}, line=True).status_code, 409)
 
-    def test_adjustment_explicit_atomic_and_linked(self):
-        run = self.preview(); self.action(run)
+    def test_adjustment_is_a_request_applied_by_difference(self):
+        run = self.preview(); self.action(run)  # externo 14, sistema 10: diferencia +4
         payload = {"note":"Conteo físico", "action":"adjustment"}
-        self.assertEqual(self.action(run, "resolve", payload, line=True).status_code, 400)
-        payload["new_stock"] = 13  # Intentionally different from the external quantity of 14.
-        original = inventory_service.register_adjustment
-        with patch.object(inventory_service, "register_adjustment", wraps=original) as adjust:
-            result = self.action(run, "resolve", payload, line=True)
+        self.assertEqual(self.action(run, "resolve", {**payload, "new_stock": 13}, line=True).status_code, 400)
+        result = self.action(run, "resolve", payload, line=True)
         self.assertEqual(result.status_code, 200, result.json)
-        self.assertFalse(adjust.call_args.kwargs["commit"])
-        self.assertEqual(self.stock(), 13)
-        movement = db.session.get(StockMovement, result.json["items"][0]["stock_movement_id"])
-        self.assertEqual(movement.movement_type, "ajuste")
-        self.assertEqual(movement.previous_stock, 10)
-        self.assertEqual(movement.new_stock, 13)
+        line = result.json["items"][0]
+        self.assertEqual((line["review_status"], line["adjustment_request"]["status"]), ("pending", "pending"))
+        self.assertEqual((self.stock(), StockMovement.query.count()), (10, 0))
+        self.assertEqual(self.action(run, "resolve", payload, line=True).status_code, 409)
+        request = line["adjustment_request"]
+        # Una venta posterior al corte no se pierde: el ajuste suma la diferencia al stock vigente.
+        with self.app.test_request_context():
+            from flask_login import login_user
+            login_user(self.users["inventario"])
+            inventory_service.register_exit({"product_id": self.product.id, "quantity": 3})
+        approve = f"/api/inventory/adjustments/{request['id']}/approve"
+        self.assertEqual(self.clients["admin"].post(approve, json={}).status_code, 403)  # no se aprueba a sí mismo
+        approved = self.clients["admin2"].post(approve, json={})
+        self.assertEqual(approved.status_code, 200, approved.json)
+        self.assertEqual(self.stock(), 11)
+        resolved = db.session.get(ReconciliationLine, line["id"])
+        self.assertEqual((resolved.review_status, resolved.resolution_action), ("resolved", "adjustment"))
+        movement = db.session.get(StockMovement, resolved.stock_movement_id)
+        self.assertEqual((movement.movement_type, movement.previous_stock, movement.new_stock), ("ajuste", 7, 11))
 
-    def test_failed_commit_rolls_back_stock_movement_and_resolution(self):
+    def test_failed_commit_rolls_back_request_and_resolution(self):
         run = self.preview(); self.action(run)
         with patch.object(db.session, "commit", side_effect=SQLAlchemyError("private detail")):
-            result = self.action(run, "resolve", {"note":"Conteo", "action":"adjustment", "new_stock":13}, line=True)
+            result = self.action(run, "resolve", {"note":"Conteo", "action":"adjustment"}, line=True)
         self.assertEqual(result.status_code, 409)
         self.assertNotIn("private", str(result.json))
         self.assertEqual(self.stock(), 10)
         self.assertEqual(StockMovement.query.count(), 0)
-        self.assertEqual(db.session.get(ReconciliationLine, run["items"][0]["id"]).review_status, "pending")
+        line = db.session.get(ReconciliationLine, run["items"][0]["id"])
+        self.assertEqual((line.review_status, line.adjustment_requests), ("pending", []))
 
     def test_permissions_and_adjustment_extra_permission(self):
         for actor in ("inventario", "vendedor"):

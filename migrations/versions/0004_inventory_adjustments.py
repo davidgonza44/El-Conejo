@@ -42,7 +42,8 @@ def apply_changes(connection):
         mysql_engine="InnoDB",
     )
     table.create(connection, checkfirst=True)
-    if {c["name"] for c in sa.inspect(connection).get_columns(table.name)} != set(table.columns.keys()):
+    # Later migrations may add columns (0010: reconciliation_line_id); none of these may be missing.
+    if not set(table.columns.keys()) <= {c["name"] for c in sa.inspect(connection).get_columns(table.name)}:
         raise RuntimeError("Unexpected adjustment request schema; manual review required.")
     grants = {"create": ("inventario", "Solicitar ajuste"), "approve": ("admin", "Aprobar o rechazar ajuste")}
     for action, (role, label) in grants.items():
