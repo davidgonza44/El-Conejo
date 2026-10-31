@@ -23,6 +23,17 @@ CUT_COLUMNS = {
     "failure_reason": ("varchar(255)", True, ""), "last_source_hash": ("varchar(64)", True, ""),
     "archived_at": ("datetime", True, ""),
 }
+# Columnas históricas de 5011, representadas por la migración 0013. Son opcionales: el script
+# manual crea la tabla sin ellas; tras 0013 existen y deben tener exactamente este tipo.
+HISTORICAL_CUT_COLUMNS = {
+    "execution_state": ("varchar(12)", True, ""), "schedule_version": ("varchar(32)", True, ""),
+    "profile_id": ("varchar(50)", True, ""), "registered_at": ("datetime", True, ""),
+    "detected_at": ("datetime", True, ""), "reason_code": ("varchar(40)", True, ""),
+    "reason_confidence": ("varchar(12)", True, ""), "registration_kind": ("varchar(16)", True, ""),
+    "inventory_realm": ("varchar(16)", True, ""), "business_entity_id": ("varchar(64)", True, ""),
+    "source_installation_id": ("varchar(64)", True, ""), "warehouse_scope_id": ("varchar(64)", True, ""),
+    "snapshot_context_json": ("longtext", True, ""),
+}
 STOCK_COLUMNS = {
     "cut_id": ("int", False, ""), "product_id": ("int", False, ""),
     "product_code_snapshot": ("varchar(50)", False, ""), "quantity": ("int", False, ""),
@@ -250,12 +261,17 @@ def _run_status_check(connection):
              {"'preview'", "'confirmed'", "'discarded'"}, "reconciliation_runs status CHECK domain")
 
 
-def _table(connection, table, columns, indexes, foreign_keys, checks):
+def _table(connection, table, columns, indexes, foreign_keys, checks, optional=None):
     _table_storage(connection, table)
     actual = _columns(connection, table)
-    _require(set(actual) == set(columns), table + " column set")
+    optional = optional or {}
+    _require(set(columns) <= set(actual) <= set(columns) | set(optional), table + " column set")
     for name, expected in columns.items():
         _column(actual[name], expected, table + "." + name)
+    for name in set(actual) & set(optional):
+        _column(actual[name], optional[name], table + "." + name)
+        if optional[name][0] == "longtext":  # MariaDB guarda JSON como LONGTEXT con json_valid propio
+            checks = {**checks, name: f"json_valid(`{name}`)"}
     _indexes(connection, table, indexes)
     _foreign_keys(inspect(connection), table, foreign_keys)
     _checks(connection, table, checks)
@@ -292,14 +308,14 @@ def verify_schema(connection, database, *, final=True):
     specs = (
         ("reconciliation_cuts", CUT_COLUMNS,
          [(True, True, ("id",)), (False, True, ("source", "scheduled_for")), (False, True, ("run_id",))],
-         [(("run_id",), "reconciliation_runs", ("id",))], CHECKS),
+         [(("run_id",), "reconciliation_runs", ("id",))], CHECKS, HISTORICAL_CUT_COLUMNS),
         ("reconciliation_cut_stock", STOCK_COLUMNS,
          [(True, True, ("cut_id", "product_id")), (False, False, ("product_code_snapshot",))],
-         [(("cut_id",), "reconciliation_cuts", ("id",))], {}),
+         [(("cut_id",), "reconciliation_cuts", ("id",))], {}, None),
     )
-    for table, columns, indexes, foreign_keys, checks in specs:
+    for table, columns, indexes, foreign_keys, checks, optional in specs:
         if final or inspector.has_table(table):
-            _table(connection, table, columns, indexes, foreign_keys, checks)
+            _table(connection, table, columns, indexes, foreign_keys, checks, optional)
 
 
 def migrate(engine, database: str, *, authorize_thesis: bool = False) -> None:
