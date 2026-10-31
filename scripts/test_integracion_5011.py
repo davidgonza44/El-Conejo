@@ -47,6 +47,23 @@ class ServiceClassification(TutorFlowCase):
         self.assertEqual(db.session.get(Product, self.product.id).current_stock, 0)
 
 
+class ApprovalsInbox(TutorFlowCase):
+    def test_inbox_keeps_the_shell_layout_and_readable_references(self):
+        body = dict(name="Proveedor Renombrado", tax_id="TEST-SUPPLIER", contact_name="Contacto", phone="0000000000",
+                    email="test@example.invalid", category="Pruebas", is_active=True)
+        self.assertEqual(self.clients["asistente"].patch(f"/api/suppliers/{self.supplier.id}", json=body).status_code, 200)
+        page = self.clients["admin"].get("/purchases/approvals")
+        html = page.get_data(as_text=True)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('class="ix-main po-page', html)  # sin el espacio la página quedaba bajo el menú lateral
+        self.assertNotIn("ix-mainpo-page", html)
+        self.assertIn(self.supplier.name, html)  # referencia legible, no el id interno
+        self.assertIn("Pendiente de decisión", html)
+        self.assertIn("Revisar", html)
+        empty = self.clients["admin"].get("/purchases/approvals?page=1")
+        self.assertEqual(empty.status_code, 200)
+
+
 class ServiceProposal(IsolatedCase):
     def body(self, code, **extra):
         return {"code": code, "name": "Servicio " + code, "category_id": self.product.category_id, "unit": "servicio",

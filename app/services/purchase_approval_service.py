@@ -1,10 +1,12 @@
 """Bandeja paginada de decisiones de Compras, sin importes ni datos fuera de los permisos del rol."""
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from flask_login import current_user
 from sqlalchemy import literal, select, union_all, func
 from app.extensions import db
 from app.models import User
-from app.models.purchase import PurchaseOrder, Supplier
+from app.models.purchase import PurchaseOrder, PurchaseReception, Supplier
 from app.models.supplier_change import SupplierChange
 from app.models.purchase_closure import PurchaseClosureRequest
 from app.models.purchase_correction import PurchaseReceptionCorrection
@@ -41,16 +43,47 @@ def listing(params):
         .order_by(pending.c.created_at, pending.c.kind, pending.c.id)
         .offset((page["page"]-1)*page["per_page"]).limit(page["per_page"])).mappings().all()
     counts = dict(db.session.execute(select(pending.c.kind, func.count()).group_by(pending.c.kind)).all())
-    return {"items": [_present(row) for row in rows], "pagination": page, "counts": counts}
+    names = _reference_names(rows)
+    return {"items": [_present(row, names) for row in rows], "pagination": page, "counts": counts,
+            "kinds": [kind for kind, model, permission, *_ in specs
+                      if role_has_permission(role, permission) and table_ready(model.__tablename__)]}
 
 
-def _present(row):
+LABELS = {"order": "Orden de compra", "supplier": "Alta de proveedor", "supplier_change": "Cambio de proveedor",
+          "closure": "Cierre comercial", "correction": "Corrección de recepción"}
+CARACAS = ZoneInfo("America/Caracas")
+
+
+def _reference_names(rows):
+    """Referencias legibles en una consulta por tipo: proveedor, número de OC o de recepción, no ids internos."""
+    ids = {kind: {int(row["reference"]) for row in rows if row["kind"] == kind}
+           for kind in ("supplier_change", "closure", "correction")}
+    names = {}
+    if ids["supplier_change"]:
+        names["supplier_change"] = dict(db.session.execute(
+            select(Supplier.id, Supplier.name).where(Supplier.id.in_(ids["supplier_change"]))).all())
+    if ids["closure"]:
+        names["closure"] = dict(db.session.execute(
+            select(PurchaseOrder.id, PurchaseOrder.order_number).where(PurchaseOrder.id.in_(ids["closure"]))).all())
+    if ids["correction"]:
+        names["correction"] = {row.id: f"REC-{row.id:05d} · {row.order_number}" for row in db.session.execute(
+            select(PurchaseReception.id, PurchaseOrder.order_number).join(
+                PurchaseOrder, PurchaseOrder.id == PurchaseReception.purchase_order_id)
+            .where(PurchaseReception.id.in_(ids["correction"])))}
+    return names
+
+
+def _present(row, names):
     kind, reference = row["kind"], row["reference"]
-    labels = {"order": "Orden de compra", "supplier": "Alta de proveedor", "supplier_change": "Cambio de proveedor",
-              "closure": "Cierre comercial", "correction": "Corrección de recepción"}
     targets = {"order": f"/purchases?detail={row['id']}", "supplier": f"/suppliers?detail={row['id']}",
                "supplier_change": f"/suppliers?detail={reference}", "closure": f"/purchases?detail={reference}",
                "correction": f"/purchases/receptions?detail={reference}"}
-    return {"id": row["id"], "kind": kind, "label": labels[kind], "reference": str(reference),
-            "responsible": row["responsible"] or "No registrado", "created_at": row["created_at"].isoformat()+"Z",
-            "age_days": max(0, (datetime.utcnow()-row["created_at"]).days), "href": targets[kind]}
+    readable = names.get(kind, {}).get(int(reference)) if kind in names else None
+    created = row["created_at"]
+    age = max(0, (datetime.utcnow() - created).days)
+    own = row["actor_id"] is not None and row["actor_id"] == current_user.id
+    return {"id": row["id"], "kind": kind, "label": LABELS[kind], "reference": str(readable or reference),
+            "responsible": row["responsible"] or "No registrado", "created_at": created.isoformat() + "Z",
+            "created_label": created.replace(tzinfo=timezone.utc).astimezone(CARACAS).strftime("%d/%m/%Y %H:%M"),
+            "age_days": age, "age_label": "Hoy" if age == 0 else ("1 día" if age == 1 else f"{age} días"),
+            "status_label": "Pendiente de decisión", "can_decide": not own, "href": targets[kind]}
