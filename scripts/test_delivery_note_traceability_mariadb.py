@@ -25,7 +25,8 @@ from sqlalchemy.exc import OperationalError
 from migrate_delivery_note_traceability import engine_for, migrate, validate_target
 
 HOST = "127.0.0.1"
-PORT = 3306
+# Puerto local explícito para un MariaDB desechable; 3306 por defecto.
+PORT = int(os.environ.get("DB_PORT", "3306"))
 USER = os.environ.get("DB_USER", "root")
 PASSWORD = os.environ.get("DB_PASSWORD", "")
 FORBIDDEN = "ferreteria_conejo_tesis"
@@ -286,9 +287,11 @@ def concurrency_case(server):
             db.session.flush()
             user = User(name="Admin desechable", username="dn-lock", email="dn-lock@example.invalid", role="admin")
             first = Product(code="DN-LOCK-1", name="Producto uno", category_id=category.id,
-                            current_stock=10, minimum_stock=0, purchase_price=1, sale_price=2, is_active=True)
+                            current_stock=10, minimum_stock=0, purchase_price=1, sale_price=2, is_active=True,
+                            sale_price_currency="USD", purchase_price_currency="USD")  # notas: solo USD explícito
             second = Product(code="DN-LOCK-2", name="Producto dos", category_id=category.id,
-                             current_stock=20, minimum_stock=0, purchase_price=1, sale_price=2, is_active=True)
+                             current_stock=20, minimum_stock=0, purchase_price=1, sale_price=2, is_active=True,
+                             sale_price_currency="USD", purchase_price_currency="USD")
             db.session.add_all([user, first, second])
             db.session.commit()
             user_id, product_ids = user.id, [first.id, second.id]

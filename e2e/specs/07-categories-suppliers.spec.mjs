@@ -114,7 +114,8 @@ test.describe('Modificación de proveedor aprobado', () => {
         const admin = await rolePage(browser, 'admin');
         await admin.goto('/suppliers');
         await admin.getByRole('button', { name: 'Ver detalle E2E Proveedor 2' }).click();
-        await expect(admin.locator('.sp-change')).toContainText('0241-1112233');
+        // El Historial (pestaña oculta) también lista la propuesta pendiente; se revisa el panel visible.
+        await expect(admin.locator('.sp-change:visible')).toContainText('0241-1112233');
         await admin.locator('#sp-review-reason').fill('Teléfono no verificado (E2E)');
         const rejected = admin.waitForResponse((r) => r.url().endsWith('/reject'));
         await admin.locator('#sp-reject').click();
@@ -125,7 +126,8 @@ test.describe('Modificación de proveedor aprobado', () => {
 
         sent = await client.patch(`/api/suppliers/${original.id}`, proposal(original, '0241-4445566'));
         expect(sent.status).toBe(200);
-        const adminClient = await api(admin, '/suppliers');
+        // Página propia para la API: tras rechazar, la pantalla navega a ?detail=<id> y cortaría esta navegación.
+        const adminClient = await api(await rolePage(browser, 'admin'), '/suppliers');
         expect((await adminClient.post(`/api/suppliers/${original.id}/approve`)).status).toBe(200);
         current = (await client.get(`/api/suppliers/${original.id}`)).body;
         expect(current.phone).toBe('0241-4445566');
