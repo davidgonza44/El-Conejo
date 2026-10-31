@@ -1,7 +1,8 @@
 # Integridad de Compras
 
-Correcciones del 30 de octubre de 2026. La migración `0011_purchase_integrity`
-sigue a `0010_inventory_integrity`, que pertenece al trabajo de Inventario.
+Correcciones del 30 de octubre de 2026. La migración `0012_purchase_integrity`
+sigue a `0011_inventory_integrity` (Inventario), que a su vez sigue a
+`0010_delivery_note_robustness` (Notas de Entrega).
 Este cambio prepara código y migración; no aplica cambios a bases operativas.
 
 ## Reglas del flujo
@@ -71,9 +72,9 @@ por el listado y el CSV para evitar una consulta de cierre por documento.
 ## Migración y validación
 
 Aplicar las migraciones mediante el procedimiento de despliegue existente,
-primero Inventario `0010` y después Compras `0011`, con respaldo y validación en
+primero Notas `0010`, después Inventario `0011` y por último Compras `0012`, con respaldo y validación en
 una copia desechable. No ejecutar scripts de inicialización sobre datos valiosos.
-La migración 0011 es aditiva y no altera cantidades, movimientos ni proveedores.
+La migración 0012 es aditiva y no altera cantidades, movimientos ni proveedores.
 Su reversión automática se bloquea para conservar la evidencia de correcciones.
 
 Pruebas fuente:

@@ -472,7 +472,7 @@ def setup_isolated_app(temp_root: Path) -> dict[str, Any]:
         raise RuntimeError(f"No se pudo crear nota a cancelar: {cancelled.get_data(as_text=True)}")
     cancelled_note = cancelled.get_json()["delivery_note"]
     cancel_resp = inventario.post(
-        f"/api/delivery-notes/{cancelled_note['id']}/cancel", json={}
+        f"/api/delivery-notes/{cancelled_note['id']}/cancel", json={"reason": "Cancelación de prueba"}
     )
     if cancel_resp.status_code != 200:
         raise RuntimeError(f"No se pudo cancelar nota: {cancel_resp.get_data(as_text=True)}")

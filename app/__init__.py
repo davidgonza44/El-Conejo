@@ -163,6 +163,8 @@ def create_app(config_class: type = Config) -> Flask:
 
         return block_withdrawn_customer_sales_request()
 
+    from sqlalchemy.exc import IntegrityError
+
     from app.services.exceptions import ApiError
 
     def _wants_page() -> bool:
@@ -195,6 +197,16 @@ def create_app(config_class: type = Config) -> Flask:
 
         db.session.rollback()
         return jsonify({"error": "Otra operación modificaba los mismos productos. Intente de nuevo."}), 409
+
+    @app.errorhandler(IntegrityError)
+    def handle_integrity_error(_):
+        # Dos peticiones simultáneas pasan la revisión previa y la base rechaza la segunda:
+        # es un conflicto de datos (409), no un fallo del servidor.
+        db.session.rollback()
+        message = "Otro registro con los mismos datos se guardó al mismo tiempo. Revise e intente de nuevo."
+        if _wants_page():
+            return _error_page(409, "No se pudo guardar", message)
+        return jsonify({"error": message}), 409
 
     @app.errorhandler(404)
     def handle_not_found(_):

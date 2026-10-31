@@ -79,6 +79,45 @@ test.describe('Emisión (vendedor)', () => {
         await expect(page.locator('#c-product option', { hasText: 'Arena lavada m3' })).toHaveCount(0);
     });
 
+    test('enlaza la nota con un cliente del directorio y la muestra en su historial', async ({ page }) => {
+        await page.goto('/delivery-notes');
+        await page.locator('#btn-new-note').click();
+        const modal = page.locator('#create-modal');
+        await modal.locator('#c-customer-search').fill('Constructora Prueba');
+        await modal.getByRole('option', { name: /E2E Constructora Prueba/ }).click();
+        await expect(modal.locator('#c-customer-linked')).toContainText('E2E Constructora Prueba');
+        await expect(modal.getByLabel('Nombre del cliente')).toHaveValue('E2E Constructora Prueba');
+        await expect(modal.getByLabel('Nombre del cliente')).not.toBeEditable();
+        const value = await modal.locator('#c-product option', { hasText: 'E2E-006 — ' }).getAttribute('value');
+        await modal.locator('#c-product').selectOption(value);
+        await modal.locator('#btn-add-line').click();
+        await modal.locator('#create-save-btn').click();
+        await modal.locator('#create-save-btn').click();
+        await expect(modal).toBeHidden();
+
+        await page.goto('/sales/customers');
+        await page.locator('#cu-search').fill('E2E Constructora Prueba');
+        const row = page.locator('#cu-body tr', { hasText: 'E2E Constructora Prueba' });
+        await row.getByRole('link', { name: /Ver notas de entrega/ }).click();
+        await expect(page.locator('#f-customer-link')).toContainText('E2E Constructora Prueba');
+        await expect(page.locator('#notes-tbody tr')).not.toHaveCount(0);
+        for (const cell of await page.locator('#notes-tbody tr td:nth-child(2)').allTextContents()) {
+            expect(cell).toBe('E2E Constructora Prueba');
+        }
+    });
+
+    test('un reintento con la misma clave no emite otra nota', async ({ page }) => {
+        const client = await api(page, '/delivery-notes');
+        const product = (await client.get('/api/products?search=E2E-006&page=1&per_page=5')).body.items[0];
+        const payload = { customer_name: 'E2E Reintento', idempotency_key: `e2e-${uid()}-reintento`,
+            items: [{ product_id: product.id, quantity: 1 }] };
+        const first = await client.post('/api/delivery-notes', payload);
+        const again = await client.post('/api/delivery-notes', payload);
+        expect([first.status, again.status]).toEqual([201, 200]);
+        expect(again.body.delivery_note.note_number).toBe(first.body.delivery_note.note_number);
+        expect(await stockOf(page, 'E2E-006')).toBe(product.current_stock - 1);
+    });
+
     test('no puede cancelar notas', async ({ page }) => {
         await page.goto('/delivery-notes');
         await page.locator('#notes-tbody tr', { hasText: customer }).getByRole('button', { name: 'Ver detalle' }).click();
@@ -96,12 +135,25 @@ test.describe('Cancelación (administrador)', () => {
         await page.locator('#notes-tbody tr', { hasText: customer }).getByRole('button', { name: 'Ver detalle' }).click();
         const detail = page.locator('#detail-modal');
         await expect(detail.locator('#d-customer-name')).toHaveText(customer);
-        page.once('dialog', (dialog) => dialog.accept());
+        // Primer clic pide el motivo; sin motivo no cancela.
+        await detail.locator('#btn-cancel-note').click();
+        await expect(detail.locator('#d-cancel-reason')).toBeVisible();
+        await detail.locator('#btn-cancel-note').click();
+        await expect(detail.locator('#detail-error')).toContainText('motivo');
+        expect(await stockOf(page, 'E2E-005'), 'sin motivo no devuelve stock').toBe(before);
+        await detail.locator('#d-cancel-reason').fill('El cliente no retiró la mercancía');
         await detail.locator('#btn-cancel-note').click();
         await expect(detail).toBeHidden();
         expect(await stockOf(page, 'E2E-005')).toBe(before + 2);
         await page.locator('#notes-tbody tr', { hasText: customer }).getByRole('button', { name: 'Ver detalle' }).click();
         await expect(page.locator('#detail-cancelled-alert')).toBeVisible();
+        await expect(page.locator('#d-cancel-reason-text')).toHaveText('El cliente no retiró la mercancía');
+    });
+
+    test('la API exige el motivo de cancelación', async ({ page }) => {
+        const client = await api(page, '/delivery-notes');
+        const issued = (await client.get('/api/delivery-notes?status=issued&page=1&per_page=1')).body.items[0];
+        expect((await client.post(`/api/delivery-notes/${issued.id}/cancel`, {})).status).toBe(400);
     });
 
     test('descarga el PDF de una nota', async ({ page }) => {

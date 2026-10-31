@@ -14,16 +14,22 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 
 from flask_login import current_user
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
-from app.models import DeliveryNote, DeliveryNoteItem, Product
+from app.models import Customer, DeliveryNote, DeliveryNoteItem, DocumentSequence, Product
 from app.models.delivery_note import (
     DELIVERY_NOTE_STATUSES,
     STATUS_CANCELLED,
     STATUS_ISSUED,
 )
+from app.models.document_sequence import DELIVERY_NOTE_SEQUENCE
 from app.services import inventory_service
+from app.services.customer_service import PHONE_MESSAGE, PHONE_RE
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
+from app.services.sales_common import utc_boundary
 
 
 def _atomic(operation):
@@ -47,7 +53,9 @@ def _reject_movement_ids(data):
 _FIELD_LIMITS = {"customer_name": ("nombre del cliente", 150), "customer_document": ("documento", 30),
                  "customer_phone": ("teléfono", 30), "customer_address": ("dirección", 255)}
 _DOCUMENT_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.\- ]{2,29}")
-_PHONE_RE = re.compile(r"\+?[0-9][0-9 ()\-.]{6,29}")
+_IDEMPOTENCY_RE = re.compile(r"[A-Za-z0-9\-]{8,64}")
+_DEFAULT_PER_PAGE = 20
+_MAX_PER_PAGE = 100
 
 
 def _customer_field(data: dict, field: str) -> str | None:
@@ -60,9 +68,64 @@ def _customer_field(data: dict, field: str) -> str | None:
         raise ValidationError(f"El {label} admite como máximo {limit} caracteres.")
     if value and field == "customer_document" and not _DOCUMENT_RE.fullmatch(value):
         raise ValidationError("El documento solo admite letras, números, puntos y guiones (p. ej. V-12345678 o J-12345678-9).")
-    if value and field == "customer_phone" and not _PHONE_RE.fullmatch(value):
-        raise ValidationError("El teléfono solo admite dígitos, espacios, paréntesis, guiones y un + inicial (p. ej. 0414-1234567).")
+    if value and field == "customer_phone" and not PHONE_RE.fullmatch(value):
+        raise ValidationError(PHONE_MESSAGE)
     return value or None
+
+
+def _linked_customer(value) -> Customer | None:
+    """Cliente del directorio elegido en el formulario; la nota copia sus datos al emitirse."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValidationError("El campo 'customer_id' debe ser un entero positivo.")
+    customer = db.session.get(Customer, value)
+    if customer is None:
+        raise NotFoundError(f"El cliente con id {value} no existe.")
+    if not customer.is_active:
+        raise ConflictError(f"El cliente '{customer.name}' está inactivo; no admite nuevas notas.")
+    return customer
+
+
+def _note_customer(data: dict) -> tuple[Customer | None, str, dict]:
+    """(cliente del directorio, nombre, documento/teléfono/dirección) que la nota guardará como copia."""
+    linked = _linked_customer(data.get("customer_id"))
+    name = linked.name if linked else _customer_field(data, "customer_name")
+    if not name:
+        raise ValidationError("El campo 'customer_name' es obligatorio.")
+    fields = {field: _customer_field(data, field) for field in ("customer_document", "customer_phone", "customer_address")}
+    if linked:  # copia los datos del directorio: una sola versión del cliente
+        fields["customer_document"], fields["customer_phone"] = linked.tax_id, linked.phone
+    return linked, name, fields
+
+
+def _idempotency_key(data: dict) -> str | None:
+    key = data.get("idempotency_key")
+    if key is None:
+        return None
+    if not isinstance(key, str) or not _IDEMPOTENCY_RE.fullmatch(key.strip()):
+        raise ValidationError("El campo 'idempotency_key' debe tener de 8 a 64 letras, números o guiones.")
+    return key.strip()
+
+
+def _replayed(key: str) -> DeliveryNote | None:
+    """La misma clave devuelve la nota ya emitida por el mismo usuario; la de otro no revela datos."""
+    existing = DeliveryNote.query.filter(DeliveryNote.idempotency_key == key).first()
+    if existing is not None and existing.created_by_user_id != current_user.id:
+        raise ConflictError("No se pudo emitir la nota de entrega.")
+    return existing
+
+
+def _next_note_number() -> str:
+    """Número correlativo tomado con bloqueo en la transacción de la nota: sin huecos ni espera por 'PENDIENTE'."""
+    sequence = (db.session.query(DocumentSequence).filter(DocumentSequence.name == DELIVERY_NOTE_SEQUENCE)
+                .with_for_update().populate_existing().first())
+    if sequence is None:  # bases creadas sin la migración 0010: continúa desde la última nota
+        start = db.session.query(func.max(DeliveryNote.id)).scalar() or 0
+        sequence = DocumentSequence(name=DELIVERY_NOTE_SEQUENCE, last_value=start)
+        db.session.add(sequence)
+    sequence.last_value += 1
+    return f"NE-{sequence.last_value:06d}"
 
 
 def _item_integer(value, message: str) -> int:
@@ -113,8 +176,27 @@ def _validate_items_payload(items) -> list[tuple[int, int]]:
     return parsed
 
 
-@_atomic
 def create_note(data: dict) -> DeliveryNote:
+    return issue_note(data)[0]
+
+
+def issue_note(data: dict) -> tuple[DeliveryNote, bool]:
+    """Devuelve ``(nota, creada)``; ``creada=False`` es un reintento con la misma clave (no emite otra)."""
+    key = _idempotency_key(data)
+    existing = _replayed(key) if key else None
+    if existing is not None:
+        return existing, False
+    try:
+        return _create_note(data, key), True
+    except IntegrityError:
+        winner = _replayed(key) if key else None  # otra petición con la misma clave confirmó primero
+        if winner is None:
+            raise
+        return winner, False
+
+
+@_atomic
+def _create_note(data: dict, key: str | None) -> DeliveryNote:
     _reject_movement_ids(data)
     if "created_by_user_id" in data:
         raise ValidationError(
@@ -122,10 +204,7 @@ def create_note(data: dict) -> DeliveryNote:
             "registra a nombre del usuario autenticado."
         )
 
-    customer_name = _customer_field(data, "customer_name")
-    if not customer_name:
-        raise ValidationError("El campo 'customer_name' es obligatorio.")
-    customer = {field: _customer_field(data, field) for field in ("customer_document", "customer_phone", "customer_address")}
+    linked, customer_name, customer = _note_customer(data)
 
     parsed_items = _validate_items_payload(data.get("items"))
     shown_prices = _shown_prices(data.get("items"))
@@ -167,7 +246,9 @@ def create_note(data: dict) -> DeliveryNote:
                             payload={"price_changes": changes})
 
     note = DeliveryNote(
-        note_number="PENDIENTE",  # se reemplaza tras obtener el id
+        note_number=_next_note_number(),
+        customer_id=linked.id if linked else None,
+        idempotency_key=key,
         customer_name=customer_name,
         customer_document=customer["customer_document"],
         customer_phone=customer["customer_phone"],
@@ -177,8 +258,7 @@ def create_note(data: dict) -> DeliveryNote:
         created_by_user_id=current_user.id,
     )
     db.session.add(note)
-    db.session.flush()  # asigna note.id; el número deriva de él (único garantizado)
-    note.note_number = f"NE-{note.id:06d}"
+    db.session.flush()  # asigna note.id para las líneas
 
     total = 0
     for product, quantity in products:
@@ -223,13 +303,24 @@ def get_note_or_404(note_id: int) -> DeliveryNote:
     return note
 
 
-def list_notes(
+def _positive_param(value, field: str) -> int:
+    text = str(value).strip()
+    if not text.isdigit() or int(text) < 1 or len(text) > 10:
+        raise ValidationError(f"El parámetro '{field}' debe ser un entero positivo.")
+    return int(text)
+
+
+def _filtered_query(
     status: str | None = None,
     customer_name: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
-) -> list[DeliveryNote]:
+    customer_id=None,
+):
     query = DeliveryNote.query
+
+    if customer_id not in (None, ""):
+        query = query.filter(DeliveryNote.customer_id == _positive_param(customer_id, "customer_id"))
 
     if status:
         status = status.strip().lower()
@@ -243,25 +334,69 @@ def list_notes(
     if customer_name:
         query = query.filter(DeliveryNote.customer_name.ilike(f"%{customer_name.strip()}%"))
 
-    def _parse_date(value: str, field: str) -> datetime:
+    def _parse_date(value: str, field: str):
         try:
-            return datetime.strptime(value, "%Y-%m-%d")
+            return datetime.strptime(value, "%Y-%m-%d").date()
         except ValueError:
             raise ValidationError(f"El parámetro '{field}' debe tener formato YYYY-MM-DD.")
 
+    # created_at se guarda en UTC; los días del filtro son días comerciales de Caracas.
     if date_from:
-        query = query.filter(DeliveryNote.created_at >= _parse_date(date_from, "date_from"))
+        query = query.filter(DeliveryNote.created_at >= utc_boundary(_parse_date(date_from, "date_from")))
     if date_to:
         # Inclusivo: hasta el final del día indicado.
         query = query.filter(
-            DeliveryNote.created_at < _parse_date(date_to, "date_to") + timedelta(days=1)
+            DeliveryNote.created_at < utc_boundary(_parse_date(date_to, "date_to") + timedelta(days=1))
         )
+    return query
 
-    return query.order_by(DeliveryNote.created_at.desc(), DeliveryNote.id.desc()).all()
+
+def _newest_first(query):
+    return query.order_by(DeliveryNote.created_at.desc(), DeliveryNote.id.desc())
+
+
+def list_notes(
+    status: str | None = None,
+    customer_name: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    customer_id=None,
+) -> list[DeliveryNote]:
+    query = _filtered_query(status, customer_name, date_from, date_to, customer_id)
+    return _newest_first(query).options(joinedload(DeliveryNote.creator)).all()
+
+
+def page_notes(filters: dict, page=None, per_page=None) -> dict:
+    """Una página del listado más los totales de todas las notas que cumplen los filtros."""
+    query = _filtered_query(**filters)
+    page = 1 if page in (None, "") else _positive_param(page, "page")
+    per_page = _DEFAULT_PER_PAGE if per_page in (None, "") else _positive_param(per_page, "per_page")
+    if per_page > _MAX_PER_PAGE:
+        raise ValidationError(f"El parámetro 'per_page' debe estar entre 1 y {_MAX_PER_PAGE}.")
+    by_status = {status: (count, amount) for status, count, amount in query.with_entities(
+        DeliveryNote.status, func.count(DeliveryNote.id), func.coalesce(func.sum(DeliveryNote.total_amount), 0),
+    ).group_by(DeliveryNote.status)}
+    total = sum(count for count, _ in by_status.values())
+    issued_count, issued_amount = by_status.get(STATUS_ISSUED, (0, 0))
+    items = (_newest_first(query).options(joinedload(DeliveryNote.creator))
+             .offset((page - 1) * per_page).limit(per_page).all())
+    return {
+        "items": items, "total": total, "page": page, "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+        "issued": issued_count, "cancelled": by_status.get(STATUS_CANCELLED, (0, 0))[0],
+        "issued_amount": Decimal(issued_amount),
+    }
+
+
+def _cancellation_reason(value) -> str:
+    if not isinstance(value, str) or not 5 <= len(value.strip()) <= 500:
+        raise ValidationError("Indique el motivo de la cancelación (entre 5 y 500 caracteres).")
+    return value.strip()
 
 
 @_atomic
-def cancel_note(note_id: int) -> DeliveryNote:
+def cancel_note(note_id: int, reason) -> DeliveryNote:
+    reason = _cancellation_reason(reason)
     # Lock the document before checking status; refresh stale identity-map state.
     note = (db.session.query(DeliveryNote).filter(DeliveryNote.id == note_id)
             .with_for_update().populate_existing().first())
@@ -293,6 +428,7 @@ def cancel_note(note_id: int) -> DeliveryNote:
     note.status = STATUS_CANCELLED
     note.cancelled_by_user_id = current_user.id
     note.cancelled_at = datetime.utcnow()
+    note.cancellation_reason = reason
     db.session.flush()
     db.session.commit()
     _notify_stock(locked.values())

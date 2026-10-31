@@ -2,20 +2,27 @@
 
 - RIF normalizado a ``L-DDDDDDDD-D`` (letra V/E/J/P/G, 6-9 dígitos, dígito verificador).
   Se valida el formato y la unicidad; no se verifica el dígito de control en v1.
-- Correo normalizado en minúsculas y único cuando existe. Teléfono opcional y no único.
+- Correo normalizado en minúsculas y único cuando existe. Teléfono opcional y no único,
+  con el mismo formato que exigen las notas de entrega.
 - El cliente ``is_walk_in`` no se renombra, desactiva, borra ni duplica.
-- Un cliente con ventas se desactiva; uno sin uso puede borrarse.
+- Un cliente con ventas, cotizaciones, pedidos o notas de entrega se desactiva; uno sin uso puede borrarse.
 """
 import re
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
+from app.models import DeliveryNote, Order, Quote, Sale
 from app.models.customer import WALK_IN_NAME, Customer
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 
 _RIF_RE = re.compile(r"^([VEJPG])-?(\d{6,9})-?(\d)$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Compartido con las notas de entrega: un solo formato de teléfono en todo el sistema.
+PHONE_RE = re.compile(r"\+?[0-9][0-9 ()\-.]{6,29}")
+PHONE_MESSAGE = "El teléfono solo admite dígitos, espacios, paréntesis, guiones y un + inicial (p. ej. 0414-1234567)."
+_DUPLICATE = "Ya existe un cliente con ese RIF o correo."
 _DEFAULT_PER_PAGE = 8
 _MAX_PER_PAGE = 100
 SORT_COLUMNS = {"name": Customer.name, "created_at": Customer.created_at, "tax_id": Customer.tax_id}
@@ -83,7 +90,10 @@ def _apply_fields(customer: Customer, data: dict, exclude_id=None) -> None:
         _unique(Customer.email, email, exclude_id, "correo")
         customer.email = email
     if "phone" in data or exclude_id is None:
-        customer.phone = _text(data, "phone", 30)
+        phone = _text(data, "phone", 30)
+        if phone and not PHONE_RE.fullmatch(phone):
+            raise ValidationError(PHONE_MESSAGE)
+        customer.phone = phone
     if "is_active" in data:
         if not isinstance(data["is_active"], bool):
             raise ValidationError("El campo 'is_active' debe ser booleano.")
@@ -108,16 +118,24 @@ def walk_in_customer() -> Customer | None:
     return Customer.query.filter(Customer.is_walk_in.is_(True)).first()
 
 
+def _commit(conflict_message: str) -> None:
+    """Confirma; si la base rechaza por unicidad o vínculo (p. ej. alta simultánea), responde 409."""
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ConflictError(conflict_message) from None
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def create_customer(data: dict) -> Customer:
     _reject_walk_in_fields(data)
     customer = Customer()
     _apply_fields(customer, data)
     db.session.add(customer)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        raise
+    _commit(_DUPLICATE)
     return customer
 
 
@@ -132,30 +150,28 @@ def update_customer(customer_id, data: dict) -> Customer:
     else:
         _reject_walk_in_fields({k: v for k, v in data.items() if k in ("name", "is_walk_in")})
     _apply_fields(customer, data, exclude_id=customer.id)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        raise
+    _commit(_DUPLICATE)
     return customer
 
 
+def _has_documents(customer_id: int) -> bool:
+    """Ventas, cotizaciones, pedidos y notas de entrega apuntan al cliente: borrarlo rompería su histórico."""
+    return any(db.session.query(model.id).filter(model.customer_id == customer_id).first() is not None
+               for model in (Sale, Quote, Order, DeliveryNote))
+
+
 def delete_customer(customer_id) -> dict:
-    """Con ventas: desactiva (histórico intacto). Sin uso: borra la fila."""
+    """Con documentos asociados: desactiva (histórico intacto). Sin uso: borra la fila."""
     customer = get_customer(customer_id)
     if customer.is_walk_in:
         raise ConflictError(f"'{WALK_IN_NAME}' no puede eliminarse ni desactivarse.")
-    if customer.sales:
+    if _has_documents(customer.id):
         customer.is_active = False
         action = "deactivated"
     else:
         db.session.delete(customer)
         action = "deleted"
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        raise
+    _commit("El cliente tiene documentos asociados y no puede borrarse; desactívelo.")
     return {"id": customer_id, "action": action}
 
 

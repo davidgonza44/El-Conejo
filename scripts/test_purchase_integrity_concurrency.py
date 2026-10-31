@@ -102,7 +102,7 @@ class PurchaseMigrationTests(unittest.TestCase):
                 connection.execute(text("DROP TABLE purchase_reception_corrections"))
                 connection.execute(text("ALTER TABLE purchase_orders DROP COLUMN supplier_snapshot"))
                 connection.execute(text("ALTER TABLE supplier_changes DROP COLUMN reason"))
-                spec = importlib.util.spec_from_file_location("purchase_migration", Path(__file__).parents[1]/"migrations/versions/0011_purchase_integrity.py")
+                spec = importlib.util.spec_from_file_location("purchase_migration", Path(__file__).parents[1]/"migrations/versions/0012_purchase_integrity.py")
                 migration = importlib.util.module_from_spec(spec);spec.loader.exec_module(migration)
                 with Operations.context(MigrationContext.configure(connection)):
                     migration.upgrade()

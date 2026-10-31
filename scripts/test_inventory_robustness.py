@@ -108,7 +108,7 @@ class InventoryRobustnessTests(IsolatedCase):
             "customer_name": "Cliente", "items": [{"product_id": self.product.id, "quantity": 10}]}).json
         self.product.is_active = False  # fixture: desactivado después de emitir la nota
         db.session.commit()
-        response = self.clients["admin"].post(f"/api/delivery-notes/{note['delivery_note']['id']}/cancel", json={})
+        response = self.clients["admin"].post(f"/api/delivery-notes/{note['delivery_note']['id']}/cancel", json={"reason": "Devolución sintética"})
         self.assertEqual(response.status_code, 200, response.json)
         self.assertEqual(self.stock(), 10)
 

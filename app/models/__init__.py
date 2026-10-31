@@ -14,6 +14,7 @@ from app.models.inventory_adjustment import InventoryAdjustmentRequest
 from app.models.inventory_snapshot import InventorySnapshot
 from app.models.delivery_note import DeliveryNote
 from app.models.delivery_note_item import DeliveryNoteItem
+from app.models.document_sequence import DocumentSequence
 from app.models.historical_import import HistoricalImport
 from app.models.historical_demand_record import HistoricalDemandRecord
 from app.models.historical_import_error import HistoricalImportError
@@ -66,6 +67,7 @@ __all__ = [
     "InventorySnapshot",
     "DeliveryNote",
     "DeliveryNoteItem",
+    "DocumentSequence",
     "HistoricalImport",
     "HistoricalDemandRecord",
     "HistoricalImportError",

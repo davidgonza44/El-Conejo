@@ -3,6 +3,7 @@ from flask import Response, jsonify, request
 
 from app.services import delivery_note_pdf_service, delivery_note_service
 from app.services.exceptions import ValidationError
+from app.utils.permissions import response_includes_sale_price
 
 
 def _json_body() -> dict:
@@ -13,26 +14,28 @@ def _json_body() -> dict:
 
 
 def create_note():
-    note = delivery_note_service.create_note(_json_body())
-    return (
-        jsonify(
-            {
-                "message": f"Nota de entrega {note.note_number} emitida correctamente.",
-                "delivery_note": note.to_dict(),
-            }
-        ),
-        201,
-    )
+    note, created = delivery_note_service.issue_note(_json_body())
+    message = (f"Nota de entrega {note.note_number} emitida correctamente." if created
+               else f"La nota {note.note_number} ya había sido emitida; no se registró otra.")
+    return jsonify({"message": message, "delivery_note": note.to_dict()}), 201 if created else 200
 
 
 def list_notes():
-    notes = delivery_note_service.list_notes(
-        status=request.args.get("status"),
-        customer_name=request.args.get("customer_name"),
-        date_from=request.args.get("date_from"),
-        date_to=request.args.get("date_to"),
-    )
-    return jsonify({"count": len(notes), "items": [n.to_summary_dict() for n in notes]})
+    filters = {field: request.args.get(field)
+               for field in ("status", "customer_name", "date_from", "date_to", "customer_id")}
+    if "page" not in request.args and "per_page" not in request.args:
+        notes = delivery_note_service.list_notes(**filters)
+        return jsonify({"count": len(notes), "items": [n.to_summary_dict() for n in notes]})
+    result = delivery_note_service.page_notes(filters, request.args.get("page"), request.args.get("per_page"))
+    issued, amount = result["issued"], result["issued_amount"]
+    visible = response_includes_sale_price()
+    return jsonify({
+        "count": result["total"], "page": result["page"], "per_page": result["per_page"], "pages": result["pages"],
+        "items": [n.to_summary_dict() for n in result["items"]],
+        "summary": {"issued": issued, "cancelled": result["cancelled"],
+                    "issued_amount": float(amount) if visible else None,
+                    "average_amount": float(amount / issued) if visible and issued else (0.0 if visible else None)},
+    })
 
 
 def get_note(note_id: int):
@@ -41,7 +44,7 @@ def get_note(note_id: int):
 
 
 def cancel_note(note_id: int):
-    note = delivery_note_service.cancel_note(note_id)
+    note = delivery_note_service.cancel_note(note_id, _json_body().get("reason"))
     return jsonify(
         {
             "message": (

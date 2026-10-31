@@ -102,6 +102,12 @@
                 <label class="form-label mb-1" for="f-date-to">Hasta</label>
                 <input type="date" id="f-date-to" class="form-control form-control-sm">
             </div>
+            <div class="col-12 d-none" id="f-customer-link" role="status">
+                <span class="dn-customer-chip">
+                    Notas del cliente <strong id="f-customer-link-name"></strong>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="f-customer-link-clear">Ver todas las notas</button>
+                </span>
+            </div>
             <div class="col-12 col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm flex-fill">
                     <i class="ti ti-filter me-1"></i>Aplicar
@@ -138,6 +144,15 @@
             <tbody id="notes-tbody"></tbody>
         </table>
     </div>
+    <div class="card-footer d-flex align-items-center justify-content-between gap-2" id="notes-pager">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="notes-prev" disabled>
+            <i class="ti ti-chevron-left me-1" aria-hidden="true"></i>Anterior
+        </button>
+        <span class="text-secondary small" id="notes-page" aria-live="polite"></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="notes-next" disabled>
+            Siguiente<i class="ti ti-chevron-right ms-1" aria-hidden="true"></i>
+        </button>
+    </div>
 </div>
 
 {% if can_create %}
@@ -155,6 +170,20 @@
 
                     <h4 class="mb-3">Datos del cliente</h4>
                     <div class="row g-3 mb-4">
+                        {% if has_permission('customers:read') %}
+                        <div class="col-12 dn-customer-picker">
+                            <label class="form-label" for="c-customer-search">Buscar en el directorio de clientes</label>
+                            <input type="search" id="c-customer-search" class="form-control" maxlength="80"
+                                   placeholder="Nombre, RIF o teléfono…" autocomplete="off"
+                                   role="combobox" aria-expanded="false" aria-controls="c-customer-results" aria-autocomplete="list">
+                            <ul id="c-customer-results" class="dn-customer-results d-none" role="listbox" aria-label="Clientes encontrados"></ul>
+                            <div id="c-customer-linked" class="dn-customer-chip d-none" role="status">
+                                Cliente del directorio: <strong id="c-customer-linked-name"></strong>
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="c-customer-unlink">Quitar</button>
+                            </div>
+                            <small class="form-hint">Al elegir un cliente se copian su nombre, RIF y teléfono. Para un cliente ocasional, escriba los datos abajo.</small>
+                        </div>
+                        {% endif %}
                         <div class="col-12 col-md-6">
                             <label class="form-label required" for="c-customer-name">Nombre del cliente</label>
                             <input type="text" id="c-customer-name" class="form-control" maxlength="150">
@@ -267,7 +296,19 @@
                             <span class="text-secondary">Cancelado por:</span> <span id="d-cancelled-by"></span>
                             <span class="text-secondary ms-2">(<span id="d-cancelled-at"></span>)</span>
                         </div>
+                        <div class="col-12 d-none" id="d-cancel-reason-wrap">
+                            <span class="text-secondary">Motivo de la cancelación:</span> <span id="d-cancel-reason-text"></span>
+                        </div>
                     </div>
+                    {% if can_cancel %}
+                    <section id="cancel-form" class="dn-cancel-form d-none" aria-labelledby="cancel-form-title">
+                        <h3 class="dn-confirm-title" id="cancel-form-title">Cancelar esta nota</h3>
+                        <label class="form-label required" for="d-cancel-reason">Motivo de la cancelación</label>
+                        <textarea id="d-cancel-reason" class="form-control" rows="2" maxlength="500"
+                                  aria-describedby="d-cancel-reason-hint"></textarea>
+                        <small class="form-hint" id="d-cancel-reason-hint">Entre 5 y 500 caracteres. Se guarda con la nota y el stock de sus productos vuelve al inventario.</small>
+                    </section>
+                    {% endif %}
                     <div class="table-responsive mb-3">
                         <table class="table table-sm table-vcenter">
                             <thead>
@@ -296,7 +337,7 @@
                 </button>
                 {% if can_cancel %}
                 <button type="button" class="btn btn-outline-danger d-none" id="btn-cancel-note">
-                    <i class="ti ti-ban me-1"></i>Cancelar nota
+                    <i class="ti ti-ban me-1"></i><span id="btn-cancel-note-label">Cancelar nota</span>
                 </button>
                 {% endif %}
                 <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cerrar</button>

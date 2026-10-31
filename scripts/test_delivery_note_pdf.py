@@ -361,10 +361,10 @@ def setup_isolated_app(temp_root: Path):
     if cancelled.status_code != 201:
         raise RuntimeError(f"No se pudo crear nota a cancelar: {cancelled.get_data(as_text=True)}")
     cancelled_note = cancelled.get_json()["delivery_note"]
-    denied_cancel = inventario.post(f"/api/delivery-notes/{cancelled_note['id']}/cancel", json={})
+    denied_cancel = inventario.post(f"/api/delivery-notes/{cancelled_note['id']}/cancel", json={"reason": "Cancelación de prueba"})
     if denied_cancel.status_code != 403:
         raise RuntimeError("Inventario no debe adquirir el permiso de cancelación.")
-    cancel_resp = admin.post(f"/api/delivery-notes/{cancelled_note['id']}/cancel", json={})
+    cancel_resp = admin.post(f"/api/delivery-notes/{cancelled_note['id']}/cancel", json={"reason": "Cancelación de prueba"})
     if cancel_resp.status_code != 200:
         raise RuntimeError(f"No se pudo cancelar nota: {cancel_resp.get_data(as_text=True)}")
     cancelled_note = cancel_resp.get_json()["delivery_note"]

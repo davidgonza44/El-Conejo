@@ -13,8 +13,9 @@ cumplen, se detiene sin cambios: los datos inválidos se revisan a mano.
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0010_inventory_integrity"
-down_revision = "0009_supplier_changes"
+revision = "0011_inventory_integrity"
+# Sigue a la 0010 de Notas de Entrega, publicada antes; ambas partían de 0009.
+down_revision = "0010_delivery_note_robustness"
 branch_labels = None
 depends_on = None
 

@@ -12,6 +12,7 @@
         drawerFeedback: $('cu-drawer-feedback'), submit: $('cu-submit')
     };
     const canWrite = document.querySelector('.sa-toolbar').dataset.canWrite === '1';
+    const canNotes = document.querySelector('.sa-toolbar').dataset.canNotes === '1';
     // ?search= es el destino de la búsqueda global; misma densidad que la referencia.
     const state = { search: (new URLSearchParams(location.search).get('search') || '').trim(), page: 1, perPage: 5 };
     if (state.search) $('cu-search').value = state.search;
@@ -58,6 +59,15 @@
             const status = node('td');
             status.append(node('span', customer.is_active ? 'Activo' : 'Inactivo', `px-badge sa-badge is-${customer.is_active ? 'green' : 'gray'}`));
             tr.append(status);
+            if (canNotes) {
+                // Historial del cliente: notas de entrega emitidas con este cliente del directorio.
+                const notes = node('td');
+                const link = node('a', 'Ver notas', 'sa-link');
+                link.href = `/delivery-notes?customer_id=${encodeURIComponent(customer.id)}`;
+                link.setAttribute('aria-label', `Ver notas de entrega de ${customer.name}`);
+                notes.append(link);
+                tr.append(notes);
+            }
             body.append(tr);
         });
         els.empty.hidden = items.length > 0;

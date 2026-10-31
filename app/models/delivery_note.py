@@ -15,6 +15,8 @@ class DeliveryNote(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     note_number = db.Column(db.String(30), unique=True, nullable=False, index=True)
+    # Cliente del directorio (opcional). La nota conserva su propia copia de nombre y datos.
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True, index=True)
     customer_name = db.Column(db.String(150), nullable=False)
     customer_document = db.Column(db.String(30))
     customer_phone = db.Column(db.String(30))
@@ -28,7 +30,11 @@ class DeliveryNote(db.Model):
     cancelled_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     cancelled_at = db.Column(db.DateTime, nullable=True)
+    cancellation_reason = db.Column(db.String(500), nullable=True)
+    # Clave por envío del formulario: un reintento devuelve la misma nota en vez de emitir otra.
+    idempotency_key = db.Column(db.String(64), unique=True, nullable=True)
 
+    customer = db.relationship("Customer")
     creator = db.relationship(
         "User", back_populates="delivery_notes", foreign_keys=[created_by_user_id]
     )
@@ -58,6 +64,7 @@ class DeliveryNote(db.Model):
         return {
             "id": self.id,
             "note_number": self.note_number,
+            "customer_id": self.customer_id,
             "customer_name": self.customer_name,
             "customer_document": self.customer_document,
             "customer_phone": self.customer_phone,
@@ -70,6 +77,7 @@ class DeliveryNote(db.Model):
             "cancelled_by_user_id": self.cancelled_by_user_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "cancelled_at": self.cancelled_at.isoformat() if self.cancelled_at else None,
+            "cancellation_reason": self.cancellation_reason,
             "items": [item.to_dict() for item in self.items],
         }
 

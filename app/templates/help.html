@@ -133,15 +133,15 @@
             {% if nav_allowed('delivery_notes') %}
             <h3>Emitir una nota</h3>
             {{ steps(['Abre Notas de entrega y pulsa «Nueva nota».',
-                      'Escribe el nombre del cliente y, si aplica, su documento (V-12345678 o J-12345678-9) y teléfono.',
+                      'Busca al cliente en el directorio para copiar su nombre, RIF y teléfono; si es un cliente ocasional, escribe sus datos (documento V-12345678 o J-12345678-9).',
                       'Agrega cada producto con su cantidad. Solo se ofrecen productos con existencia y precio en USD.',
                       'Pulsa «Revisar nota»: verás cliente, líneas, total y el aviso de salida de inventario.',
                       'Confirma con «Confirmar emisión». Si un precio cambió mientras preparabas la nota, el sistema muestra el importe nuevo y pide confirmarlo otra vez.']) }}
-            <p>Desde «Ver detalle» puedes descargar el PDF con el membrete de la empresa. Solo el administrador puede cancelar una nota; al hacerlo, el stock vuelve al inventario.</p>
+            <p>Desde «Ver detalle» puedes descargar el PDF con el membrete de la empresa. Solo el administrador puede cancelar una nota y debe indicar el motivo, que queda guardado en la nota; al cancelarla, el stock vuelve al inventario. Si la conexión falla al emitir, puedes volver a pulsar «Confirmar emisión»: el sistema no emite la misma nota dos veces.</p>
             {% endif %}
             {% if nav_allowed('sales_customers') %}
             <h3>Clientes</h3>
-            <p>En Ventas › Clientes registras razón social, RIF, teléfono y correo. La búsqueda filtra mientras escribes.</p>
+            <p>En Ventas › Clientes registras razón social, RIF, teléfono y correo. La búsqueda filtra mientras escribes y «Ver notas» abre las notas de entrega emitidas a ese cliente.</p>
             {% endif %}
         </section>
         {% endif %}
