@@ -9,7 +9,15 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("purchase_orders", sa.Column("supplier_snapshot", sa.JSON(), nullable=True))
+    # Las bases desplegadas en 5001 y 5011 ya traen purchase_orders.supplier_snapshot, creada fuera de
+    # Alembic y con valores. Se adopta sin modificarla: esta migración no inventa ni reescribe históricos.
+    inspector = sa.inspect(op.get_bind())
+    snapshot = {column["name"]: column for column in inspector.get_columns("purchase_orders")}.get("supplier_snapshot")
+    if snapshot is None:
+        op.add_column("purchase_orders", sa.Column("supplier_snapshot", sa.JSON(), nullable=True))
+    # MariaDB guarda JSON como LONGTEXT con json_valid; así lo devuelve la reflexión.
+    elif not snapshot["nullable"] or type(snapshot["type"]).__name__ not in ("JSON", "LONGTEXT"):
+        raise RuntimeError("purchase_orders.supplier_snapshot existe con otro tipo; revise antes de migrar.")
     op.add_column("supplier_changes", sa.Column("reason", sa.String(1000), nullable=True))
     op.create_table("purchase_reception_corrections",
         sa.Column("id", sa.Integer, primary_key=True),
