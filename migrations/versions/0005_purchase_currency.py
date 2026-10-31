@@ -3,7 +3,8 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0005_purchase_currency"
-down_revision = "0004_inventory_adjustments"
+# 0004a provee la línea base que esta migración ya suponía (supplier_quotes y columnas de OC).
+down_revision = "0004a_baseline_tables"
 branch_labels = None
 depends_on = None
 
