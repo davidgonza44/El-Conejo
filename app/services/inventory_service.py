@@ -163,6 +163,8 @@ def register_entry(data: dict, commit: bool = True, *, creation_origin=None,
         quantity = _positive_quantity(data)
         user_id = _current_user_id(data)
         reason = _reason(data)
+        if product.is_service:
+            raise ConflictError(f"'{product.name}' es un servicio: no lleva existencias.")
 
         new_stock = _within_stock_limit(product.current_stock + quantity)
         movement = _create_movement(

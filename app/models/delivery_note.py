@@ -12,6 +12,9 @@ class DeliveryNote(db.Model):
     """Nota de entrega simple (no es una factura fiscal)."""
 
     __tablename__ = "delivery_notes"
+    __table_args__ = (
+        db.CheckConstraint("currency IS NULL OR HEX(currency) IN ('555344','564553')", name="ck_delivery_notes_currency"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     note_number = db.Column(db.String(30), unique=True, nullable=False, index=True)
@@ -33,6 +36,9 @@ class DeliveryNote(db.Model):
     cancellation_reason = db.Column(db.String(500), nullable=True)
     # Clave por envío del formulario: un reintento devuelve la misma nota en vez de emitir otra.
     idempotency_key = db.Column(db.String(64), unique=True, nullable=True)
+    # Columna de la migración 0008. La moneda documental sigue pendiente de autorización:
+    # el servicio no la asigna y las notas históricas conservan NULL, sin inferencias.
+    currency = db.Column(db.String(8), nullable=True)
 
     customer = db.relationship("Customer")
     creator = db.relationship(

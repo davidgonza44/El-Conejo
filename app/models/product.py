@@ -35,6 +35,9 @@ class Product(db.Model):
     purchase_price_currency = db.Column(db.String(8), nullable=True)
     image_url = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    # Clasificación explícita y aprobada (migración 0014); nunca se infiere del nombre.
+    # Compras, reposición y pronóstico ya la consultan para excluir servicios.
+    is_service = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     approval_status = db.Column(db.String(20), nullable=False, default="approved", server_default="approved")
     proposed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     approved_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -85,6 +88,7 @@ class Product(db.Model):
             "proposed_initial_stock": self.proposed_initial_stock,
             "image_url": self.image_url,
             "is_active": self.is_active,
+            "is_service": self.is_service,
             "approval_status": self.approval_status,
             "is_low_stock": self.is_low_stock,
             "stock_status": self.stock_status,

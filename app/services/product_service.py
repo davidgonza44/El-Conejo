@@ -35,6 +35,7 @@ _UPDATABLE_FIELDS = {
     "purchase_price_currency",
     "image_url",
     "is_active",
+    "is_service",
     "brand",
 }
 
@@ -474,6 +475,11 @@ def create_product(data: dict) -> Product:
     category_id = _validate_category(data.get("category_id"))
     initial_stock = _non_negative_int(data, "current_stock", default=0)
     minimum_stock = _non_negative_int(data, "minimum_stock", default=0)
+    is_service = data.get("is_service", False)
+    if type(is_service) is not bool:
+        raise ValidationError("El campo 'is_service' debe ser booleano.")
+    if is_service and initial_stock:
+        raise ValidationError("Un servicio no lleva existencias: el stock inicial debe ser 0.")
     purchase_price = _non_negative_price(data, "purchase_price")
     sale_price = _non_negative_price(data, "sale_price")
 
@@ -487,6 +493,7 @@ def create_product(data: dict) -> Product:
         current_stock=0,
         # El stock inicial espera la aprobación: un alta rechazada no deja existencias ni movimientos.
         proposed_initial_stock=initial_stock or None,
+        is_service=is_service,
         minimum_stock=minimum_stock,
         purchase_price=purchase_price,
         sale_price=sale_price,

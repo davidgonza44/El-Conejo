@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, inspect, text
 
 from docker_support.guard import wait_database, validate
 
-HEAD = "0012_purchase_integrity"
+HEAD = "0014_product_service_flag"
 
 
 def engine():

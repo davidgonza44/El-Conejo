@@ -67,7 +67,7 @@ def _normalize_field(product, field, value):
     if field == "minimum_stock":
         return _minimum(value)
     if type(value) is not bool:
-        raise ValidationError("El campo 'is_active' debe ser booleano.")
+        raise ValidationError(f"El campo '{field}' debe ser booleano.")
     return value
 
 
@@ -100,6 +100,13 @@ def _require_deactivable(product):
         raise ConflictError("El producto tiene órdenes de compra por recibir; ciérrelas antes de desactivarlo.")
 
 
+def _require_serviceable(product):
+    """Un servicio no lleva existencias; clasificar con stock dejaría inventario sin reponer."""
+    if product.current_stock:
+        raise ConflictError(
+            f"El producto tiene {product.current_stock} unidades en stock; un servicio no lleva existencias.")
+
+
 def _value(product, field):
     value = getattr(product, field)
     return str(Decimal(value).quantize(Decimal("0.01"))) if field in ("purchase_price", "sale_price") else value
@@ -124,6 +131,8 @@ def propose_change(product_id, data):
             raise ValidationError("La propuesta no contiene cambios respecto al producto vigente.")
         if changes.get("is_active") is False:
             _require_deactivable(product)
+        if changes.get("is_service") is True:
+            _require_serviceable(product)
         proposal = ProductChange(product_id=product.id, proposed_by_user_id=current_user.id,
                                  changes=changes, previous_values={key: _value(product, key) for key in changes})
         db.session.add(proposal)
@@ -167,6 +176,8 @@ def _apply(product, proposal):
     changes = normalize_changes(product, data)
     if changes.get("is_active") is False:
         _require_deactivable(product)  # pudo entrar mercancía mientras la propuesta esperaba
+    if changes.get("is_service") is True:
+        _require_serviceable(product)
     previous_minimum, previous_active = product.minimum_stock, bool(product.is_active)
     for field, value in changes.items():
         setattr(product, field, Decimal(value) if field in ("purchase_price", "sale_price") else value)

@@ -758,6 +758,8 @@
             sale_price: document.getElementById('np-price').value || 0,
             sale_price_currency: document.getElementById('np-price-currency').value,
             current_stock: document.getElementById('np-stock').value || 0,
+            // Clasificación explícita; el Administrador la aprueba junto con el alta.
+            is_service: Boolean(document.getElementById('np-service')?.checked),
             minimum_stock: document.getElementById('np-minimum').value || 0,
             description: document.getElementById('np-description').value.trim(),
             brand: document.getElementById('np-brand').value.trim(),

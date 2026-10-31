@@ -6,7 +6,7 @@
         description: 'Descripción', brand: 'Marca', sale_price: 'Precio de venta',
         purchase_price: 'Costo de referencia', minimum_stock: 'Stock mínimo',
         sale_price_currency: 'Moneda de venta', purchase_price_currency: 'Moneda de referencia',
-        current_stock: 'Stock inicial', is_active: 'Estado del catálogo', image_url: 'Imagen'
+        current_stock: 'Stock inicial', is_active: 'Estado del catálogo', is_service: 'Servicio', image_url: 'Imagen'
     };
     window.canProposeProductChange = (product, canWrite) => Boolean(
         canWrite && product.approval_status === 'approved' && !product.pending_change && !product.has_pending_change);
@@ -24,6 +24,7 @@
                 return `${symbol} ${Number(raw).toFixed(2)}`;
             }
             if (field === 'is_active') return raw ? 'Activo' : 'Inactivo';
+            if (field === 'is_service') return raw ? 'Sí' : 'No';
             if (field === 'category_id') return categoryName(raw) || `Categoría #${raw}`;
             return raw === null || raw === '' ? '—' : String(raw);
         }

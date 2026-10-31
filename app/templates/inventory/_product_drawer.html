@@ -59,6 +59,9 @@
                 {{ field('stock', 'Stock inicial', type='number', value='0') }}
                 {{ field('minimum', 'Stock mínimo', type='number', value='0') }}
             </div>
+            {% if not reference_mode %}<div class="np-field">
+                <label class="flex items-center gap-2" for="np-service"><input id="np-service" type="checkbox"> Es un servicio (no lleva existencias ni se repone)</label>
+            </div>{% endif %}
             <div class="np-field">
                 <label for="np-status">Estado <span class="np-required">*</span></label>
                 <div class="np-status" data-status="Disponible"><span class="np-dot" aria-hidden="true"></span><select id="np-status" required aria-describedby="np-status-error"><option>Disponible</option><option>Bajo stock</option><option>Agotado</option></select></div>
