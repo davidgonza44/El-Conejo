@@ -1,0 +1,44 @@
+import { start, stop, login, go, shot, flushErrors, TAG } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Movimientos';
+await start();
+const p = await login('inventario', OUT);
+await go(p, '/inventory');
+const D = p.locator('#mv-drawer');
+async function attempt(label, { kind, product = 'AUD-CAB', qty, ref, notes, date }) {
+    await p.getByRole('button', { name: /Nuevo movimiento/ }).click(); await p.waitForTimeout(700);
+    if (kind) await D.locator('#mv-kind').selectOption({ label: kind });
+    await p.waitForTimeout(200);
+    const opt = await D.locator('#mv-product option', { hasText: product }).first().getAttribute('value');
+    await D.locator('#mv-product').selectOption(opt); await p.waitForTimeout(400);
+    const stockShown = await D.locator('#mv-stock').inputValue().catch(() => '');
+    if (qty !== undefined) await D.locator('#mv-quantity').fill(String(qty));
+    if (ref) await D.locator('#mv-external-reference').fill(ref);
+    if (notes) await D.locator('#mv-notes').fill(notes);
+    const dateField = D.locator('#mv-date');
+    const dateDefault = await dateField.inputValue().catch(() => '');
+    if (date) await dateField.fill(date).catch((e) => console.log('fecha no editable', e.message.slice(0, 60)));
+    const labels = await D.locator('[data-notes-label]').textContent();
+    await D.locator('button[type=submit]').click(); await p.waitForTimeout(1500);
+    const toast = await p.locator('#mv-status').textContent().catch(() => '');
+    const inline = await D.locator('.mv-error:visible, [role=alert]:visible, .is-invalid:visible').allTextContents().catch(() => []);
+    const open = await D.isVisible();
+    console.log(`[${label}] stockMostrado=${stockShown} fechaDef=${dateDefault} notasLabel=${labels} abierto=${open} toast="${toast.trim()}" inline=${JSON.stringify(inline)} nativo=${p.audit.lastNative || ''}`);
+    p.audit.lastNative = '';
+    if (open) { await shot(p, label.replace(/\W+/g, '_'), D); await D.locator('[data-mv-close]').first().click().catch(() => {}); await p.waitForTimeout(400); }
+    for (const n of flushErrors(p, A)) console.log('   ', n.slice(0, 200));
+}
+await attempt('vacio', {});
+await attempt('entrada cantidad 0', { kind: 'Entrada', qty: 0 });
+await attempt('entrada negativa', { kind: 'Entrada', qty: -3 });
+await attempt('entrada decimal', { kind: 'Entrada', qty: 2.5 });
+await attempt('entrada servicio', { kind: 'Entrada', product: 'E2E-FLETE', qty: 3 });
+await attempt('salida mayor que stock', { kind: 'Salida', qty: 99999 });
+await attempt('entrada fecha pasada', { kind: 'Entrada', qty: 25, ref: 'FAC-PROV-' + TAG, notes: 'Compra directa sin orden ' + TAG, date: '2026-10-01' });
+await attempt('salida valida', { kind: 'Salida', qty: 5, ref: 'DESP-' + TAG, notes: 'Material dañado en almacén ' + TAG });
+await attempt('salida sin motivo', { kind: 'Salida', qty: 1 });
+await attempt('ajuste', { kind: 'Solicitar ajuste', qty: 160, notes: 'Conteo físico difiere ' + TAG });
+await go(p, '/inventory');
+await shot(p, 'lista_tras');
+const rows = await p.locator('tbody tr').allInnerTexts();
+console.log(rows.slice(0, 6).map((r) => r.replace(/\s+/g, ' ')).join('\n'));
+await stop(OUT);

@@ -1,0 +1,17 @@
+import { start, stop, login, go, shot, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Conciliación';
+await start();
+const ad = await login('admin', OUT);
+await go(ad, '/reconciliation');
+await ad.getByText('Conciliación manual independiente').click(); await ad.waitForTimeout(600);
+const sec = ad.locator('details[open]').last();
+await sec.getByRole('button', { name: 'Previsualizar' }).click(); await ad.waitForTimeout(800);
+console.log('sin archivo ->', ad.audit.lastNative || '', (await sec.innerText()).split('\n').filter((l) => /seleccion|archivo|obligat|requer/i.test(l)).join(' / '), flushErrors(ad, A).map((x) => x.slice(0, 150)));
+await sec.locator('input[type=file]').setInputFiles('conteo.csv');
+await sec.locator('input[type=datetime-local]').fill('2026-10-31T08:00');
+await sec.getByRole('button', { name: 'Previsualizar' }).click(); await ad.waitForTimeout(2500);
+console.log('PREVIEW:\n' + (await ad.locator('main').innerText()).split('Conciliación manual independiente').pop().replace(/\n+/g, ' | ').slice(0, 2500));
+console.log(flushErrors(ad, A).map((x) => x.slice(0, 200)));
+await shot(ad, 'preview');
+console.log('botones', (await ad.locator('main button:visible').allInnerTexts()).filter(Boolean));
+await stop(OUT);

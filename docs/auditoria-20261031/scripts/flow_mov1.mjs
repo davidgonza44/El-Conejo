@@ -1,0 +1,13 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Movimientos';
+await start();
+const p = await login('inventario', OUT);
+await go(p, '/inventory');
+await shot(p, 'lista');
+await p.getByRole('button', { name: /Nuevo movimiento/ }).click(); await p.waitForTimeout(800);
+const dlg = p.locator('dialog[open], [role=dialog]:visible').last();
+console.log(await dlg.innerText());
+console.log(JSON.stringify(await fields(p, 'dialog[open]')));
+await shot(p, 'nuevo', dlg);
+flushErrors(p, A);
+await stop(OUT);

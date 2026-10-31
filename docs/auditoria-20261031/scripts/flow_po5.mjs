@@ -1,0 +1,13 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Compras';
+await start();
+const as = await login('asistente', OUT);
+await go(as, '/purchases/requests/4');
+await as.getByRole('button', { name: 'Iniciar procesamiento' }).click(); await as.waitForTimeout(1500);
+console.log('nativo', as.audit.lastNative || '');
+await as.reload(); await as.waitForTimeout(1000);
+console.log((await as.locator('main').innerText()).slice(600, 3500));
+console.log(JSON.stringify(await fields(as, 'main')));
+await shot(as, 'en_proceso');
+flushErrors(as, A);
+await stop(OUT);

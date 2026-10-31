@@ -1,0 +1,12 @@
+import { start, stop, login, go, BASE } from './lib.mjs';
+await start();
+const p = await login('inventario', 'out/flows');
+const j = await (await p.request.get(BASE + '/api/products?search=AUD-CAB')).json();
+const it = (j.items || j.products || j)[0];
+console.log('API inventario keys precio:', JSON.stringify(Object.fromEntries(Object.entries(it).filter(([k]) => /price|cost|currency/.test(k)))));
+await go(p, '/catalog');
+console.log('catálogo inventario:', (await p.locator('main').innerText()).match(/AUD-CAB-VI60[\s\S]{0,120}/)?.[0].replace(/\n+/g, ' | '));
+await go(p, '/products');
+await p.locator('tbody tr', { hasText: 'AUD-CAB' }).locator('button').first().click(); await p.waitForTimeout(1000);
+console.log('detalle inventario:', (await p.locator('dialog[open]').last().innerText()).match(/Precios[\s\S]{0,120}/)?.[0].replace(/\n+/g, ' | '));
+await stop('out/flows');

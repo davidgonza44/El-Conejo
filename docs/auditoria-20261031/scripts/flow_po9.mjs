@@ -1,0 +1,26 @@
+import { start, stop, login, go, shot, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Compras';
+await start();
+const as = await login('asistente', OUT);
+await go(as, '/purchases/requests/4');
+//ya preparada
+console.log('preparar ->', as.url(), as.audit.lastNative || '', flushErrors(as, A));
+await go(as, '/purchases');
+const row = as.locator('tbody tr').first();
+console.log('fila OC asistente:', (await row.innerText()).replace(/\s+/g, ' '));
+await row.locator('button, a').first().click(); await as.waitForTimeout(1200);
+const d = as.locator('dialog[open], [role=dialog]:visible').last();
+console.log('DETALLE OC (asistente):\n' + (await d.innerText()).replace(/\n+/g, ' | '));
+console.log('botones', await d.locator('button:visible').allInnerTexts());
+await shot(as, 'oc_borrador', d);
+const ad = await login('admin', OUT);
+await go(ad, '/purchases/approvals');
+await shot(ad, 'pendientes');
+console.log('pendientes:', (await ad.locator('tbody').innerText()).replace(/\s+/g, ' ').slice(0, 600));
+await ad.locator('tbody tr', { hasText: 'Orden' }).last().locator('a').click(); await ad.waitForTimeout(1500);
+console.log('URL revisión', ad.url());
+const d2 = ad.locator('dialog[open], [role=dialog]:visible').last();
+console.log('DETALLE OC (admin):\n' + (await d2.innerText().catch(() => 'sin diálogo')).replace(/\n+/g, ' | '));
+console.log('botones', await d2.locator('button:visible').allInnerTexts().catch(() => []));
+await shot(ad, 'oc_admin', d2);
+await stop(OUT);

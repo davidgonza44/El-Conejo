@@ -1,0 +1,12 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Compras';
+await start();
+const p = await login('inventario', OUT);
+await go(p, '/predictive/replenishment');
+await p.getByRole('button', { name: 'Generar solicitud de reposición' }).click(); await p.waitForTimeout(1000);
+const d = p.locator('dialog[open]').last();
+console.log(await d.innerText());
+console.log(JSON.stringify(await fields(p, 'dialog[open]')));
+await shot(p, 'dlg_solicitud', d);
+flushErrors(p, A);
+await stop(OUT);

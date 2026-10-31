@@ -1,0 +1,17 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Importación';
+await start();
+const p = await login('admin', OUT);
+await go(p, '/historical-imports');
+await p.getByRole('button', { name: 'Nueva importación' }).click(); await p.waitForTimeout(800);
+const d = p.locator('[role=dialog]:visible, dialog[open], .modal.show').last();
+console.log((await d.innerText()).replace(/\n+/g, ' | ').slice(0, 900));
+console.log(JSON.stringify((await fields(p, '[role=dialog]:visible, dialog[open], .modal.show')).map((f) => `${f.id || f.name}|${f.label}|${f.type}|${(f.options || []).join(';')}`)));
+const file = d.locator('input[type=file]'); await file.setInputFiles('malo.csv');
+const go2 = d.locator('button[type=submit], button:has-text("Validar"), button:has-text("Subir"), button:has-text("Importar"), button:has-text("Cargar")').last();
+console.log('botón', await go2.innerText().catch(() => '?'));
+await go2.click().catch((e) => console.log('click', e.message.slice(0, 60))); await p.waitForTimeout(2500);
+console.log('tras subir:', (await p.locator('main').innerText()).replace(/\n+/g, ' | ').slice(0, 900), '|| dlg:', (await d.innerText().catch(() => '')).replace(/\n+/g, ' | ').slice(-400));
+console.log(flushErrors(p, A).map((x) => x.slice(0, 220)));
+await shot(p, 'subida_mala');
+await stop(OUT);

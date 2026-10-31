@@ -1,0 +1,17 @@
+import { start, stop, login, go, shot, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Productos';
+await start();
+const p = await login('admin', OUT);
+await go(p, '/products?approval_status=pending');
+await shot(p, 'admin_productos_pendientes');
+const row = p.locator('tr', { hasText: 'AUD-CAB' }).first();
+console.log('fila:', (await row.innerText()).replace(/\s+/g, ' '));
+await row.locator('button, a').last().click(); await p.waitForTimeout(1200);
+const dlg = p.locator('#pl-dialog');
+console.log('visible', await dlg.isVisible());
+console.log('TEXTO DETALLE:\n' + await dlg.innerText());
+await shot(p, 'admin_detalle_propuesta', dlg);
+await dlg.evaluate((e) => { const b = e.querySelector('.pl-body, [class*=body]'); if (b) b.scrollTop = 99999; });
+await shot(p, 'admin_detalle_propuesta_abajo', dlg);
+flushErrors(p, A);
+await stop(OUT);

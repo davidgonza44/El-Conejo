@@ -1,0 +1,11 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Compras';
+await start();
+const p = await login('inventario', OUT);
+console.log('menú', await p.evaluate(() => [...document.querySelectorAll('#ix-sidebar a[href]')].map((a) => a.textContent.trim().replace(/\s+/g, ' ') + '→' + a.getAttribute('href')).join(' | ')));
+await go(p, '/predictive/replenishment');
+await shot(p, 'reposicion');
+console.log((await p.locator('main').innerText()).slice(0, 2500));
+console.log('checkboxes', await p.locator('main input[type=checkbox]').count(), 'botones', await p.locator('main button:visible').allInnerTexts());
+flushErrors(p, A);
+await stop(OUT);

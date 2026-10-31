@@ -1,0 +1,13 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows';
+await start();
+const as = await login('asistente', OUT);
+await go(as, '/products');
+const row = as.locator('tbody tr', { hasText: 'AUD-CAB' }).first();
+console.log('acciones', await row.locator('button, a').evaluateAll((b) => b.map((x) => (x.getAttribute('aria-label') || x.title || x.textContent).trim())));
+await row.locator('button[aria-label*="Ver"], button[aria-label*="detalle"], a[aria-label*="Ver"]').first().click(); await as.waitForTimeout(1200);
+const d = as.locator('dialog[open]').last();
+console.log('DIALOGO:', (await d.innerText()).replace(/\n+/g, ' | ').slice(0, 1500));
+console.log('botones', await d.locator('button:visible').allInnerTexts());
+await shot(as, 'detalle', d);
+await stop(OUT);

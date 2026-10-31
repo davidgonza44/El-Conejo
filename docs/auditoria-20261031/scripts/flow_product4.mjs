@@ -1,0 +1,33 @@
+import { start, stop, login, go, shot, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Productos';
+await start();
+const p = await login('admin', OUT);
+async function open(code) {
+    await go(p, '/products?approval_status=pending');
+    await p.locator('tr', { hasText: code }).first().locator('button, a').last().click(); await p.waitForTimeout(1000);
+    return p.locator('#pl-dialog');
+}
+let dlg = await open('AUD-V-');
+await dlg.getByRole('button', { name: 'Rechazar' }).click(); await p.waitForTimeout(800);
+console.log('rechazo sin motivo ->', p.audit.lastNative, '|', (await dlg.innerText()).match(/.*motivo.*$/gim));
+await shot(p, 'rechazo_sin_motivo', dlg);
+await dlg.locator('textarea').first().fill('Código duplicado con otro producto del catálogo.');
+await dlg.getByRole('button', { name: 'Rechazar' }).click(); await p.waitForTimeout(1200);
+console.log('tras rechazar visible', await dlg.isVisible(), flushErrors(p, A));
+dlg = await open('AUD-CAB');
+await dlg.getByRole('button', { name: 'Aprobar' }).click(); await p.waitForTimeout(1500);
+console.log('nativo', p.audit.lastNative);
+await shot(p, 'tras_aprobar');
+console.log('tras aprobar', flushErrors(p, A));
+await go(p, '/products');
+console.log('fila lista:', (await p.locator('tr', { hasText: 'AUD-CAB' }).first().innerText()).replace(/\s+/g, ' '));
+console.log('kpis:', (await p.locator('.iv-kpis, [class*=kpi]').first().innerText()).replace(/\s+/g, ' '));
+await go(p, '/inventory');
+await shot(p, 'movimientos_tras_aprobar');
+console.log('primer movimiento:', (await p.locator('tbody tr').first().innerText()).replace(/\s+/g, ' '));
+await go(p, '/catalog');
+await p.waitForTimeout(800);
+await shot(p, 'catalogo');
+const card = p.locator('article, .card, [class*=card]', { hasText: 'Cable THW' }).first();
+console.log('catalogo tarjeta:', (await card.innerText().catch(() => 'NO APARECE')).replace(/\s+/g, ' '));
+await stop(OUT);

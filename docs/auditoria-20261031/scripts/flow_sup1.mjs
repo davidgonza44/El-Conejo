@@ -1,0 +1,12 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Proveedores';
+await start();
+const as = await login('asistente', OUT);
+await go(as, '/suppliers');
+console.log('botones', await as.locator('main button:visible').allInnerTexts());
+await as.locator('main button:visible', { hasText: /Nuevo proveedor|Agregar proveedor|Proponer/ }).first().click(); await as.waitForTimeout(1000);
+const d = as.locator('dialog[open], [role=dialog]:visible').last();
+console.log((await d.innerText()).replace(/\n+/g, ' | ').slice(0, 1200));
+console.log(JSON.stringify((await fields(as, 'dialog[open]')).map((f) => `${f.name || f.id}|${f.label}|${f.type}|req=${f.required}|max=${f.maxlength}`), null, 0));
+await shot(as, 'nuevo', d);
+await stop(OUT);

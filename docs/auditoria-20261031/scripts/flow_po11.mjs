@@ -1,0 +1,11 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Recepción';
+await start();
+const inv = await login('inventario', OUT);
+await go(inv, '/purchases/receptions');
+await inv.getByRole('button', { name: 'Nueva recepción' }).click(); await inv.waitForTimeout(1200);
+let d = inv.locator('dialog[open], [role=dialog]:visible').last();
+console.log('NUEVA RECEPCIÓN:\n' + (await d.innerText()).replace(/\n+/g, ' | ').slice(0, 1500));
+console.log(JSON.stringify((await fields(inv, 'dialog[open]')).map((f) => `${f.label}|${f.type}|${f.value}|req=${f.required}|min=${f.min}|max=${f.max}|${(f.options || []).join(';')}`), null, 1));
+await shot(inv, 'nueva', d);
+await stop(OUT);

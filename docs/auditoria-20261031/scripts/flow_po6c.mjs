@@ -1,0 +1,15 @@
+import { start, stop, login, go, shot, fields, flushErrors } from './lib.mjs';
+const OUT = 'out/flows';
+await start();
+const as = await login('asistente', OUT);
+await go(as, '/products');
+const row = as.locator('tbody tr', { hasText: 'AUD-CAB' }).first();
+await row.locator('button[aria-label*="Más acciones"]').click(); await as.waitForTimeout(600);
+console.log('menú más acciones:', await as.locator('[role=menu]:visible, .menu:visible, [class*=menu]:visible').last().innerText().catch(() => 'n/a'));
+await as.keyboard.press('Escape');
+await row.locator('button[aria-label*="Proponer"]').click(); await as.waitForTimeout(1200);
+const d = as.locator('dialog[open]').last();
+console.log('FORM MODIF:', (await d.innerText()).replace(/\n+/g, ' | ').slice(0, 2000));
+console.log(JSON.stringify((await fields(as, 'dialog[open]')).map((f) => `${f.label}=${f.value}`)));
+await shot(as, 'proponer_mod', d);
+await stop(OUT);

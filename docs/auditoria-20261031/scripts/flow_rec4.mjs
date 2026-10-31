@@ -1,0 +1,17 @@
+import { start, stop, login, go, shot, flushErrors } from './lib.mjs';
+const OUT = 'out/flows'; const A = 'Conciliación';
+await start();
+const ad = await login('admin', OUT);
+await go(ad, '/reconciliation');
+await ad.getByText('Ver detalle', { exact: true }).first().click(); await ad.waitForTimeout(1500);
+await ad.getByRole('button', { name: 'Confirmar comparación actual' }).click(); await ad.waitForTimeout(2500);
+console.log('confirmar ->', ad.audit.lastNative || '', flushErrors(ad, A).map((x) => x.slice(0, 200)));
+const row = ad.locator('tr', { hasText: 'AUD-CAB-VI60' }).last();
+console.log('fila tras confirmar:', (await row.innerText()).replace(/\s+/g, ' '));
+console.log('acciones:', await row.locator('button, a').allInnerTexts());
+await row.getByText('Resolver').click(); await ad.waitForTimeout(1200);
+const d = ad.locator('dialog[open], [role=dialog]:visible').last();
+const txt = (await d.count()) ? await d.innerText() : (await ad.locator('main').innerText()).slice(-2000);
+console.log('RESOLVER:\n' + txt.replace(/\n+/g, ' | ').slice(0, 1800));
+await shot(ad, 'resolver', (await d.count()) ? d : undefined);
+await stop(OUT);
