@@ -45,12 +45,13 @@ const assert = require('node:assert/strict');
     await page.screenshot({path:path.join(output,'reconciliation-preview-1600.png'), fullPage:true});
     await page.getByRole('button', {name:'Confirmar comparación actual'}).click();
     await page.getByRole('button', {name:'Resolver', exact:true}).click();
-    await page.locator('#rc-resolution [name=action]').selectOption('adjustment');
-    assert.match(await page.locator('#rc-stock-label').innerText(), /ajuste de \+4 unidades/);
+    // A manually uploaded CSV is not an accredited source: the adjustment option stays disabled.
+    assert.ok(await page.locator('#rc-resolution [name=action] option[value=adjustment]').isDisabled());
+    await page.locator('#rc-resolution [name=action]').selectOption('acknowledge');
     await page.locator('#rc-resolution [name=note]').fill('Conteo sintético de verificación');
     await page.locator('#rc-resolution [type=submit]').click();
     await page.locator('#rc-dialog').waitFor({state:'hidden'});
-    assert.match(await page.locator('#rc-lines').innerText(), /Solicitud de ajuste #\d+: pendiente de aprobación/);
+    assert.match(await page.locator('#rc-lines').innerText(), /Resuelta|resuelta/);
     await page.screenshot({path:path.join(output,'reconciliation-resolved-1600.png'), fullPage:true});
     await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:path.join(output,'reconciliation-mobile.png'), fullPage:true});
@@ -59,6 +60,6 @@ const assert = require('node:assert/strict');
     await page.goto(base + '/purchases?ref=1');
     await page.screenshot({path:path.join(output,'purchases-reference-1600.png'), fullPage:true});
     assert.deepEqual(errors, []);
-    console.log('PASS: inventory creation access without approval; admin approval; CSV preview/confirm/adjustment request pending approval; mobile overflow; browser errors=0. Screenshots: tmp/approval-reconciliation-ui');
+    console.log('PASS: inventory creation access without approval; admin approval; CSV preview/confirm/unaccredited CSV cannot adjust; mobile overflow; browser errors=0. Screenshots: tmp/approval-reconciliation-ui');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode=1;});

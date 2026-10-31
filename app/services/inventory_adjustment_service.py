@@ -123,18 +123,40 @@ def review_request(request_id, data, *, approve):
     return row
 
 
+def _later_correction(product_id, since):
+    """Ajuste o corrección de recepción posterior al corte: pudo corregir ya la misma diferencia."""
+    later = (StockMovement.query.filter(
+        StockMovement.product_id == product_id, StockMovement.movement_type == MOVEMENT_AJUSTE,
+        StockMovement.created_at >= since).first())
+    if later is not None:
+        return later
+    from app.utils.schema import table_ready
+
+    if not table_ready("purchase_reception_correction_lines"):
+        return None
+    from app.models.purchase_correction import PurchaseReceptionCorrectionLine
+
+    return (StockMovement.query.join(PurchaseReceptionCorrectionLine,
+                                     PurchaseReceptionCorrectionLine.stock_movement_id == StockMovement.id)
+            .filter(StockMovement.product_id == product_id, StockMovement.created_at >= since).first())
+
+
 def _reconciliation_target(line, product):
-    """Stock vigente + diferencia del corte; rechaza si otro ajuste ya pudo corregirla."""
+    """Stock vigente + diferencia del corte; exige fuente acreditada y que nadie la haya corregido ya."""
     run = line.run
+    if not run.accredited_for_adjustment():
+        # La doble aprobación no sustituye la acreditación: un CSV subido a mano no fija existencias.
+        raise ValidationError(
+            "La fuente de esta conciliación no está acreditada para ajustar existencias. Registre la "
+            "diferencia sin ajuste e Inventario puede solicitar un ajuste manual con el conteo físico.",
+            status_code=403)
     if run.source_type == "automatic" and product.code.upper() != line.product_code.upper():
         raise ConflictError("El código del producto cambió desde el corte; revise el catálogo antes de ajustar.")
     reference = run.cut.local_snapshot_at if run.cut and run.cut.local_snapshot_at else run.imported_at
-    later = (StockMovement.query.filter(
-        StockMovement.product_id == product.id, StockMovement.movement_type == MOVEMENT_AJUSTE,
-        StockMovement.created_at >= reference - SNAPSHOT_MARGIN).first())
+    later = _later_correction(product.id, reference - SNAPSHOT_MARGIN)
     if later is not None:
         raise ConflictError(
-            f"El producto tuvo un ajuste (MOV-{later.id:06d}) después del corte; esta diferencia pudo "
+            f"El producto tuvo una corrección (MOV-{later.id:06d}) después del corte; esta diferencia pudo "
             "corregirse ya. Use un corte más reciente.")
     target = product.current_stock + line.difference
     if target < 0:

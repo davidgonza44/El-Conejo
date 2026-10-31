@@ -116,3 +116,22 @@ class LinkedSupplierCase(IsolatedCase):
         db.session.add(link)
         db.session.commit()
         return link
+
+
+def accredit_run(app, run_id, source="legacy_inventory"):
+    """Fixture sintético: convierte una conciliación confirmada en corte automático de una fuente acreditada.
+
+    Solo para pruebas aisladas. En producción la acreditación se configura con
+    RECONCILIATION_ACCREDITED_SOURCES y el corte lo captura el servidor.
+    """
+    from datetime import datetime, timedelta
+    from app.models.reconciliation import ReconciliationCut, ReconciliationRun
+
+    app.config["RECONCILIATION_ACCREDITED_SOURCES"] = (source,)
+    run = db.session.get(ReconciliationRun, run_id)
+    run.source_type = "automatic"
+    snapshot = datetime.utcnow() - timedelta(hours=1)
+    db.session.add(ReconciliationCut(source=source, scheduled_for=snapshot, status="completed",
+                                     snapshot_status="captured", local_snapshot_at=snapshot, run_id=run.id))
+    db.session.commit()
+    return run

@@ -25,10 +25,22 @@ class ReconciliationRun(db.Model):
     creator = db.relationship("User")
     lines = db.relationship("ReconciliationLine", order_by="ReconciliationLine.row_number", back_populates="run")
 
+    def accredited_for_adjustment(self):
+        """Solo un corte automático de una fuente acreditada en la configuración respalda un ajuste.
+
+        Un CSV subido a mano o una simulación informan diferencias, pero no acreditan existencias.
+        """
+        from flask import current_app
+
+        cut = self.cut
+        return (self.source_type == "automatic" and cut is not None and not cut.source.startswith("demo_sim:")
+                and cut.source in current_app.config.get("RECONCILIATION_ACCREDITED_SOURCES", ()))
+
     def to_dict(self, detail=True):
         result = {key: getattr(self, key) for key in (
             "id", "number", "filename", "sha256", "status", "created_by_user_id", "source_type",
             "received_count", "valid_count", "invalid_count", "match_count", "discrepancy_count", "unmatched_count")}
+        result["adjustment_accredited"] = self.accredited_for_adjustment()
         result.update(cutoff_at=self.cutoff_at.isoformat(), imported_at=self.imported_at.isoformat(),
                       creator=self.creator.name if self.creator else ("Proceso automático" if self.source_type == "automatic" else None),
                       cut=self.cut.to_dict(False) if self.cut else None)

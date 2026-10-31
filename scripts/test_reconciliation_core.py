@@ -3,7 +3,7 @@ import unittest
 from io import BytesIO
 from unittest.mock import patch
 
-from approval_test_support import IsolatedCase
+from approval_test_support import IsolatedCase, accredit_run
 from app.extensions import db
 from app.models import Role, Permission, StockMovement
 from app.models.reconciliation import ReconciliationRun, ReconciliationLine
@@ -84,8 +84,19 @@ class ReconciliationTests(IsolatedCase):
         self.assertEqual(self.stock(), 10)
         self.assertEqual(self.action(run, "resolve", {"note":"Again", "action":"acknowledge"}, line=True).status_code, 409)
 
+    def test_manual_csv_never_accredits_an_adjustment(self):
+        run = self.preview(); self.action(run)  # CSV subido a mano: informa, no acredita existencias
+        result = self.action(run, "resolve", {"note":"Conteo físico", "action":"adjustment"}, line=True)
+        self.assertEqual(result.status_code, 403, result.json)
+        self.assertIn("no está acreditada", result.json["error"])
+        line = db.session.get(ReconciliationLine, run["items"][0]["id"])
+        self.assertEqual((line.review_status, line.adjustment_requests, self.stock()), ("pending", [], 10))
+        acknowledged = self.action(run, "resolve", {"note":"Diferencia informada", "action":"acknowledge"}, line=True)
+        self.assertEqual(acknowledged.status_code, 200, acknowledged.json)
+
     def test_adjustment_is_a_request_applied_by_difference(self):
         run = self.preview(); self.action(run)  # externo 14, sistema 10: diferencia +4
+        accredit_run(self.app, run["id"])
         payload = {"note":"Conteo físico", "action":"adjustment"}
         self.assertEqual(self.action(run, "resolve", {**payload, "new_stock": 13}, line=True).status_code, 400)
         result = self.action(run, "resolve", payload, line=True)
@@ -112,6 +123,7 @@ class ReconciliationTests(IsolatedCase):
 
     def test_failed_commit_rolls_back_request_and_resolution(self):
         run = self.preview(); self.action(run)
+        accredit_run(self.app, run["id"])
         with patch.object(db.session, "commit", side_effect=SQLAlchemyError("private detail")):
             result = self.action(run, "resolve", {"note":"Conteo", "action":"adjustment"}, line=True)
         self.assertEqual(result.status_code, 409)

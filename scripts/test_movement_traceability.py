@@ -8,7 +8,7 @@ from io import BytesIO
 from flask_login import login_user
 from sqlalchemy import event, select
 
-from approval_test_support import IsolatedCase
+from approval_test_support import IsolatedCase, accredit_run
 from app.extensions import db
 from app.models import Customer, Permission, Role, SaleLine, StockMovement
 from app.models.reconciliation import ReconciliationLine, ReconciliationRun
@@ -63,6 +63,8 @@ class TraceabilityTests(IsolatedCase):
         run = response.json
         url = f"/api/reconciliation/{run['id']}"
         self.assertEqual(self.clients['admin'].post(url + '/confirm', json={}).status_code, 200)
+        if action == 'adjustment':  # Only an accredited cut can back a stock adjustment.
+            accredit_run(self.app, run['id'])
         payload = {'action': action, 'note': 'Conteo sintético'}
         response = self.clients['admin'].post(url + f"/lines/{run['items'][0]['id']}/resolve", json=payload)
         self.assertEqual(response.status_code, 200, response.json)

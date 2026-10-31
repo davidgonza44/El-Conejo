@@ -201,7 +201,11 @@
     node('dialog-title').textContent = resolving ? 'Resolver discrepancia' : 'Marcar como revisada';
     node('line-label').textContent = `${line.product_code} · Externo ${line.external_quantity} · Sistema ${line.system_quantity} ${current.cut ? 'en la fotografía local del corte' : 'al confirmar'}`;
     const adjustment = node('resolution').elements.action.querySelector('[value=adjustment]');
-    if (adjustment) adjustment.disabled = simulated(current);
+    // Solo un corte de una fuente acreditada respalda un ajuste; un CSV subido a mano solo informa.
+    if (adjustment) {
+      adjustment.disabled = simulated(current) || !current.adjustment_accredited;
+      adjustment.textContent = adjustment.disabled ? 'Solicitar ajuste (fuente no acreditada)' : 'Solicitar ajuste por la diferencia';
+    }
     node('action-label').hidden = !resolving; stockField(); node('dialog').showModal();
   }
   document.addEventListener('click', async event => {

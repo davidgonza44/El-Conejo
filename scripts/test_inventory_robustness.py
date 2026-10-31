@@ -6,17 +6,19 @@ entrega por el servicio central, CHECK de stock en la base, orden de bloqueo y
 aprobar, categorías con productos activos y catálogo paginado en el servidor.
 """
 import unittest
+from datetime import datetime
 from io import BytesIO
 from unittest.mock import patch
 
-from approval_test_support import IsolatedCase
+from approval_test_support import IsolatedCase, accredit_run
 from flask_login import login_user
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.extensions import db
 from app.models import Category, InventoryAdjustmentRequest, Product, StockMovement
-from app.models.purchase import PurchaseOrder, PurchaseOrderLine
+from app.models.purchase import PurchaseOrder, PurchaseOrderLine, PurchaseReception
+from app.models.purchase_correction import PurchaseReceptionCorrection, PurchaseReceptionCorrectionLine
 from app.services import inventory_service
 
 
@@ -27,13 +29,15 @@ class InventoryRobustnessTests(IsolatedCase):
             login_user(self.users["inventario"])
             inventory_service.register_exit({"product_id": self.product.id, "quantity": quantity})
 
-    def discrepancy(self, external=14):
-        """Conciliación manual confirmada: externo ``external`` contra sistema 10."""
+    def discrepancy(self, external=14, accredited=True):
+        """Conciliación confirmada: externo ``external`` contra sistema 10; por defecto, corte acreditado."""
         content = f"product_code;quantity\nTEST-01;{external}\n".encode()
         run = self.clients["admin"].post("/api/reconciliation", data={
             "file": (BytesIO(content), "cut.csv"), "cutoff_at": "2026-09-28T12:00:00-04:00"},
             content_type="multipart/form-data").json
         self.assertEqual(self.clients["admin"].post(f"/api/reconciliation/{run['id']}/confirm", json={}).status_code, 200)
+        if accredited:
+            accredit_run(self.app, run["id"])
         return run, f"/api/reconciliation/{run['id']}/lines/{run['items'][0]['id']}/resolve"
 
     def request_adjustment(self, path):
@@ -67,6 +71,49 @@ class InventoryRobustnessTests(IsolatedCase):
         self.assertEqual(self.review(second).status_code, 409)
         self.assertEqual(self.stock(), 14)
         self.assertEqual(StockMovement.query.filter_by(movement_type="ajuste").count(), 1)
+
+    def test_unaccredited_csv_cannot_adjust_even_with_two_admins(self):
+        _, path = self.discrepancy(accredited=False)  # CSV subido a mano por un administrador
+        response = self.clients["admin"].post(path, json={"action": "adjustment", "note": "Conteo externo"})
+        self.assertEqual(response.status_code, 403, response.json)
+        self.assertEqual((InventoryAdjustmentRequest.query.count(), self.stock()), (0, 10))
+        # Una solicitud ya creada tampoco se aplica si la fuente pierde la acreditación.
+        _, accredited_path = self.discrepancy()
+        request = self.request_adjustment(accredited_path)
+        self.app.config["RECONCILIATION_ACCREDITED_SOURCES"] = ()
+        self.assertEqual(self.review(request).status_code, 403)
+        self.assertEqual(self.stock(), 10)
+
+    def test_reception_correction_after_cut_blocks_double_correction(self):
+        _, path = self.discrepancy(external=8)  # faltan 2 según el corte
+        request = self.request_adjustment(path)
+        # Después del corte, Compras corrige la recepción y descuenta esas mismas 2 unidades.
+        admin = self.users["admin"]
+        order = PurchaseOrder(order_number="OC-COR", supplier_id=self.supplier.id, created_by_user_id=admin.id,
+                              status="closed_complete", currency="USD")
+        db.session.add(order)
+        db.session.flush()
+        po_line = PurchaseOrderLine(purchase_order_id=order.id, product_id=self.product.id, product_code="TEST-01",
+                                    product_name="Producto sintético", quantity_ordered=2, quantity_received=2,
+                                    unit_cost=1, line_total=2)
+        reception = PurchaseReception(purchase_order_id=order.id, received_by_user_id=admin.id,
+                                      received_at=datetime.utcnow().date())
+        db.session.add_all([po_line, reception])
+        db.session.flush()
+        with self.app.test_request_context():
+            login_user(self.users["inventario"])
+            movement = inventory_service.register_exit({"product_id": self.product.id, "quantity": 2}, commit=False)
+            correction = PurchaseReceptionCorrection(reception_id=reception.id, requested_by_user_id=self.users["inventario"].id,
+                                                     reason="Llegaron 0", status="approved")
+            db.session.add(correction)
+            db.session.flush()
+            db.session.add(PurchaseReceptionCorrectionLine(
+                correction_id=correction.id, purchase_order_line_id=po_line.id, product_id=self.product.id,
+                previous_quantity=2, target_quantity=0, expected_stock=10, stock_movement_id=movement.id))
+            db.session.commit()
+        self.assertEqual(self.stock(), 8)
+        self.assertEqual(self.review(request).status_code, 409)  # no se descuentan otras 2
+        self.assertEqual(self.stock(), 8)
 
     def test_reconciliation_target_cannot_go_negative(self):
         _, path = self.discrepancy(external=2)  # diferencia -8

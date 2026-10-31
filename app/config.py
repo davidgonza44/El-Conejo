@@ -87,6 +87,11 @@ class Config:
     RECONCILIATION_ACTIVATED_ON = os.getenv("RECONCILIATION_ACTIVATED_ON", "")
     RECONCILIATION_ACTIVATED_AT = os.getenv("RECONCILIATION_ACTIVATED_AT", "")
     RECONCILIATION_AUTO_INGEST_ENABLED = _env_bool("RECONCILIATION_AUTO_INGEST_ENABLED", "true")
+    # Fuentes de cortes automáticos acreditadas para proponer ajustes de stock (separadas por coma).
+    # Vacío = ninguna: la conciliación solo informa diferencias. Un CSV subido a mano nunca acredita
+    # un ajuste; la doble aprobación no sustituye la acreditación de la fuente.
+    RECONCILIATION_ACCREDITED_SOURCES = tuple(
+        source.strip() for source in os.getenv("RECONCILIATION_ACCREDITED_SOURCES", "").split(",") if source.strip())
     # Cliente mysql/mariadb usado SOLO para restaurar respaldos; vacío = restauración de BD no disponible.
     MYSQL_BIN = os.getenv("MYSQL_BIN", "")
 
