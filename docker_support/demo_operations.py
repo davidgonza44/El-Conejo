@@ -101,7 +101,8 @@ def create_note(event, products, clients):
     note = delivery_note_service.create_note(dict(customer_name=client.name,
         customer_document=f"DEMO-CLIENTE-{event['index'] + 1:02d}", customer_phone=client.phone,
         customer_address="DEMO · Retiro independiente en mostrador; no corresponde a una venta registrada",
-        items=[dict(product_id=products[n].id, quantity=q) for n, q in event["items"]]))
+        items=[dict(product_id=products[n].id, quantity=q, expected_unit_price=str(products[n].sale_price))
+               for n, q in event["items"]]))
     stamp(note, event["at"])
     for line in note.items:
         stamp(line, event["at"])

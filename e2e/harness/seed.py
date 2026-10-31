@@ -70,5 +70,6 @@ def seed(users):
     customer = customer_service.create_customer({"name": "E2E Constructora Prueba", "phone": "0414-0000000",
                                                  "email": "cliente@example.invalid"})
     delivery_note_service.create_note({"customer_name": customer.name, "customer_document": "J-90000099-1",
-                                       "items": [{"product_id": products[1].id, "quantity": 2}]})
+                                       "items": [{"product_id": products[1].id, "quantity": 2,
+                                                  "expected_unit_price": str(products[1].sale_price)}]})
     return {"categories": len(categories), "suppliers": len(suppliers), "products": len(products)}

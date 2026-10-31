@@ -30,8 +30,12 @@ class Base(IsolatedCase):
         self.admin = self.clients["admin"]
 
     def note(self, client=None, **extra):
-        payload = {"customer_name": "Cliente mostrador", "items": [{"product_id": self.product.id, "quantity": 1}], **extra}
+        payload = {"customer_name": "Cliente mostrador", "items": [self.item(1)], **extra}
         return (client or self.seller).post("/api/delivery-notes", json=payload)
+
+    def item(self, quantity):
+        """Renglón con el precio que la persona vio y confirmó."""
+        return {"product_id": self.product.id, "quantity": quantity, "expected_unit_price": str(self.product.sale_price)}
 
     def customer(self, **fields):
         customer = Customer(name=fields.pop("name", "Constructora Sintética"), **fields)
@@ -111,7 +115,7 @@ class TimesAndDates(Base):
 class Numbering(Base):
     def test_failed_note_leaves_no_gap(self):
         first = self.note().get_json()["delivery_note"]["note_number"]
-        failed = self.note(items=[{"product_id": self.product.id, "quantity": 10_000}])
+        failed = self.note(items=[self.item(10_000)])
         self.assertEqual(failed.status_code, 409)
         second = self.note().get_json()["delivery_note"]["note_number"]
         self.assertEqual((first, second), ("NE-000001", "NE-000002"))

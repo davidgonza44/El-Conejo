@@ -70,6 +70,15 @@ LONG_ADDRESS = (
 )
 
 
+def shown_prices(client, items):
+    """Agrega a cada renglón el precio vigente que la interfaz mostraría antes de confirmar."""
+    priced = []
+    for item in items:
+        product = client.get("/api/products/" + str(item["product_id"])).get_json()
+        priced.append({**item, "expected_unit_price": "%.2f" % product["sale_price"]})
+    return priced
+
+
 @compiles(BigInteger, "sqlite")
 def _compile_big_integer_for_sqlite(_type, _compiler, **_kwargs):
     return "INTEGER"
@@ -341,10 +350,10 @@ def setup_isolated_app(temp_root: Path):
             "customer_document": "V-12345678",
             "customer_phone": "0412-5551133",
             "customer_address": LONG_ADDRESS,
-            "items": [
+            "items": shown_prices(admin, [
                 {"product_id": hist_id, "quantity": 3},
                 {"product_id": long_id, "quantity": 1},
-            ],
+            ]),
         },
     )
     if issued.status_code != 201:
@@ -355,7 +364,7 @@ def setup_isolated_app(temp_root: Path):
         "/api/delivery-notes",
         json={
             "customer_name": "Cliente Cancelado",
-            "items": [{"product_id": hist_id, "quantity": 1}],
+            "items": shown_prices(admin, [{"product_id": hist_id, "quantity": 1}]),
         },
     )
     if cancelled.status_code != 201:
@@ -373,7 +382,7 @@ def setup_isolated_app(temp_root: Path):
         "/api/delivery-notes",
         json={
             "customer_name": "Cliente Muchos Productos",
-            "items": [{"product_id": product_id, "quantity": 1} for product_id in many_ids],
+            "items": shown_prices(admin, [{"product_id": product_id, "quantity": 1} for product_id in many_ids]),
         },
     )
     if many.status_code != 201:

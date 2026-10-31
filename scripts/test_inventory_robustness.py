@@ -130,7 +130,8 @@ class InventoryRobustnessTests(IsolatedCase):
         db.session.add(second)
         db.session.commit()
         payload = {"customer_name": "Cliente sintético",
-                   "items": [{"product_id": self.product.id, "quantity": 1}, {"product_id": second.id, "quantity": 2}]}
+                   "items": [{"product_id": self.product.id, "quantity": 1, "expected_unit_price": "3.00"},
+                             {"product_id": second.id, "quantity": 2, "expected_unit_price": "2.00"}]}
         with patch.object(inventory_service, "lock_products", wraps=inventory_service.lock_products) as lock, \
                 patch.object(inventory_service, "register_exit", wraps=inventory_service.register_exit) as exit_, \
                 patch("app.services.notification_service.product_stock_changed") as notify:
@@ -143,7 +144,7 @@ class InventoryRobustnessTests(IsolatedCase):
 
     def test_deadlock_returns_409_and_rolls_back(self):
         deadlock = OperationalError("SELECT ... FOR UPDATE", {}, Exception(1213, "Deadlock found"))
-        payload = {"customer_name": "Cliente", "items": [{"product_id": self.product.id, "quantity": 1}]}
+        payload = {"customer_name": "Cliente", "items": [{"product_id": self.product.id, "quantity": 1, "expected_unit_price": "3.00"}]}
         with patch.object(inventory_service, "lock_products", side_effect=deadlock):
             response = self.clients["admin"].post("/api/delivery-notes", json=payload)
         self.assertEqual(response.status_code, 409)
@@ -152,7 +153,7 @@ class InventoryRobustnessTests(IsolatedCase):
 
     def test_cancel_note_returns_stock_to_inactive_product(self):
         note = self.clients["admin"].post("/api/delivery-notes", json={
-            "customer_name": "Cliente", "items": [{"product_id": self.product.id, "quantity": 10}]}).json
+            "customer_name": "Cliente", "items": [{"product_id": self.product.id, "quantity": 10, "expected_unit_price": "3.00"}]}).json
         self.product.is_active = False  # fixture: desactivado después de emitir la nota
         db.session.commit()
         response = self.clients["admin"].post(f"/api/delivery-notes/{note['delivery_note']['id']}/cancel", json={"reason": "Devolución sintética"})

@@ -359,7 +359,7 @@ def main() -> int:
                       str(response.status_code))
 
         note = vendedor.post("/api/delivery-notes", json={
-            "customer_name": "Obra Norte", "items": [{"product_id": product_id, "quantity": 1}],
+            "customer_name": "Obra Norte", "items": [{"product_id": product_id, "quantity": 1, "expected_unit_price": SALE}],
         })
         note_body = require_json(note, 201).get("delivery_note") or {}
         check("nota de entrega conserva unit_price y no filtra costos",

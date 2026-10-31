@@ -292,13 +292,14 @@ def concurrency_case(server):
             db.session.add_all([user, first, second])
             db.session.commit()
             user_id, product_ids = user.id, [first.id, second.id]
+            first_price, second_price = first.sale_price, second.sale_price
             db.session.remove()
 
         issuer = _client(application, user_id)
         created = issuer.post("/api/delivery-notes", json={
             "customer_name": "Cliente desechable",
-            "items": [{"product_id": product_ids[0], "quantity": 2},
-                      {"product_id": product_ids[1], "quantity": 3}],
+            "items": [{"product_id": product_ids[0], "quantity": 2, "expected_unit_price": f"{first_price:.2f}"},
+                      {"product_id": product_ids[1], "quantity": 3, "expected_unit_price": f"{second_price:.2f}"}],
         })
         if created.status_code != 201:
             raise AssertionError(created.get_json())

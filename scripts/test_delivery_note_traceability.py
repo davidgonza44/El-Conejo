@@ -21,7 +21,7 @@ from app.services.movement_traceability_service import movement_presentations
 
 class DeliveryTraceabilityTests(IsolatedCase):
     def payload(self, multiple=False):
-        items = [{"product_id": self.product.id, "quantity": 2}]
+        items = [{"product_id": self.product.id, "quantity": 2, "expected_unit_price": "3.00"}]
         if multiple:
             second = Product(code="TEST-02", name="Second synthetic product",
                              category_id=self.product.category_id, current_stock=20,
@@ -29,7 +29,7 @@ class DeliveryTraceabilityTests(IsolatedCase):
                              purchase_price_currency="USD", sale_price_currency="USD", is_active=True)
             db.session.add(second)
             db.session.commit()
-            items.append({"product_id": second.id, "quantity": 3})
+            items.append({"product_id": second.id, "quantity": 3, "expected_unit_price": "3.00"})
         return {"customer_name": "Synthetic customer", "items": items}
 
     def issue(self, payload=None):

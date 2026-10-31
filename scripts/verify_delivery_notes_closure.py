@@ -76,7 +76,7 @@ def main():
     test_customer = f"Cliente TEST WEB cierre {os.getpid()}"
 
     # --- Errores HTTP API ---
-    r = admin.post(f"{BASE}/api/delivery-notes", json={"items": [{"product_id": prod_id, "quantity": 1}]})
+    r = admin.post(f"{BASE}/api/delivery-notes", json={"items": [{"product_id": prod_id, "quantity": 1, "expected_unit_price": "10.00"}]})
     check("400 sin cliente", 400, r.status_code)
 
     r = requests.get(f"{BASE}/api/delivery-notes", allow_redirects=False)
@@ -87,7 +87,7 @@ def main():
 
     r = admin.post(f"{BASE}/api/delivery-notes", json={
         "customer_name": test_customer,
-        "items": [{"product_id": prod_id, "quantity": 9999}],
+        "items": [{"product_id": prod_id, "quantity": 9999, "expected_unit_price": "10.00"}],
     })
     check("409 stock insuficiente", 409, r.status_code)
 
@@ -95,7 +95,7 @@ def main():
     qty = 3
     r = admin.post(f"{BASE}/api/delivery-notes", json={
         "customer_name": test_customer,
-        "items": [{"product_id": prod_id, "quantity": qty}],
+        "items": [{"product_id": prod_id, "quantity": qty, "expected_unit_price": "10.00"}],
     })
     check("crear nota -> 201", 201, r.status_code)
     note_id = r.json()["delivery_note"]["id"]
@@ -114,7 +114,7 @@ def main():
 
     r2 = vendedor.post(f"{BASE}/api/delivery-notes", json={
         "customer_name": f"{test_customer} v2",
-        "items": [{"product_id": prod_id, "quantity": 1}],
+        "items": [{"product_id": prod_id, "quantity": 1, "expected_unit_price": "10.00"}],
     })
     note2_id = r2.json()["delivery_note"]["id"]
     r = vendedor.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={"reason": "Cancelación de prueba"})

@@ -454,7 +454,7 @@ def setup_isolated_app(temp_root: Path) -> dict[str, Any]:
         "/api/delivery-notes",
         json={
             "customer_name": "Cliente nota emitida",
-            "items": [{"product_id": ids["PRED-OPS"], "quantity": 4}],
+            "items": [{"product_id": ids["PRED-OPS"], "quantity": 4, "expected_unit_price": "12.50"}],
         },
     )
     if issued.status_code != 201:
@@ -465,7 +465,7 @@ def setup_isolated_app(temp_root: Path) -> dict[str, Any]:
         "/api/delivery-notes",
         json={
             "customer_name": "Cliente nota cancelada",
-            "items": [{"product_id": ids["PRED-CANCEL"], "quantity": 3}],
+            "items": [{"product_id": ids["PRED-CANCEL"], "quantity": 3, "expected_unit_price": "12.50"}],
         },
     )
     if cancelled.status_code != 201:

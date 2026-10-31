@@ -77,7 +77,7 @@ def main():
     check("6b. filtro cliente/fecha", 200, r.status_code)
 
     # 10-12 validaciones crear
-    r = admin.post(f"{BASE}/api/delivery-notes", json={"items": [{"product_id": prod_id, "quantity": 1}]})
+    r = admin.post(f"{BASE}/api/delivery-notes", json={"items": [{"product_id": prod_id, "quantity": 1, "expected_unit_price": "10.00"}]})
     check("10. sin cliente -> 400", 400, r.status_code)
     r = admin.post(f"{BASE}/api/delivery-notes", json={"customer_name": TEST_CUSTOMER, "items": []})
     check("11. sin productos -> 400", 400, r.status_code)
@@ -92,7 +92,7 @@ def main():
     r = admin.post(f"{BASE}/api/delivery-notes", json={
         "customer_name": TEST_CUSTOMER,
         "customer_document": "V-TEST",
-        "items": [{"product_id": prod_id, "quantity": qty}],
+        "items": [{"product_id": prod_id, "quantity": qty, "expected_unit_price": "10.00"}],
     })
     check("8a. crear nota valida -> 201", 201, r.status_code)
     note = r.json()["delivery_note"]
@@ -111,7 +111,7 @@ def main():
     # 13 Stock insuficiente
     r = admin.post(f"{BASE}/api/delivery-notes", json={
         "customer_name": TEST_CUSTOMER,
-        "items": [{"product_id": prod_id, "quantity": 9999}],
+        "items": [{"product_id": prod_id, "quantity": 9999, "expected_unit_price": "10.00"}],
     })
     check("13. stock insuficiente -> 409", 409, r.status_code)
 
@@ -129,7 +129,7 @@ def main():
     # 17 Vendedor no puede cancelar
     r2 = vendedor.post(f"{BASE}/api/delivery-notes", json={
         "customer_name": f"{TEST_CUSTOMER} 2",
-        "items": [{"product_id": prod_id, "quantity": 1}],
+        "items": [{"product_id": prod_id, "quantity": 1, "expected_unit_price": "10.00"}],
     })
     note2_id = r2.json()["delivery_note"]["id"]
     r = vendedor.post(f"{BASE}/api/delivery-notes/{note2_id}/cancel", json={"reason": "Cancelación de prueba"})

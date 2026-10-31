@@ -157,8 +157,9 @@ class CatalogCurrency(IsolatedCase):
             self.product.sale_price_currency = currency
             db.session.commit()
             response = self.clients["vendedor"].post("/api/delivery-notes", json={"customer_name": "Cliente sintético",
-                "items": [{"product_id": self.product.id, "quantity": 1}]})
+                "items": [{"product_id": self.product.id, "quantity": 1, "expected_unit_price": str(self.product.sale_price)}]})
             self.assertEqual(response.status_code, 400, response.json)
+            self.assertIn("USD", response.json["error"])  # rechazada por la moneda, no por otro dato
             self.assertEqual(self.stock(), original)
             self.assertEqual(StockMovement.query.count(), 0)
 

@@ -80,7 +80,8 @@ class DeliveryNoteSecurity(IsolatedCase):
             response = self.clients[actor].post("/api/delivery-notes", json={
                 "customer_name": "Cliente sintético " + str(index),
                 "customer_address": "Dirección de prueba áéíóú ñ Ñ",
-                "items": [{"product_id": self.product.id, "quantity": index % 3 + 1}],
+                "items": [{"product_id": self.product.id, "quantity": index % 3 + 1,
+                           "expected_unit_price": str(self.product.sale_price)}],
             })
             self.assertEqual(response.status_code, 201, response.json)
             self.ids.append(response.json["delivery_note"]["id"])
@@ -383,7 +384,8 @@ class DeliveryNoteSecurity(IsolatedCase):
         self.assertNotIn("products:view_price", inventory.permission_codes)
         self.assertNotIn("products:view_cost", inventory.permission_codes)
         response = self.clients["vendedor"].post("/api/delivery-notes", json={
-            "customer_name": "Nuevo sintético", "items": [{"product_id": self.product.id, "quantity": 2}]})
+            "customer_name": "Nuevo sintético",
+            "items": [{"product_id": self.product.id, "quantity": 2, "expected_unit_price": str(CURRENT_PRICE)}]})
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json["delivery_note"]["items"][0]["unit_price"], float(CURRENT_PRICE))
         self.assert_cost_absent(response.get_data(as_text=True))
@@ -395,7 +397,8 @@ class DeliveryNoteSecurity(IsolatedCase):
         for role in ("inventario", "asistente", "soporte_ti"):
             self.assertEqual(self.clients[role].post("/api/delivery-notes", json={}).status_code, 403)
         invalid = self.clients["vendedor"].post("/api/delivery-notes", json={
-            "customer_name": "No debe existir", "items": [{"product_id": self.product.id, "quantity": 9999}]})
+            "customer_name": "No debe existir",
+            "items": [{"product_id": self.product.id, "quantity": 9999, "expected_unit_price": str(CURRENT_PRICE)}]})
         self.assertEqual(invalid.status_code, 409)
         self.assertEqual(self.snapshot(), before)
 

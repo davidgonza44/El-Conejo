@@ -101,7 +101,7 @@ def commercial(client, tag):
     replay = client.json("POST", "/api/sales", 200, json=sale_body)
     check(replay["sale_number"] == sale["sale_number"], "ventas e idempotencia sin doble salida")
     note = client.json("POST", "/api/delivery-notes", 201, json={"customer_name": "Destinatario sintético",
-        "items": [{"product_id": pid, "quantity": 2}]})["delivery_note"]
+        "items": [{"product_id": pid, "quantity": 2, "expected_unit_price": "8.00"}]})["delivery_note"]
     check(client.call("GET", f"/api/delivery-notes/{note['id']}/pdf").content.startswith(b"%PDF"), "nota de entrega y PDF")
     supplier = client.json("POST", "/api/purchases/suppliers", 201,
         json={"name": "Proveedor sintético " + tag, "tax_id": "J-" + str(secrets.randbelow(90000000) + 10000000) + "-1"})

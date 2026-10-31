@@ -178,7 +178,7 @@ def main() -> int:
         db.session.get(Sale, s_out).sold_at = _noon(today - timedelta(days=20))
         db.session.commit()
     # Nota de entrega (salida de stock, NO venta): jamás debe sumar en Sales Core.
-    note = admin.post("/api/delivery-notes", json={"customer_name": "Cliente de nota", "items": [{"product_id": tal, "quantity": 3}]})
+    note = admin.post("/api/delivery-notes", json={"customer_name": "Cliente de nota", "items": [{"product_id": tal, "quantity": 3, "expected_unit_price": "100.00"}]})
     check("nota de entrega creada", note.status_code == 201, str(note.json))
 
     before = _counts(app)

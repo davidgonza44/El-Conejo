@@ -9,6 +9,7 @@ Reglas clave:
   preservar el histórico de la nota.
 """
 import re
+import unicodedata
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from functools import wraps
@@ -50,6 +51,7 @@ def _reject_movement_ids(data):
 
 
 # Límites de las columnas de delivery_notes y formatos aceptados para identificar al cliente.
+MAX_NOTE_AMOUNT = Decimal("9999999999.99")  # NUMERIC(12,2) de delivery_notes.total_amount
 _FIELD_LIMITS = {"customer_name": ("nombre del cliente", 150), "customer_document": ("documento", 30),
                  "customer_phone": ("teléfono", 30), "customer_address": ("dirección", 255)}
 _DOCUMENT_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.\- ]{2,29}")
@@ -63,6 +65,8 @@ def _customer_field(data: dict, field: str) -> str | None:
     value = (data.get(field) or "")
     if not isinstance(value, str):
         raise ValidationError(f"El campo {label} debe ser texto.")
+    if any(unicodedata.category(char).startswith("C") for char in value):
+        raise ValidationError(f"El {label} contiene caracteres de control no admitidos.")
     value = value.strip()
     if len(value) > limit:
         raise ValidationError(f"El {label} admite como máximo {limit} caracteres.")
@@ -136,15 +140,24 @@ def _item_integer(value, message: str) -> int:
 
 
 def _shown_prices(items) -> dict[int, Decimal]:
-    """Precio que el usuario vio por producto (opcional). Sirve para confirmar cambios de precio."""
+    """Precio que el usuario vio y confirmó por producto (obligatorio). Detecta cambios antes de emitir."""
     shown = {}
     for item in items:
-        if item.get("unit_price") is None:
-            continue
+        # expected_unit_price es el nombre canónico; unit_price se conserva para clientes existentes.
+        value = item.get("expected_unit_price", item.get("unit_price"))
+        if value is None:
+            # Sin el precio confirmado no hay emisión: el cliente debe ver el importe antes de emitir.
+            raise ValidationError("Cada producto requiere expected_unit_price: el precio mostrado al confirmar.")
+        if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
+            raise ValidationError("El precio mostrado de un item no es válido.")
         try:
-            shown[int(item["product_id"])] = Decimal(str(item["unit_price"])).quantize(Decimal("0.01"))
-        except (InvalidOperation, TypeError, ValueError):
+            price = Decimal(str(value))
+        except (InvalidOperation, ValueError):
             raise ValidationError("El precio mostrado de un item no es válido.") from None
+        # Un precio con más de dos decimales se rechaza; nunca se redondea en silencio.
+        if not price.is_finite() or price < 0 or price > MAX_NOTE_AMOUNT or price != price.quantize(Decimal("0.01")):
+            raise ValidationError("El precio mostrado de un item no es válido (hasta dos decimales).")
+        shown[int(item["product_id"])] = price
     return shown
 
 
@@ -161,6 +174,8 @@ def _validate_items_payload(items) -> list[tuple[int, int]]:
 
         _reject_movement_ids(item)
         product_id = _item_integer(item.get("product_id"), f"El item #{index} requiere un 'product_id' entero positivo.")
+        if product_id <= 0:
+            raise ValidationError(f"El item #{index} requiere un 'product_id' entero positivo.")
         quantity = _item_integer(item.get("quantity"), f"El item #{index} requiere una 'quantity' entera.")
         if quantity <= 0:
             raise ValidationError(f"La cantidad del item #{index} debe ser mayor que 0.")
@@ -243,7 +258,9 @@ def _create_note(data: dict, key: str | None) -> DeliveryNote:
                if product.id in shown_prices and shown_prices[product.id] != product.sale_price]
     if changes:
         raise ConflictError("El precio de uno o más productos cambió. Revise y confirme los importes vigentes.",
-                            payload={"price_changes": changes})
+                            payload={"code": "price_changed", "price_changes": changes})
+    if sum((product.sale_price * quantity for product, quantity in products), Decimal(0)) > MAX_NOTE_AMOUNT:
+        raise ValidationError("El importe supera el máximo admitido por la nota.")
 
     note = DeliveryNote(
         note_number=_next_note_number(),

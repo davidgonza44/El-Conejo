@@ -117,5 +117,6 @@ def seed(users):
     for customer, lines in NOTES:
         delivery_note_service.create_note({
             "customer_name": customers[customer].name, "customer_document": customers[customer].tax_id,
-            "items": [{"product_id": products[code].id, "quantity": qty} for code, qty in lines]})
+            "items": [{"product_id": products[code].id, "quantity": qty,
+                       "expected_unit_price": str(products[code].sale_price)} for code, qty in lines]})
     return {"categories": len(CATEGORIES), "products": len(products), "notes": len(NOTES)}

@@ -162,6 +162,8 @@
                 name: p.name,
                 current_stock: p.current_stock,
                 sale_price: p.sale_price,
+                sale_price_currency: p.sale_price_currency,
+                is_active: p.is_active,
                 unit: p.unit || "",
             };
         });
@@ -175,7 +177,7 @@
         if (!sel) return;
         const options = Object.values(productMap)
             // La nota solo admite precios en USD (regla del servidor): no se ofrecen otras monedas.
-            .filter((p) => p.current_stock > 0 && (p.sale_price_currency ?? "USD") === "USD")
+            .filter((p) => p.is_active !== false && p.current_stock > 0 && (p.sale_price_currency ?? "USD") === "USD")
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((p) => {
                 const opt = document.createElement("option");
@@ -637,7 +639,7 @@
             items: createLines.map((l) => ({
                 product_id: l.product_id,
                 quantity: l.quantity,
-                unit_price: l.unit_price,
+                expected_unit_price: String(l.unit_price),
             })),
         };
 
@@ -654,6 +656,14 @@
             console.error("Error al crear nota:", error);
             if (error instanceof ApiError && error.data?.price_changes?.length) {
                 showPriceChanges(error.data.price_changes);
+                return;
+            }
+            if (error instanceof ApiError && (error.status === 0 || error.status >= 500)) {
+                // Resultado incierto: la nota pudo guardarse. Se conserva la clave por envío,
+                // así un reintento devuelve la misma nota en lugar de emitir otra.
+                errBox.textContent = "No se pudo confirmar el resultado. Revise el listado antes de volver a intentar; si reintenta, no se emitirá una nota duplicada.";
+                errBox.classList.remove("d-none");
+                await loadNotes().catch(() => {});
                 return;
             }
             errBox.textContent = errorMessage(error);

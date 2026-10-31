@@ -198,12 +198,25 @@ def create_app(config_class: type = Config) -> Flask:
         db.session.rollback()
         return jsonify({"error": "Otra operación modificaba los mismos productos. Intente de nuevo."}), 409
 
+    def _integrity_message(error) -> str:
+        code = error.orig.args[0] if error.orig is not None and error.orig.args else None
+        text = str(error.orig).lower()
+        if code == 1062 or "unique constraint" in text:
+            return "Otro registro con los mismos datos se guardó al mismo tiempo. Revise e intente de nuevo."
+        if code == 4025 or "check constraint" in text:
+            return "La operación dejaría datos inválidos (por ejemplo, existencias negativas). No se guardó nada."
+        if code in (1451, 1452) or "foreign key" in text:
+            return "La operación hace referencia a un registro inexistente o en uso. No se guardó nada."
+        if code == 1048 or "not null" in text:
+            return "Falta un dato obligatorio. No se guardó nada."
+        return "La base de datos rechazó la operación por una regla de integridad. No se guardó nada."
+
     @app.errorhandler(IntegrityError)
-    def handle_integrity_error(_):
-        # Dos peticiones simultáneas pasan la revisión previa y la base rechaza la segunda:
-        # es un conflicto de datos (409), no un fallo del servidor.
+    def handle_integrity_error(error):
+        # La base rechazó la escritura después de la revisión previa: conflicto de datos (409),
+        # no fallo del servidor. El mensaje nombra la causa real, no siempre un duplicado.
         db.session.rollback()
-        message = "Otro registro con los mismos datos se guardó al mismo tiempo. Revise e intente de nuevo."
+        message = _integrity_message(error)
         if _wants_page():
             return _error_page(409, "No se pudo guardar", message)
         return jsonify({"error": message}), 409

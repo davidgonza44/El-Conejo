@@ -207,7 +207,9 @@ def delivery_notes(domain, plan, products, customers, actors):
         row = domain.delivery_note_service.create_note(dict(customer_name=customer.name,
             customer_document=customer.tax_id, customer_phone=customer.phone,
             customer_address="Valencia, Carabobo",
-            items=[dict(product_id=products[index].id, quantity=quantity) for index, quantity in note["items"]]))
+            items=[dict(product_id=products[index].id, quantity=quantity,
+                        expected_unit_price=str(products[index].sale_price))  # precio confirmado
+                   for index, quantity in note["items"]]))
         set_dates(row, when)
         for line in row.items:
             set_dates(line, when)

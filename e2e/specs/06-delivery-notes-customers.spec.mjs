@@ -47,7 +47,8 @@ test.describe('Emisión (vendedor)', () => {
     test('rechaza documento y teléfono con formato inválido', async ({ page }) => {
         const client = await api(page, '/delivery-notes');
         const product = (await client.get('/api/products?search=E2E-006&page=1&per_page=5')).body.items[0];
-        const base = { customer_name: 'E2E Formato', items: [{ product_id: product.id, quantity: 1 }] };
+        const base = { customer_name: 'E2E Formato',
+            items: [{ product_id: product.id, quantity: 1, expected_unit_price: Number(product.sale_price).toFixed(2) }] };
         for (const extra of [{ customer_phone: 'llamar-luego' }, { customer_document: '<script>' }, { customer_name: 'x'.repeat(151) }]) {
             const response = await client.post('/api/delivery-notes', { ...base, ...extra });
             expect(response.status, JSON.stringify(extra)).toBe(400);
@@ -59,7 +60,7 @@ test.describe('Emisión (vendedor)', () => {
         const product = (await client.get('/api/products?search=E2E-006&page=1&per_page=5')).body.items[0];
         const before = product.current_stock;
         const stale = await client.post('/api/delivery-notes', { customer_name: 'E2E Precio',
-            items: [{ product_id: product.id, quantity: 1, unit_price: '0.01' }] });
+            items: [{ product_id: product.id, quantity: 1, expected_unit_price: '0.01' }] });
         expect(stale.status).toBe(409);
         expect(stale.body.price_changes[0]).toMatchObject({ code: 'E2E-006', shown: '0.01' });
         expect(Number(stale.body.price_changes[0].current)).toBe(Number(product.sale_price));
@@ -110,7 +111,7 @@ test.describe('Emisión (vendedor)', () => {
         const client = await api(page, '/delivery-notes');
         const product = (await client.get('/api/products?search=E2E-006&page=1&per_page=5')).body.items[0];
         const payload = { customer_name: 'E2E Reintento', idempotency_key: `e2e-${uid()}-reintento`,
-            items: [{ product_id: product.id, quantity: 1 }] };
+            items: [{ product_id: product.id, quantity: 1, expected_unit_price: Number(product.sale_price).toFixed(2) }] };
         const first = await client.post('/api/delivery-notes', payload);
         const again = await client.post('/api/delivery-notes', payload);
         expect([first.status, again.status]).toEqual([201, 200]);
