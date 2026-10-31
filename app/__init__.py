@@ -191,6 +191,8 @@ def create_app(config_class: type = Config) -> Flask:
     def handle_lock_conflict(error: OperationalError):
         # 1213 deadlock, 1205 espera de bloqueo agotada: MariaDB ya revirtió; reintentar es seguro.
         code = error.orig.args[0] if error.orig is not None and error.orig.args else None
+        if code == 4025:  # MariaDB informa una violación de CHECK como OperationalError
+            return handle_integrity_error(error)
         if code not in (1205, 1213):
             raise error
         from app.extensions import db

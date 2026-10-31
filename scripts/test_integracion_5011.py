@@ -122,6 +122,18 @@ class IntegrityMessages(IsolatedCase):
         self.assertIn("mismos datos", unique.json["error"])
         self.assertEqual(self.stock(), 10)
 
+    def test_mariadb_check_violation_is_409_not_500(self):
+        # MariaDB informa CHECK (4025) como OperationalError; no debe terminar en 500.
+        from unittest.mock import patch
+        from sqlalchemy.exc import OperationalError
+        failure = OperationalError("UPDATE products ...", {}, Exception(4025, "CONSTRAINT `ck_products_stock` failed"))
+        with patch.object(inventory_service, "lock_products", side_effect=failure):
+            response = self.clients["vendedor"].post("/api/delivery-notes", json={"customer_name": "Cliente",
+                "items": [{"product_id": self.product.id, "quantity": 1, "expected_unit_price": "3.00"}]})
+        self.assertEqual(response.status_code, 409, response.json)
+        self.assertIn("datos inválidos", response.json["error"])
+        self.assertEqual(self.stock(), 10)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
