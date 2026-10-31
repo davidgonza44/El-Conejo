@@ -82,11 +82,8 @@ def get_order(order_id, lock=False):
     return order
 
 
-def lock_products(ids):
-    """Products by id, locked in ascending order: the single product lock order of purchasing."""
-    rows = db.session.execute(select(Product).where(Product.id.in_(sorted(ids))).order_by(Product.id)
-                              .with_for_update().execution_options(populate_existing=True)).scalars()
-    return {product.id: product for product in rows}
+# Un solo orden de bloqueo de productos (id ascendente) para Compras, Inventario y Notas.
+lock_products = inventory_service.lock_products
 
 
 def _supplier(value):

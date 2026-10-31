@@ -53,7 +53,10 @@ def _get_active_product_locked(product_id, *, allow_inactive: bool = False) -> P
 
 
 def lock_products(product_ids) -> dict[int, Product]:
-    """Bloquea varias filas en orden de id: dos documentos simultáneos no se bloquean entre sí."""
+    """Bloquea varias filas en orden de id: dos documentos simultáneos no se bloquean entre sí.
+
+    Es el único orden de bloqueo de productos; Compras lo reutiliza como purchase_service.lock_products.
+    """
     ids = sorted(set(product_ids))
     if not ids:
         return {}
